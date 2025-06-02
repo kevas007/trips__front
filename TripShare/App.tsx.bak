@@ -1,0 +1,223 @@
+// === App.tsx - VERSION CORRIGÉE SANS REANIMATED ===
+
+// Gesture Handler en premier (pour l'initialisation des gestes)
+import 'react-native-gesture-handler';
+
+import React from 'react';
+import { View, Text } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import AuthNavigator from './src/navigation/AuthNavigator';
+import HomeScreen from './src/screens/main/HomeScreen';
+import type { RootStackParamList, MainTabParamList } from './src/types/navigation';
+
+const RootStack = createStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
+
+// ========== ÉCRANS TEMPORAIRES ==========
+
+const SearchScreen: React.FC = () => (
+  <View style={{ 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa'
+  }}>
+    <Ionicons name="search-outline" size={64} color="#667eea" />
+    <Text style={{ 
+      fontSize: 24, 
+      fontWeight: 'bold', 
+      color: '#333',
+      marginTop: 20
+    }}>
+      Recherche
+    </Text>
+    <Text style={{ 
+      fontSize: 16, 
+      color: '#666',
+      marginTop: 10,
+      textAlign: 'center',
+      paddingHorizontal: 40
+    }}>
+      Découvrez des milliers d'itinéraires partagés par la communauté
+    </Text>
+  </View>
+);
+
+const ProfileScreen: React.FC = () => (
+  <View style={{ 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa'
+  }}>
+    <Ionicons name="person-outline" size={64} color="#667eea" />
+    <Text style={{ 
+      fontSize: 24, 
+      fontWeight: 'bold', 
+      color: '#333',
+      marginTop: 20
+    }}>
+      Profil
+    </Text>
+    <Text style={{ 
+      fontSize: 16, 
+      color: '#666',
+      marginTop: 10,
+      textAlign: 'center',
+      paddingHorizontal: 40
+    }}>
+      Gérez vos voyages, paramètres et statistiques
+    </Text>
+  </View>
+);
+
+// ========== NAVIGATION PRINCIPALE (BOTTOM TABS) ==========
+
+const MainNavigator: React.FC = () => (
+  <Tab.Navigator
+    screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarIcon: ({ focused, color, size }) => {
+        let iconName: React.ComponentProps<typeof Ionicons>['name'];
+
+        switch (route.name) {
+          case 'Home':
+            iconName = focused ? 'home' : 'home-outline';
+            break;
+          case 'Search':
+            iconName = focused ? 'search' : 'search-outline';
+            break;
+          case 'Profile':
+            iconName = focused ? 'person' : 'person-outline';
+            break;
+          default:
+            iconName = 'home-outline';
+        }
+
+        return <Ionicons name={iconName} size={size} color={color} />;
+      },
+      tabBarActiveTintColor: '#667eea',
+      tabBarInactiveTintColor: '#64748b',
+      tabBarStyle: {
+        backgroundColor: '#ffffff',
+        borderTopWidth: 1,
+        borderTopColor: '#e2e8f0',
+        paddingBottom: 5,
+        paddingTop: 5,
+        height: 60,
+      },
+      tabBarLabelStyle: {
+        fontSize: 12,
+        fontWeight: '500',
+      },
+    })}
+  >
+    <Tab.Screen 
+      name="Home" 
+      component={HomeScreen} 
+      options={{ 
+        tabBarLabel: 'Accueil',
+        tabBarBadge: undefined, // Peut être utilisé pour les notifications
+      }} 
+    />
+    <Tab.Screen 
+      name="Search" 
+      component={SearchScreen} 
+      options={{ 
+        tabBarLabel: 'Recherche',
+      }} 
+    />
+    <Tab.Screen 
+      name="Profile" 
+      component={ProfileScreen} 
+      options={{ 
+        tabBarLabel: 'Profil',
+      }} 
+    />
+  </Tab.Navigator>
+);
+
+// ========== NAVIGATION PRINCIPALE (STACK) ==========
+
+const AppNavigator: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Écran de chargement pendant la vérification d'auth
+  if (isLoading) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: '#667eea'
+      }}>
+        <Ionicons name="airplane" size={64} color="#ffffff" />
+        <Text style={{ 
+          color: '#ffffff', 
+          fontSize: 24, 
+          fontWeight: 'bold',
+          marginTop: 20
+        }}>
+          TripShare
+        </Text>
+        <Text style={{ 
+          color: 'rgba(255,255,255,0.8)', 
+          fontSize: 16,
+          marginTop: 10
+        }}>
+          Chargement...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      <RootStack.Navigator 
+        screenOptions={{ 
+          headerShown: false,
+          cardStyle: { backgroundColor: '#ffffff' },
+          animationEnabled: true,
+          animationTypeForReplace: 'push',
+        }}
+      >
+        {isAuthenticated ? (
+          <RootStack.Screen 
+            name="Main" 
+            component={MainNavigator}
+            options={{
+              animationTypeForReplace: 'push',
+            }}
+          />
+        ) : (
+          <RootStack.Screen 
+            name="Auth" 
+            component={AuthNavigator}
+            options={{
+              animationTypeForReplace: 'pop',
+            }}
+          />
+        )}
+      </RootStack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+// ========== COMPOSANT RACINE ==========
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppNavigator />
+      <StatusBar style="auto" backgroundColor="#667eea" />
+    </AuthProvider>
+  );
+};
+
+export default App;
