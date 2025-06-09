@@ -1,90 +1,109 @@
 import React from 'react';
-import { View, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import HomeScreen from '@/screens/main/HomeScreen';
+import { useAppTheme } from '../hooks/useAppTheme';
+import { Text } from 'react-native';
 
-type MainTabParamList = {
-  Home: undefined;
-  Search: undefined;
-  Profile: undefined;
+// Screens
+import HomeScreen from '../screens/main/HomeScreen';
+import ProfileScreen from '../screens/main/ProfileScreen';
+import EditProfileScreen from '../screens/main/EditProfileScreen';
+import SettingsScreen from '../screens/main/SettingsScreen';
+import ChangePasswordScreen from '../screens/settings/ChangePasswordScreen';
+
+const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+const SettingsStack = createStackNavigator();
+
+// Stack pour le profil
+const ProfileStack = () => {
+  const { theme } = useAppTheme();
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.background.primary },
+        headerTintColor: theme.colors.text.primary,
+        headerTitleStyle: { fontWeight: 'bold' },
+      }}
+    >
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
+          title: 'Modifier le profil',
+          headerBackTitle: 'Retour',
+        }}
+      />
+    </Stack.Navigator>
+  );
 };
 
-const Tab = createBottomTabNavigator<MainTabParamList>();
+const SettingsStackScreen = () => {
+  const { theme } = useAppTheme();
+  return (
+    <SettingsStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.background.primary },
+        headerTintColor: theme.colors.text.primary,
+        headerTitleStyle: { fontWeight: 'bold' },
+      }}
+    >
+      <SettingsStack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+      <SettingsStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Changer le mot de passe' }} />
+    </SettingsStack.Navigator>
+  );
+};
 
-// Composants temporaires pour les autres onglets
-const SearchScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-    <Ionicons name="search-outline" size={64} color="#667eea" />
-    <Text style={{ fontSize: 18, color: '#64748b', marginTop: 16 }}>Recherche</Text>
-    <Text style={{ fontSize: 14, color: '#64748b', marginTop: 8 }}>Trouvez des destinations incroyables</Text>
-  </View>
-);
-
-const ProfileScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-    <Ionicons name="person-outline" size={64} color="#667eea" />
-    <Text style={{ fontSize: 18, color: '#64748b', marginTop: 16 }}>Profil</Text>
-    <Text style={{ fontSize: 14, color: '#64748b', marginTop: 8 }}>Gérez votre compte</Text>
-  </View>
-);
-
-const MainNavigator: React.FC = () => {
+const MainNavigator = () => {
+  const { theme, isDark } = useAppTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false,
+        headerStyle: { backgroundColor: theme.colors.background.primary },
+        headerTintColor: theme.colors.text.primary,
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
-
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Search') {
-            iconName = focused ? 'search' : 'search-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
-          } else {
-            iconName = 'home-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
+          let iconName = 'home';
+          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
+          else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
+          return <Ionicons name={iconName} size={focused ? 28 : 24} color={color} style={{ marginBottom: -2 }} />;
         },
-        tabBarActiveTintColor: '#667eea',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: theme.colors.primary[0],
+        tabBarInactiveTintColor: theme.colors.text.secondary,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e2e8f0',
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          backgroundColor: isDark ? '#1a2233' : '#FFFFFF',
+          borderTopColor: isDark ? '#232b3b' : '#E2E8F0',
+          height: 64,
+          paddingBottom: 6,
+          paddingTop: 4,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
+          shadowOpacity: 0.08,
           shadowRadius: 8,
           elevation: 8,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
+        tabBarLabel: ({ focused, color }) => (
+          <Text style={{
+            fontSize: 14,
+            fontWeight: focused ? 'bold' : 'normal',
+            color,
+            marginBottom: 2,
+          }}>
+            {route.name === 'Home' ? 'Accueil' : route.name === 'Profile' ? 'Profil' : route.name === 'Settings' ? 'Paramètres' : route.name}
+          </Text>
+        ),
+        headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen}
-        options={{ tabBarLabel: 'Accueil' }}
-      />
-      <Tab.Screen 
-        name="Search" 
-        component={SearchScreen}
-        options={{ tabBarLabel: 'Recherche' }}
-      />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{ tabBarLabel: 'Profil' }}
-      />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Accueil' }} />
+      <Tab.Screen name="Profile" component={ProfileStack} options={{ headerShown: false }} />
+      <Tab.Screen name="Settings" component={SettingsStackScreen} options={{ title: 'Paramètres' }} />
     </Tab.Navigator>
   );
 };

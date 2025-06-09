@@ -1,6 +1,9 @@
+import { useTheme } from '@/theme/ThemeContext';
+import { useTranslation } from 'react-i18next';
+
 export const useAppTheme = () => {
-  const { theme, isDark, toggleTheme, setTheme } = useTheme();
-  const { language, t, setLanguage, toggleLanguage } = useLanguage();
+  const { theme, isDark, toggleTheme, setTheme, fontSize, setFontSize } = useTheme();
+  const { t, i18n } = useTranslation();
 
   return {
     // Theme
@@ -8,26 +11,18 @@ export const useAppTheme = () => {
     isDark,
     toggleTheme,
     setTheme,
-    
-    // Language
-    language,
+    fontSize,
+    setFontSize,
+
+    // Langue (i18n)
     t,
-    setLanguage,
-    toggleLanguage,
-    
+    language: i18n.language,
+    setLanguage: i18n.changeLanguage,
+
     // Utilities
     getThemeColor: (path: string) => {
       const keys = path.split('.');
       let value: any = theme.colors;
-      for (const key of keys) {
-        value = value[key];
-      }
-      return value;
-    },
-    
-    getTranslation: (path: string) => {
-      const keys = path.split('.');
-      let value: any = t;
       for (const key of keys) {
         value = value[key];
       }

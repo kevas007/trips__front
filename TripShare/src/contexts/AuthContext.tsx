@@ -1,44 +1,27 @@
-// === src/contexts/AuthContext.tsx - VERSION CORRIGÉE ===
+// === src/contexts/AuthContext.tsx - VERSION FINALE AVEC SERVICE API ===
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { Alert } from 'react-native';
+import { api, User, APIError } from '../services/api';
 
 // ========== TYPES ==========
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
-  verified: boolean;
-  createdAt: string;
-}
 
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, username: string, firstName: string, lastName: string, phoneNumber: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
+  clearError: () => void;
 }
 
 // ========== CONTEXT ==========
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// ========== MOCK DATA ==========
-
-const mockUser: User = {
-  id: '1',
-  email: 'demo@tripshare.com',
-  name: 'Demo User',
-  avatar: undefined,
-  verified: true,
-  createdAt: new Date().toISOString(),
-};
 
 // ========== PROVIDER ==========
 
@@ -49,37 +32,70 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // ========== EFFET D'INITIALISATION ==========
+  // ========== INITIALISATION ==========
+  
   useEffect(() => {
     initializeAuth();
   }, []);
 
-  const initializeAuth = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Vérifier si un token existe dans le stockage sécurisé
-      const storedToken = await SecureStore.getItemAsync('auth_token');
-      const storedUser = await SecureStore.getItemAsync('user_data');
-      
-      if (storedToken && storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          
-          // En production, valider le token avec l'API
-          console.log('🔑 Utilisateur connecté automatiquement:', userData.email);
-        } catch (error) {
-          console.error('❌ Erreur parsing user data:', error);
-          await clearStoredAuth();
-        }
+const initializeAuth = async () => {
+  try {
+    setIsLoading(true);
+    setError(null);
+
+    // Récupérer le token (si jamais il existe)
+    const storedToken = await api.getStoredToken();
+    if (storedToken) {
+      // Si un token est présent, récupérer l'utilisateur en local et tenter de le valider
+      const storedUser = await api.getStoredUser();
+      if (storedUser) {
+        setUser(storedUser);
       }
-    } catch (error) {
-      console.error('❌ Erreur initialisation auth:', error);
-    } finally {
-      setIsLoading(false);
+
+      // Vérifier auprès du serveur que le token est toujours valide
+      try {
+        const currentUser = await api.getCurrentUser();
+        setUser(currentUser);
+        console.log('🔑 Utilisateur validé:', currentUser.email);
+      } catch (validationError) {
+        console.log('⚠️ Token invalide, suppression locale');
+        await api.clearAuthData(); // supprimer token + user_data locaux
+        setUser(null);
+      }
     }
+    // Si pas de token, on ne fait rien, on restera sur l'écran Login/Register
+  } catch (error) {
+    console.error('❌ Erreur initialisation auth:', error);
+    setError('Erreur d\'initialisation');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+  // ========== GESTION D'ERREURS ==========
+
+  const handleError = (error: any, fallbackMessage: string = 'Une erreur est survenue'): string => {
+    console.error('❌ Auth Error:', error);
+    
+    let errorMessage = fallbackMessage;
+    
+    if (error instanceof APIError) {
+      // Prioriser les erreurs de validation
+      const validationError = error.getFirstValidationError();
+      errorMessage = validationError || error.message;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
+    setError(errorMessage);
+    return errorMessage;
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   // ========== MÉTHODES D'AUTHENTIFICATION ==========
@@ -87,97 +103,103 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setIsLoading(true);
+      clearError();
 
-      // Validation basique
-      if (!email || !password) {
+      // Validation côté client
+      if (!email?.trim() || !password?.trim()) {
         throw new Error('Email et mot de passe requis');
       }
 
       if (!email.includes('@')) {
-        throw new Error('Email invalide');
+        throw new Error('Format d\'email invalide');
       }
 
       if (password.length < 6) {
         throw new Error('Mot de passe trop court (minimum 6 caractères)');
       }
 
-      // Simulation d'une requête API (remplacer par apiService.login)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Appel API
+      const response = await api.login({
+        email: email.toLowerCase().trim(),
+        password: password,
+      });
 
-      // Mock: accepter n'importe quel email/password valide
-      const loginUser: User = {
-        ...mockUser,
-        email: email,
-        name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
-      };
+      setUser(response.user);
+      console.log('✅ Connexion réussie:', response.user.email);
 
-      // Stocker les données de manière sécurisée
-      await SecureStore.setItemAsync('auth_token', 'mock_jwt_token_' + Date.now());
-      await SecureStore.setItemAsync('user_data', JSON.stringify(loginUser));
-
-      setUser(loginUser);
-      
-      console.log('✅ Connexion réussie:', loginUser.email);
-
-    } catch (error: any) {
-      console.error('❌ Erreur de connexion:', error);
-      throw new Error(error.message || 'Erreur de connexion');
+    } catch (error) {
+      const errorMessage = handleError(error, 'Erreur de connexion');
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (email: string, password: string, name: string): Promise<void> => {
+  const register = async (
+    email: string,
+    username: string, 
+    firstName: string, 
+    lastName: string, 
+    phoneNumber: string, 
+    password: string
+  ): Promise<void> => {
     try {
       setIsLoading(true);
+      clearError();
 
-      // Validation
-      if (!email || !password || !name) {
-        throw new Error('Tous les champs sont requis');
+      // Validation côté client
+      const validationErrors: string[] = [];
+
+      if (!email?.trim()) validationErrors.push('Email requis');
+      else if (!email.includes('@')) validationErrors.push('Format d\'email invalide');
+
+      if (!username?.trim()) validationErrors.push('Nom d\'utilisateur requis');
+      else if (username.length < 3) validationErrors.push('Nom d\'utilisateur trop court (min. 3 caractères)');
+
+      if (!firstName?.trim()) validationErrors.push('Prénom requis');
+      else if (firstName.length < 2) validationErrors.push('Prénom trop court (min. 2 caractères)');
+
+      if (!lastName?.trim()) validationErrors.push('Nom requis');
+      else if (lastName.length < 2) validationErrors.push('Nom trop court (min. 2 caractères)');
+
+      if (!password?.trim()) validationErrors.push('Mot de passe requis');
+      else if (password.length < 6) validationErrors.push('Mot de passe trop court (min. 6 caractères)');
+
+      // Validation optionnelle du téléphone
+      if (phoneNumber?.trim()) {
+        const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+        if (!phoneRegex.test(phoneNumber.replace(/[\s\-\(\)]/g, ''))) {
+          validationErrors.push('Format de téléphone invalide');
+        }
       }
 
-      if (!email.includes('@')) {
-        throw new Error('Email invalide');
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
       }
 
-      if (password.length < 6) {
-        throw new Error('Mot de passe trop court (minimum 6 caractères)');
-      }
+      // Appel API
+      const response = await api.register({
+        email: email.toLowerCase().trim(),
+        username: username.trim(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone_number: phoneNumber?.trim() || undefined,
+        password: password,
+      });
 
-      if (name.trim().length < 2) {
-        throw new Error('Nom trop court (minimum 2 caractères)');
-      }
+      setUser(response.user);
+      console.log('✅ Inscription réussie:', response.user.email);
 
-      // Simulation d'une requête API
-      await new Promise(resolve => setTimeout(resolve, 1200));
-
-      const newUser: User = {
-        id: 'user_' + Date.now(),
-        email: email.toLowerCase(),
-        name: name.trim(),
-        avatar: undefined,
-        verified: false,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Stocker les données
-      await SecureStore.setItemAsync('auth_token', 'mock_jwt_token_' + Date.now());
-      await SecureStore.setItemAsync('user_data', JSON.stringify(newUser));
-
-      setUser(newUser);
-      
-      console.log('✅ Inscription réussie:', newUser.email);
-
-      // Notification d'inscription
+      // Notification de succès
       Alert.alert(
-        'Inscription réussie !',
-        'Bienvenue sur TripShare ! Vous pouvez maintenant créer et partager vos itinéraires.',
-        [{ text: 'Commencer', style: 'default' }]
+        '🎉 Inscription réussie !',
+        `Bienvenue ${response.user.first_name} ! Votre compte TripShare est prêt.`,
+        [{ text: 'Commencer l\'aventure', style: 'default' }]
       );
 
-    } catch (error: any) {
-      console.error('❌ Erreur d\'inscription:', error);
-      throw new Error(error.message || 'Erreur d\'inscription');
+    } catch (error) {
+      const errorMessage = handleError(error, 'Erreur d\'inscription');
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -186,21 +208,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<void> => {
     try {
       setIsLoading(true);
+      clearError();
 
-      // Nettoyer le stockage sécurisé
-      await clearStoredAuth();
-
-      // Réinitialiser l'état
+      await api.logout();
       setUser(null);
 
       console.log('✅ Déconnexion réussie');
 
-      // En production, notifier le serveur
-      // await apiService.logout();
-
     } catch (error) {
-      console.error('❌ Erreur de déconnexion:', error);
-      // Forcer la déconnexion même en cas d'erreur
+      // Forcer la déconnexion locale même en cas d'erreur serveur
+      console.warn('⚠️ Erreur logout serveur (déconnexion locale forcée):', error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -210,40 +227,74 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const forgotPassword = async (email: string): Promise<void> => {
     try {
       setIsLoading(true);
+      clearError();
 
-      if (!email || !email.includes('@')) {
-        throw new Error('Email invalide');
+      if (!email?.trim()) {
+        throw new Error('Email requis');
       }
 
-      // Simulation d'une requête API
-      await new Promise(resolve => setTimeout(resolve, 800));
+      if (!email.includes('@')) {
+        throw new Error('Format d\'email invalide');
+      }
+
+      await api.forgotPassword({
+        email: email.toLowerCase().trim(),
+      });
 
       console.log('✅ Email de réinitialisation envoyé à:', email);
 
       Alert.alert(
-        'Email envoyé',
-        `Un lien de réinitialisation a été envoyé à ${email}. Vérifiez votre boîte mail.`,
-        [{ text: 'OK', style: 'default' }]
+        '📧 Email envoyé',
+        `Un lien de réinitialisation a été envoyé à ${email}. Vérifiez votre boîte mail (et vos spams).`,
+        [{ text: 'Compris', style: 'default' }]
       );
 
-    } catch (error: any) {
-      console.error('❌ Erreur mot de passe oublié:', error);
-      throw new Error(error.message || 'Erreur d\'envoi d\'email');
+    } catch (error) {
+      const errorMessage = handleError(error, 'Erreur d\'envoi d\'email');
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const refreshUser = async (): Promise<void> => {
+    try {
+      if (!user) return;
+      
+      const updatedUser = await api.getCurrentUser();
+      setUser(updatedUser);
+      console.log('✅ Profil utilisateur actualisé');
+    } catch (error) {
+      console.warn('⚠️ Impossible d\'actualiser le profil:', error);
+      // Ne pas lever d'erreur, garder l'utilisateur actuel
+    }
+  };
+
   // ========== MÉTHODES UTILITAIRES ==========
 
-  const clearStoredAuth = async (): Promise<void> => {
+  const updateProfile = async (userData: Partial<User>): Promise<void> => {
     try {
-      await Promise.all([
-        SecureStore.deleteItemAsync('auth_token'),
-        SecureStore.deleteItemAsync('user_data'),
-      ]);
+      if (!user) throw new Error('Utilisateur non connecté');
+      
+      const updatedUser = await api.updateProfile(userData);
+      setUser(updatedUser);
+      console.log('✅ Profil mis à jour');
     } catch (error) {
-      console.warn('⚠️ Erreur nettoyage stockage:', error);
+      const errorMessage = handleError(error, 'Erreur de mise à jour du profil');
+      throw new Error(errorMessage);
+    }
+  };
+
+  const uploadAvatar = async (imageUri: string): Promise<void> => {
+    try {
+      if (!user) throw new Error('Utilisateur non connecté');
+      
+      const updatedUser = await api.uploadAvatar(imageUri);
+      setUser(updatedUser);
+      console.log('✅ Avatar mis à jour');
+    } catch (error) {
+      const errorMessage = handleError(error, 'Erreur de téléchargement d\'avatar');
+      throw new Error(errorMessage);
     }
   };
 
@@ -253,10 +304,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isAuthenticated: !!user,
     isLoading,
+    error,
     login,
     register,
     logout,
     forgotPassword,
+    refreshUser,
+    clearError,
   };
 
   return (
@@ -276,6 +330,46 @@ export const useAuth = (): AuthContextType => {
   }
   
   return context;
+};
+
+// ========== HOOKS UTILITAIRES ==========
+
+// Hook pour gérer les erreurs d'authentification avec toast
+export const useAuthError = () => {
+  const { error, clearError } = useAuth();
+  
+  React.useEffect(() => {
+    if (error) {
+      // Auto-clear après 5 secondes
+      const timer = setTimeout(clearError, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, clearError]);
+
+  const showError = (message: string) => {
+    Alert.alert('Erreur', message);
+  };
+
+  return { error, clearError, showError };
+};
+
+// Hook pour les actions avec gestion automatique des erreurs
+export const useAuthAction = () => {
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const { showError } = useAuthError();
+
+  const executeAction = async (action: () => Promise<void>, errorMessage?: string) => {
+    try {
+      setIsActionLoading(true);
+      await action();
+    } catch (error: any) {
+      showError(error.message || errorMessage || 'Une erreur est survenue');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  return { isActionLoading, executeAction };
 };
 
 export default AuthContext;

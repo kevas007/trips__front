@@ -14,11 +14,13 @@ import './src/i18n';
 
 // Contexts
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { ThemeProvider } from './src/theme/ThemeContext';
+import { useAppTheme } from './src/hooks/useAppTheme';
 
 // Navigation
 import AuthNavigator from './src/navigation/AuthNavigator';
 import HomeScreen from './src/screens/main/HomeScreen';
+import MainNavigator from './src/navigation/MainNavigator';
 
 // Types
 import type { RootStackParamList, MainTabParamList } from './src/types/navigation';
@@ -29,7 +31,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 // ========== ÉCRANS TEMPORAIRES THÉMATISÉS ===
 
 const SearchScreen: React.FC = () => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { t } = useTranslation();
   
   return (
@@ -65,47 +67,10 @@ const SearchScreen: React.FC = () => {
   );
 };
 
-const ProfileScreen: React.FC = () => {
-  const { theme } = useTheme();
-  const { t } = useTranslation();
-  
-  return (
-    <View style={{ 
-      flex: 1, 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      backgroundColor: theme.colors.background.primary
-    }}>
-      <Ionicons 
-        name="person-outline" 
-        size={64} 
-        color={theme.colors.primary[0]} 
-      />
-      <Text style={{ 
-        fontSize: 24, 
-        fontWeight: 'bold', 
-        color: theme.colors.text.primary,
-        marginTop: 20
-      }}>
-        {t('common.profile')}
-      </Text>
-      <Text style={{ 
-        fontSize: 16, 
-        color: theme.colors.text.secondary,
-        marginTop: 10,
-        textAlign: 'center',
-        paddingHorizontal: 40
-      }}>
-        {t('common.profileDescription')}
-      </Text>
-    </View>
-  );
-};
-
 // ========== NAVIGATION PRINCIPALE THÉMATISÉE ==========
 
-const MainNavigator: React.FC = () => {
-  const { theme, isDark } = useTheme();
+const MainTabs: React.FC = () => {
+  const { theme, isDark } = useAppTheme();
   const { t } = useTranslation();
 
   return (
@@ -169,7 +134,7 @@ const MainNavigator: React.FC = () => {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen} 
+        component={MainNavigator} 
         options={{ 
           tabBarLabel: t('nav.profile'),
         }} 
@@ -182,7 +147,7 @@ const MainNavigator: React.FC = () => {
 
 const AppNavigator: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark } = useAppTheme();
 
   // Écran de chargement thématisé
   if (isLoading) {
@@ -217,40 +182,21 @@ const AppNavigator: React.FC = () => {
     );
   }
 
+  const navigationTheme = {
+    dark: isDark,
+    colors: {
+      primary: theme.colors.primary[0],
+      background: theme.colors.background.primary,
+      card: theme.colors.background.card,
+      text: theme.colors.text.primary,
+      border: theme.colors.glassmorphism.border,
+      notification: theme.colors.semantic.info,
+    },
+  };
+
   return (
-    <NavigationContainer
-      theme={{
-        dark: isDark,
-        colors: {
-          primary: theme.colors.primary[0],
-          background: theme.colors.background.primary,
-          card: isDark ? '#1E293B' : '#FFFFFF',
-          text: theme.colors.text.primary,
-          border: isDark ? '#334155' : '#E2E8F0',
-          notification: theme.colors.accent[0],
-        },
-      }}
-    >
-      <RootStack.Navigator 
-        screenOptions={{ 
-          headerShown: false,
-          cardStyle: { backgroundColor: theme.colors.background.primary },
-        }}
-      >
-        {isAuthenticated ? (
-          <RootStack.Screen 
-            name="Main" 
-            component={MainNavigator}
-          />
-        ) : (
-          <RootStack.Screen 
-            name="Auth" 
-            component={AuthNavigator}
-          />
-        )}
-      </RootStack.Navigator>
-      
-      {/* StatusBar adaptatif au thème */}
+    <NavigationContainer theme={navigationTheme}>
+      {isAuthenticated ? <MainTabs /> : <AuthNavigator />}
       <StatusBar style={isDark ? "light" : "dark"} />
     </NavigationContainer>
   );
@@ -260,11 +206,11 @@ const AppNavigator: React.FC = () => {
 
 const AppWithProviders: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <AppNavigator />
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 };
 

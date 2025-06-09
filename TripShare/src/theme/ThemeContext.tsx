@@ -1,11 +1,8 @@
-// === contexts/ThemeContext.tsx - SANS ASYNCSTORAGE ===
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Appearance } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-// === TYPES THEME ===
-
+// Types du thème
 export interface Theme {
   colors: {
     primary: string[];
@@ -49,34 +46,33 @@ export interface Theme {
   };
 }
 
-// === THÈMES LIGHT/DARK ===
-
+// Thème clair
 export const lightTheme: Theme = {
   colors: {
-    primary: ['#667eea', '#764ba2', '#f093fb', '#4facfe'],
+    primary: ['#2563EB', '#667eea', '#764ba2', '#f093fb'],
     accent: ['#FF6B9D', '#4ECDC4'],
     secondary: ['#4facfe', '#00f2fe'],
     background: {
-      primary: '#F8FAFC',
-      card: 'rgba(255, 255, 255, 0.1)',
+      primary: '#FFFFFF',
+      card: '#F1F5F9',
       overlay: 'rgba(0, 0, 0, 0.8)',
-      gradient: ['#667eea', '#764ba2', '#f093fb', '#4facfe'],
+      gradient: ['#2563EB', '#667eea', '#764ba2', '#f093fb'],
     },
     text: {
       primary: '#1E293B',
       secondary: '#64748B',
-      light: 'rgba(255, 255, 255, 0.9)',
+      light: 'rgba(30, 41, 59, 0.7)',
     },
     semantic: {
-      success: '#4ADE80',
-      warning: '#FBBF24',
-      error: '#EF4444',
-      info: '#3B82F6',
+      success: '#22C55E',
+      warning: '#F59E0B',
+      error: '#E11D48',
+      info: '#2563EB',
     },
     glassmorphism: {
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: 'rgba(255, 255, 255, 0.2)',
-      shadow: 'rgba(0, 0, 0, 0.1)',
+      background: 'rgba(241, 245, 249, 0.7)',
+      border: 'rgba(100, 116, 139, 0.15)',
+      shadow: 'rgba(100, 116, 139, 0.10)',
     },
   },
   spacing: {
@@ -94,6 +90,7 @@ export const lightTheme: Theme = {
   },
 };
 
+// Thème sombre
 export const darkTheme: Theme = {
   colors: {
     primary: ['#1a1b3a', '#2d1b69', '#8b5a9a', '#4facfe'],
@@ -137,26 +134,24 @@ export const darkTheme: Theme = {
   },
 };
 
-// === CONTEXT INTERFACE ===
-
 interface ThemeContextType {
   theme: Theme;
   isDark: boolean;
   toggleTheme: () => void;
   setTheme: (isDark: boolean) => void;
+  fontSize: 'Petit' | 'Normal' | 'Grand' | 'Très grand';
+  setFontSize: (size: 'Petit' | 'Normal' | 'Grand' | 'Très grand') => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// === THEME PROVIDER ===
-
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isDark, setIsDark] = useState(false);
+  const [fontSize, setFontSize] = useState<'Petit' | 'Normal' | 'Grand' | 'Très grand'>('Normal');
 
   useEffect(() => {
     loadThemePreference();
     
-    // Écouter les changements système (iOS/Android)
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
       if (colorScheme) {
         setIsDark(colorScheme === 'dark');
@@ -169,18 +164,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const loadThemePreference = async () => {
     try {
-      // Utiliser SecureStore au lieu d'AsyncStorage (déjà disponible avec Expo)
       const savedTheme = await SecureStore.getItemAsync('theme_preference');
       if (savedTheme !== null) {
         setIsDark(savedTheme === 'dark');
       } else {
-        // Utiliser le thème système par défaut
         const systemTheme = Appearance.getColorScheme();
         setIsDark(systemTheme === 'dark');
       }
     } catch (error) {
       console.log('Error loading theme preference:', error);
-      // Fallback: utiliser le thème système
       const systemTheme = Appearance.getColorScheme();
       setIsDark(systemTheme === 'dark');
     }
@@ -208,13 +200,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const theme = isDark ? darkTheme : lightTheme;
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, isDark, toggleTheme, setTheme, fontSize, setFontSize }}>
       {children}
     </ThemeContext.Provider>
   );
 };
-
-// === HOOK THEME ===
 
 export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
@@ -222,4 +212,4 @@ export const useTheme = (): ThemeContextType => {
     throw new Error('useTheme must be used within ThemeProvider');
   }
   return context;
-};
+}; 
