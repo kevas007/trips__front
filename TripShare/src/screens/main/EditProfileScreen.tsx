@@ -9,6 +9,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,7 @@ import { User } from '../../types/user';
 import * as ImagePicker from 'expo-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MainTabParamList } from '../../types/navigation';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type EditProfileScreenNavigationProp = StackNavigationProp<MainTabParamList, 'Profile'>;
 
@@ -32,6 +34,7 @@ const EditProfileScreen = ({ navigation }: { navigation: EditProfileScreenNaviga
     phone_number: '',
     date_of_birth: '',
   });
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -80,9 +83,24 @@ const EditProfileScreen = ({ navigation }: { navigation: EditProfileScreenNaviga
   };
 
   const handleSave = async () => {
+    // Validation simple
+    if (!formData.first_name.trim() || !formData.last_name.trim()) {
+      Alert.alert('Erreur', 'Le prénom et le nom sont obligatoires.');
+      return;
+    }
+    // Validation du format de la date
+    if (formData.date_of_birth && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(formData.date_of_birth)) {
+      Alert.alert('Erreur', 'La date de naissance doit être au format AAAA-MM-JJ.');
+      return;
+    }
     try {
       setSaving(true);
-      await profileService.updateProfile(formData);
+      // Correction du format de la date pour l'API (ISO 8601)
+      let dataToSend = { ...formData };
+      if (dataToSend.date_of_birth && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(dataToSend.date_of_birth)) {
+        dataToSend.date_of_birth = dataToSend.date_of_birth + 'T00:00:00Z';
+      }
+      await profileService.updateProfile(dataToSend);
       Alert.alert('Succès', 'Profil mis à jour avec succès');
       navigation.goBack();
     } catch (error) {
@@ -185,17 +203,61 @@ const EditProfileScreen = ({ navigation }: { navigation: EditProfileScreenNaviga
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: theme.colors.text.primary }]}>Date de naissance</Text>
-          <TextInput
-            style={[styles.input, { 
-              backgroundColor: theme.colors.background.card,
-              color: theme.colors.text.primary,
-              borderColor: theme.colors.glassmorphism.border,
-            }]}
-            value={formData.date_of_birth}
-            onChangeText={(text) => setFormData({ ...formData, date_of_birth: text })}
-            placeholder="JJ/MM/AAAA"
-            placeholderTextColor={theme.colors.text.secondary}
-          />
+          {Platform.OS === 'web' ? (
+            <input
+              type="date"
+              style={{
+                ...styles.input,
+                backgroundColor: theme.colors.background.card,
+                color: theme.colors.text.primary,
+                borderColor: theme.colors.glassmorphism.border,
+                padding: 12,
+                borderRadius: 10,
+                borderWidth: 1,
+                width: '100%',
+                fontSize: 16,
+              }}
+              value={formData.date_of_birth}
+              onChange={e => {
+                // Format AAAA-MM-JJ
+                setFormData({ ...formData, date_of_birth: e.target.value });
+              }}
+            />
+          ) : (
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.colors.background.card,
+                  color: theme.colors.text.primary,
+                  borderColor: theme.colors.glassmorphism.border,
+                  justifyContent: 'center',
+                },
+              ]}
+            >
+              <Text style={{ color: theme.colors.text.primary }}>
+                {formData.date_of_birth ? new Date(formData.date_of_birth).toLocaleDateString() : 'Sélectionner une date'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {showDatePicker && Platform.OS !== 'web' && (
+            <DateTimePicker
+              value={formData.date_of_birth ? new Date(formData.date_of_birth) : new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) {
+                  // Format AAAA-MM-JJ
+                  const yyyy = selectedDate.getFullYear();
+                  const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                  const dd = String(selectedDate.getDate()).padStart(2, '0');
+                  setFormData({ ...formData, date_of_birth: `${yyyy}-${mm}-${dd}` });
+                }
+              }}
+            />
+          )}
         </View>
       </View>
 

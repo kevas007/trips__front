@@ -125,11 +125,6 @@ const SettingsScreen = () => {
           </Text>
         </View>
       </Section>
-      {/* Déconnexion */}
-      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: theme.colors.semantic.error }]} onPress={logout}>
-        <Ionicons name="log-out-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-        <Text style={[styles.logoutText, { color: theme.colors.text.light }]}>Déconnexion</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -141,8 +136,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: { fontSize: 16 },
-  logoutButton: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 16, margin: 18, justifyContent: 'center', marginTop: 32 },
-  logoutText: { fontSize: 16, fontWeight: 'bold' },
 });
 
 export default SettingsScreen; 

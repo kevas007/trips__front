@@ -11,10 +11,10 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
 import ChangePasswordScreen from '../screens/settings/ChangePasswordScreen';
+import SearchScreen from '../screens/main/SearchScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-const SettingsStack = createStackNavigator();
 
 // Stack pour le profil
 const ProfileStack = () => {
@@ -36,27 +36,20 @@ const ProfileStack = () => {
         name="EditProfile"
         component={EditProfileScreen}
         options={{
-          title: 'Modifier le profil',
-          headerBackTitle: 'Retour',
+          title: 'Modifier le profil'
         }}
       />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: 'Paramètres' }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: 'Changer le mot de passe' }}
+      />
     </Stack.Navigator>
-  );
-};
-
-const SettingsStackScreen = () => {
-  const { theme } = useAppTheme();
-  return (
-    <SettingsStack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.background.primary },
-        headerTintColor: theme.colors.text.primary,
-        headerTitleStyle: { fontWeight: 'bold' },
-      }}
-    >
-      <SettingsStack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
-      <SettingsStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Changer le mot de passe' }} />
-    </SettingsStack.Navigator>
   );
 };
 
@@ -70,6 +63,7 @@ const MainNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = 'home';
           if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'Search') iconName = focused ? 'search' : 'search-outline';
           else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
           else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
           return <Ionicons name={iconName} size={focused ? 28 : 24} color={color} style={{ marginBottom: -2 }} />;
@@ -95,15 +89,15 @@ const MainNavigator = () => {
             color,
             marginBottom: 2,
           }}>
-            {route.name === 'Home' ? 'Accueil' : route.name === 'Profile' ? 'Profil' : route.name === 'Settings' ? 'Paramètres' : route.name}
+            {route.name === 'Home' ? 'Accueil' : route.name === 'Search' ? 'Recherche' : route.name === 'Profile' ? 'Profil' : route.name === 'Settings' ? 'Paramètres' : route.name}
           </Text>
         ),
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Accueil' }} />
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="Profile" component={ProfileStack} options={{ headerShown: false }} />
-      <Tab.Screen name="Settings" component={SettingsStackScreen} options={{ title: 'Paramètres' }} />
     </Tab.Navigator>
   );
 };
