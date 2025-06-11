@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cercle de fond -->
+  <circle cx="100" cy="100" r="90" fill="#4F8CFF"/>
+  
+  <!-- Avion stylisé -->
+  <path d="M140 80L160 100L140 120L120 100L140 80Z" fill="white"/>
+  <path d="M100 60L120 100L100 140L80 100L100 60Z" fill="white"/>
+  <path d="M60 80L80 100L60 120L40 100L60 80Z" fill="white"/>
+  
+  <!-- Cercle central -->
+  <circle cx="100" cy="100" r="20" fill="#4F8CFF"/>
+</svg> 

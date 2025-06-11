@@ -26,6 +26,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
+import DropDownPicker from 'react-native-dropdown-picker';
 import {
   PlaneAnimation,
   BoatAnimation,
@@ -34,7 +35,6 @@ import {
   CloudAnimation,
   useTransportAnimation,
 } from './TravelAnimations';
-import Select from 'react-select';
 
 // ==================== INTERFACES ====================
 interface ValidationError {
@@ -122,6 +122,8 @@ const AuthScreenEnhanced: React.FC<AuthScreenProps> = ({ navigation }) => {
   const [enableNotifications, setEnableNotifications] = useState(true);
   const [countryCodes, setCountryCodes] = useState<{ code: string, name: string }[]>([]);
   const [countryCode, setCountryCode] = useState('+33'); // Par défaut France
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<{ label: string; value: string }[]>([]);
 
   // -------- Hooks --------
   const { theme, isDark, toggleTheme } = useAppTheme();
@@ -265,6 +267,15 @@ const AuthScreenEnhanced: React.FC<AuthScreenProps> = ({ navigation }) => {
       keyboardDidHideListener?.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (countryCodes.length > 0) {
+      setItems(countryCodes.map(c => ({
+        label: `${c.name} (${c.code})`,
+        value: c.code
+      })));
+    }
+  }, [countryCodes]);
 
   const checkBiometricAvailability = async () => {
     if (!isWeb) {
@@ -470,6 +481,84 @@ const AuthScreenEnhanced: React.FC<AuthScreenProps> = ({ navigation }) => {
       </TouchableOpacity>
     </Animated.View>
   );
+
+  const renderCountrySelector = () => {
+    if (Platform.OS === 'web') {
+      return (
+        <View style={{ flex: 1.2, marginBottom: 16 }}>
+          <select
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value)}
+            style={{
+              backgroundColor: inputBg,
+              borderColor: '#e0e0e0',
+              borderRadius: 12,
+              height: 48,
+              width: '100%',
+              padding: 8,
+              color: '#222',
+              fontSize: 16,
+              fontFamily: 'Inter, Roboto, Arial, sans-serif',
+              border: '1px solid #e0e0e0',
+              outline: 'none',
+            }}
+          >
+            <option value="">Sélectionner un pays</option>
+            {countryCodes.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name} ({c.code})
+              </option>
+            ))}
+          </select>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1.2, marginBottom: 16, zIndex: 1000 }}>
+        <DropDownPicker
+          open={open}
+          value={countryCode}
+          items={items}
+          setOpen={setOpen}
+          setValue={setCountryCode}
+          setItems={setItems}
+          placeholder="Sélectionner un pays"
+          style={{
+            backgroundColor: inputBg,
+            borderColor: '#e0e0e0',
+            borderRadius: 12,
+            height: 48,
+          }}
+          textStyle={{
+            color: '#222',
+            fontSize: 16,
+            fontFamily: 'Inter, Roboto, Arial, sans-serif',
+          }}
+          dropDownContainerStyle={{
+            backgroundColor: '#fff',
+            borderColor: '#e0e0e0',
+            borderRadius: 12,
+          }}
+          listItemLabelStyle={{
+            color: '#222',
+            fontSize: 16,
+            fontFamily: 'Inter, Roboto, Arial, sans-serif',
+          }}
+          searchable={true}
+          searchPlaceholder="Rechercher un pays..."
+          searchContainerStyle={{
+            borderBottomColor: '#e0e0e0',
+          }}
+          searchTextInputStyle={{
+            color: '#222',
+            fontSize: 16,
+            fontFamily: 'Inter, Roboto, Arial, sans-serif',
+          }}
+        />
+      </View>
+    );
+  };
 
   const renderEnhancedFormField = (
     icon: string,
@@ -839,65 +928,7 @@ const AuthScreenEnhanced: React.FC<AuthScreenProps> = ({ navigation }) => {
                     </View>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}>
-                      <View style={{ flex: 1.2 }}>
-                        <Select
-                          value={countryCodes.find(c => c.code === countryCode)}
-                          onChange={option => setCountryCode(option.code)}
-                          options={countryCodes}
-                          formatOptionLabel={option => (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                              <span style={{ fontWeight: 'bold', color: '#222', fontSize: 16 }}>{option.name.replace(/\p{Emoji_Presentation}/gu, '').trim()}</span>
-                              <span style={{ color: '#888', fontSize: 13, marginLeft: 12 }}>{option.code}</span>
-                            </div>
-                          )}
-                          getOptionValue={option => option.code + '-' + option.name}
-                          menuPortalTarget={Platform.OS === 'web' ? document.body : null}
-                          styles={{
-                            control: (base) => ({
-                              ...base,
-                              backgroundColor: inputBg,
-                              height: 48,
-                              minHeight: 48,
-                              padding: 0,
-                              boxShadow: 'none',
-                              border: '1px solid #e0e0e0',
-                              borderRadius: 12,
-                              display: 'flex',
-                              alignItems: 'center',
-                            }),
-                            singleValue: (base) => ({
-                              ...base,
-                              color: '#222',
-                              fontWeight: 600,
-                              fontFamily: 'Inter, Roboto, Arial, sans-serif',
-                              fontSize: 16,
-                            }),
-                            option: (base, state) => ({
-                              ...base,
-                              color: '#222',
-                              background: state.isFocused
-                                ? 'rgba(120, 80, 220, 0.10)'
-                                : '#fff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              fontWeight: 'bold',
-                              fontSize: 10,
-                              cursor: 'pointer',
-                            }),
-                            menu: (base) => ({
-                              ...base,
-                              borderRadius: 12,
-                              overflow: 'hidden',
-                              background: '#fff',
-                              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                              color: '#222',
-                              zIndex: 9999,
-                            }),
-                          }}
-                          placeholder="Sélectionner un pays"
-                          isSearchable
-                        />
-                      </View>
+                      {renderCountrySelector()}
                       <TextInput
                         style={{
                           backgroundColor: inputBg,
