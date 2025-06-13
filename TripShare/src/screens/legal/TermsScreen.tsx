@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   backButton: {
-    paddingTop: 40,
+    paddingTop: 66,
     paddingLeft: 16,
     paddingBottom: 8,
     backgroundColor: 'transparent',

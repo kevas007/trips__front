@@ -3,180 +3,114 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  Alert,
   ScrollView,
+  SafeAreaView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext';
-import { useAppTheme } from '../../hooks/useAppTheme';
-import { NavigationProp } from '@react-navigation/native';
 
-interface RegisterScreenProps {
-  navigation: NavigationProp<any>;
-}
+// Import des étapes
+import PersonalInfoStep from './steps/PersonalInfoStep';
+import AccountSecurityStep from './steps/AccountSecurityStep';
+import PreferencesStep from './steps/PreferencesStep';
+import VerificationStep from './steps/VerificationStep';
 
-const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
-  const { theme } = useAppTheme();
-  const { register } = useAuth();
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+const RegisterScreen: React.FC = () => {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    // Informations personnelles
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    // Sécurité du compte
+    username: '',
+    password: '',
+    confirmPassword: '',
+    // Préférences
+    language: 'fr',
+    theme: 'system',
+    notifications: {
+      email: true,
+      push: true,
+      marketing: false,
+    },
+    privacy: {
+      profileVisibility: 'public',
+      locationSharing: true,
+    },
+  });
 
-  const handleRegister = async () => {
-    if (!username || !email || !password || !confirmPassword) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-      return;
-    }
+  const handleNext = (stepData: any) => {
+    setFormData(prev => ({ ...prev, ...stepData }));
+    setCurrentStep(prev => prev + 1);
+  };
 
-    if (password !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
-      return;
-    }
-
-    if (password.length < 8) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await register(username, email, password);
-      Alert.alert('Succès', 'Inscription réussie ! Vous pouvez maintenant vous connecter.');
-      navigation.navigate('Login');
-    } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Échec de l\'inscription');
-    } finally {
-      setIsLoading(false);
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return <PersonalInfoStep onNext={handleNext} initialData={formData} />;
+      case 2:
+        return <AccountSecurityStep onNext={handleNext} initialData={formData} />;
+      case 3:
+        return <PreferencesStep onNext={handleNext} initialData={formData} />;
+      case 4:
+        return <VerificationStep onNext={handleNext} />;
+      default:
+        return null;
     }
   };
 
-  const InputField = ({ icon, placeholder, value, onChangeText, secureTextEntry, showPassword, setShowPassword }) => (
-    <View style={[styles.inputContainer, { backgroundColor: theme.colors.background.card }]}>
-      <Ionicons
-        name={icon}
-        size={20}
-        color={theme.colors.text.secondary}
-        style={styles.inputIcon}
-      />
-      <TextInput
-        style={[styles.input, { color: theme.colors.text.primary }]}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.text.secondary}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
-        autoCapitalize="none"
-      />
-      {secureTextEntry && (
-        <TouchableOpacity
-          style={styles.eyeIcon}
-          onPress={() => setShowPassword(!showPassword)}
-        >
-          <Ionicons
-            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
-            color={theme.colors.text.secondary}
-          />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-              Créer un compte
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-              Rejoignez la communauté TripShare
-            </Text>
-          </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <LinearGradient
+        colors={theme.colors.accent}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+        >
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{t('register.title')}</Text>
+        <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
+      </LinearGradient>
 
-          <View style={styles.form}>
-            <InputField
-              icon="person-outline"
-              placeholder="Nom d'utilisateur"
-              value={username}
-              onChangeText={setUsername}
-              secureTextEntry={false}
-            />
+      <View style={styles.progressContainer}>
+        {[1, 2, 3, 4].map(step => (
+          <View
+            key={step}
+            style={[
+              styles.progressStep,
+              {
+                backgroundColor:
+                  step === currentStep
+                    ? theme.colors.primary
+                    : step < currentStep
+                    ? theme.colors.success
+                    : theme.colors.border,
+              },
+            ]}
+          />
+        ))}
+      </View>
 
-            <InputField
-              icon="mail-outline"
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              secureTextEntry={false}
-            />
-
-            <InputField
-              icon="lock-closed-outline"
-              placeholder="Mot de passe"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
-            />
-
-            <InputField
-              icon="lock-closed-outline"
-              placeholder="Confirmer le mot de passe"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showConfirmPassword}
-              showPassword={showConfirmPassword}
-              setShowPassword={setShowConfirmPassword}
-            />
-
-            <TouchableOpacity
-              style={[styles.registerButton, { backgroundColor: theme.colors.primary[0] }]}
-              onPress={handleRegister}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Text style={styles.registerButtonText}>Inscription...</Text>
-              ) : (
-                <Text style={styles.registerButtonText}>S'inscrire</Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.loginContainer}>
-              <Text style={[styles.loginText, { color: theme.colors.text.secondary }]}>
-                Déjà un compte ?
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Login')}
-              >
-                <Text style={[styles.loginLink, { color: theme.colors.primary[0] }]}>
-                  Se connecter
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {renderStep()}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -184,77 +118,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-  },
   header: {
-    alignItems: 'center',
-    marginBottom: 40,
+    padding: 20,
+    paddingTop: 40,
   },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    zIndex: 1,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  form: {
-    width: '100%',
-  },
-  inputContainer: {
+  progressContainer: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    height: 50,
+    paddingVertical: 20,
+    gap: 8,
   },
-  inputIcon: {
-    marginRight: 12,
+  progressStep: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  input: {
+  content: {
     flex: 1,
-    fontSize: 16,
   },
-  eyeIcon: {
-    padding: 8,
-  },
-  registerButton: {
-    height: 50,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 24,
-  },
-  registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loginText: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  loginLink: {
-    fontSize: 14,
-    fontWeight: '600',
+  contentContainer: {
+    padding: 20,
   },
 });
 
