@@ -11,7 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import './i18n';
 
 // Contexts
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SimpleAuthProvider, useSimpleAuth } from './contexts/SimpleAuthContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { useAppTheme } from './hooks/useAppTheme';
 
@@ -19,16 +19,22 @@ import { useAppTheme } from './hooks/useAppTheme';
 import AuthNavigator from './navigation/AuthNavigator';
 import MainNavigator from './navigation/MainNavigator';
 
+// Debug OAuth (temporaire)
+import { debugOAuthInfo } from './utils/debugOAuth';
+
+// ========== DEBUG OAUTH (TEMPORAIRE) ==========
+// Afficher les informations OAuth dans la console au démarrage
+debugOAuthInfo();
+
 // ========== COMPOSANTS DE BASE ==========
 
 const LoadingScreen: React.FC = () => {
-  const { theme } = useAppTheme();
   return (
     <View style={{ 
       flex: 1, 
       justifyContent: 'center', 
       alignItems: 'center',
-      backgroundColor: theme.colors.primary[0]
+      backgroundColor: '#667eea' // Couleur fixe pour éviter les erreurs de thème
     }}>
       <Ionicons 
         name="airplane" 
@@ -57,7 +63,7 @@ const LoadingScreen: React.FC = () => {
 // ========== NAVIGATION PRINCIPALE ==========
 
 const AppNavigator: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useSimpleAuth();
   const { theme, isDark } = useAppTheme();
 
   if (isLoading) {
@@ -92,11 +98,11 @@ const AppWithProviders: React.FC = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
+        <SimpleAuthProvider>
           <ThemeProvider>
             <AppNavigator />
           </ThemeProvider>
-        </AuthProvider>
+        </SimpleAuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -4,13 +4,8 @@ module.exports = function(api) {
   api.cache(true);
 
   return {
-    presets: [
-      'babel-preset-expo'
-    ],
+    presets: ['babel-preset-expo'],
     plugins: [
-      // Plugin pour React Native Gesture Handler (OBLIGATOIRE)
-    
-      
       // Plugin pour les alias de modules (optionnel mais recommandé)
       [
         'module-resolver',

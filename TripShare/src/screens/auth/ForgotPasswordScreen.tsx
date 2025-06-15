@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext';
+import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { NavigationProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,7 +24,7 @@ interface ForgotPasswordScreenProps {
 
 const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => {
   const { theme } = useAppTheme();
-  const { resetPassword } = useAuth();
+  // const { resetPassword } = useSimpleAuth(); // Fonctionnalité à implémenter
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -82,7 +82,7 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
           <View style={styles.header}>
             <Animated.View style={[styles.logoContainer, logoAnimation]}>
               <LinearGradient
-                colors={theme.colors.primary || ['#667eea', '#764ba2']}
+                colors={['#667eea', '#764ba2']}
                 style={styles.logoGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -118,7 +118,7 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
             </View>
 
             <TouchableOpacity
-              style={[styles.resetButton, { backgroundColor: theme.colors.primary }]}
+              style={[styles.resetButton, { backgroundColor: theme.colors.primary[0] }]}
               onPress={handleResetPassword}
               disabled={isLoading}
             >

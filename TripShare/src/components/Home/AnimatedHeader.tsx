@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext';
+import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 
 interface AnimatedHeaderProps {
   fadeAnim: Animated.Value;
@@ -22,7 +22,7 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
   slideAnim,
   pulseAnim,
 }) => {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
 
   return (
     <Animated.View

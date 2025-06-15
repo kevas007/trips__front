@@ -128,6 +128,16 @@ class APIService {
     }
   }
 
+  // -------- Méthodes pour le service Auth --------
+  setAuthToken(token: string) {
+    // Cette méthode sera appelée par authService
+    // Le token sera automatiquement inclus dans les prochains appels
+  }
+
+  clearAuthToken() {
+    // Pour nettoyer le token lors de la déconnexion
+  }
+
   // -------- AUTHENTIFICATION --------
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {

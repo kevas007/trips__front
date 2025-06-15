@@ -73,7 +73,7 @@ const PreferencesStep: React.FC<PreferencesStepProps> = ({ onNext, initialData =
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: '#767577', true: theme.colors.primary }}
+                      trackColor={{ false: '#767577', true: theme.colors.primary[0] }}
           thumbColor={value ? '#FFFFFF' : '#f4f3f4'}
         />
       ) : (

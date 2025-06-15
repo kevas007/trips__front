@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useAuth } from '../../contexts/AuthContext';
+import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import AnimatedHeader from '../../components/Home/AnimatedHeader';
 import FloatingElements from '../../components/Home/FloatingElements';
 import SearchBar from '../../components/Home/SearchBar';
@@ -52,7 +52,7 @@ interface UserStats {
 }
 
 const HomeScreen: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { theme, isDark, toggleTheme } = useAppTheme();
 
   // Onglet actif & texte de recherche

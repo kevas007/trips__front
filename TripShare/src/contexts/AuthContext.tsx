@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Alert } from 'react-native';
-import { api, User, APIError } from '../services/api';
+import { authService, User, AuthError } from '../services/auth';
 
 // ========== TYPES ==========
 
@@ -45,27 +45,20 @@ const initializeAuth = async () => {
     setIsLoading(true);
     setError(null);
 
-    // Récupérer le token (si jamais il existe)
-    const storedToken = await api.getStoredToken();
-    if (storedToken) {
-      // Si un token est présent, récupérer l'utilisateur en local et tenter de le valider
-      const storedUser = await api.getStoredUser();
-      if (storedUser) {
-        setUser(storedUser);
-      }
-
-      // Vérifier auprès du serveur que le token est toujours valide
+    // Vérifier si l'utilisateur est authentifié
+    if (authService.isAuthenticated()) {
       try {
-        const currentUser = await api.getCurrentUser();
+        // Vérifier auprès du serveur que le token est toujours valide
+        const currentUser = await authService.verifyToken();
         setUser(currentUser);
         console.log('🔑 Utilisateur validé:', currentUser.email);
       } catch (validationError) {
-        console.log('⚠️ Token invalide, suppression locale');
-        await api.clearAuthData(); // supprimer token + user_data locaux
+        console.log('⚠️ Token invalide, déconnexion');
+        await authService.logout();
         setUser(null);
       }
     }
-    // Si pas de token, on ne fait rien, on restera sur l'écran Login/Register
+    // Si pas authentifié, on ne fait rien, on restera sur l'écran Login/Register
   } catch (error) {
     console.error('❌ Erreur initialisation auth:', error);
     setError('Erreur d\'initialisation');
@@ -82,10 +75,8 @@ const initializeAuth = async () => {
     
     let errorMessage = fallbackMessage;
     
-    if (error instanceof APIError) {
-      // Prioriser les erreurs de validation
-      const validationError = error.getFirstValidationError();
-      errorMessage = validationError || error.message;
+    if (error instanceof AuthError) {
+      errorMessage = error.message;
     } else if (error instanceof Error) {
       errorMessage = error.message;
     }
@@ -336,7 +327,9 @@ export const useAuth = (): AuthContextType => {
 
 // Hook pour gérer les erreurs d'authentification avec toast
 export const useAuthError = () => {
-  const { error, clearError } = useAuth();
+  // Désactivé temporairement - utiliser useSimpleAuth à la place
+  const error = null;
+  const clearError = () => {};
   
   React.useEffect(() => {
     if (error) {

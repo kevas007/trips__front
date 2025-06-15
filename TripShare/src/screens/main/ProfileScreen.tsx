@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext';
+import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { profileService } from '../../services/profileService';
 import { useNavigation } from '@react-navigation/native';
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
 });
 
 const ProfileScreen: React.FC = () => {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser, logout } = useSimpleAuth();
   const { theme, fontSize } = useAppTheme();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

@@ -1,17 +1,18 @@
 // === App.tsx - VERSION CORRIGÉE AVEC REACT-I18NEXT ===
 
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 // Import de la configuration i18n
-import './src/i18n';
+import './src/i18n/index';
 
-// Contexts
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+// Contexts et Store
+import { SimpleAuthProvider, useSimpleAuth } from './src/contexts/SimpleAuthContext';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { useAppTheme } from './src/hooks/useAppTheme';
 
@@ -22,41 +23,8 @@ import MainNavigator from './src/navigation/MainNavigator';
 // ========== NAVIGATION PRINCIPALE AVEC THÈME ==========
 
 const AppNavigator: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useSimpleAuth();
   const { theme, isDark } = useAppTheme();
-
-  // Écran de chargement thématisé
-  if (isLoading) {
-    return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        backgroundColor: theme.colors.primary[0]
-      }}>
-        <Ionicons 
-          name="airplane" 
-          size={64} 
-          color="#FFFFFF" 
-        />
-        <Text style={{ 
-          color: '#FFFFFF', 
-          fontSize: 24, 
-          fontWeight: 'bold',
-          marginTop: 20
-        }}>
-          TripShare
-        </Text>
-        <Text style={{ 
-          color: 'rgba(255,255,255,0.8)', 
-          fontSize: 16,
-          marginTop: 10
-        }}>
-          Chargement...
-        </Text>
-      </View>
-    );
-  }
 
   const navigationTheme = {
     dark: isDark,
@@ -70,11 +38,50 @@ const AppNavigator: React.FC = () => {
     },
   };
 
+  // Écran de chargement
+  if (isLoading) {
+    return (
+      <SafeAreaView style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: theme.colors.background.primary 
+      }}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <Ionicons 
+          name="airplane" 
+          size={60} 
+          color={theme.colors.primary[0]} 
+          style={{ marginBottom: 20 }}
+        />
+        <Text style={{ 
+          color: theme.colors.text.primary, 
+          fontSize: 18,
+          fontWeight: '600'
+        }}>
+          TripShare
+        </Text>
+        <Text style={{ 
+          color: theme.colors.text.secondary, 
+          fontSize: 14,
+          marginTop: 8
+        }}>
+          Chargement...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <NavigationContainer theme={navigationTheme}>
-      {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
-      <StatusBar style={isDark ? "light" : "dark"} />
-    </NavigationContainer>
+    <>
+      <StatusBar 
+        style={isDark ? "light" : "dark"} 
+        backgroundColor={Platform.OS === 'android' ? theme.colors.background.primary : undefined}
+      />
+      <NavigationContainer theme={navigationTheme}>
+        {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
+      </NavigationContainer>
+    </>
   );
 };
 
@@ -82,11 +89,13 @@ const AppNavigator: React.FC = () => {
 
 const AppWithProviders: React.FC = () => {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <AppNavigator />
-      </ThemeProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <SimpleAuthProvider>
+        <ThemeProvider>
+          <AppNavigator />
+        </ThemeProvider>
+      </SimpleAuthProvider>
+    </SafeAreaProvider>
   );
 };
 

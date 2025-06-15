@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { useAuth } from '../../contexts/AuthContext';
+import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 
 const ChangePasswordScreen = ({ navigation }) => {
   const { theme } = useAppTheme();
-  const { updatePassword } = useAuth();
+  // const { updatePassword } = useSimpleAuth(); // Fonctionnalité à implémenter
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

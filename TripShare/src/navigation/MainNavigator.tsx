@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../hooks/useAppTheme';
-import { Text } from 'react-native';
+import { Text, Platform } from 'react-native';
 
 // Screens
 import HomeScreen from '../screens/main/HomeScreen';
@@ -24,7 +24,10 @@ const ProfileStack = () => {
       screenOptions={{
         headerStyle: { backgroundColor: theme.colors.background.primary },
         headerTintColor: theme.colors.text.primary,
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleStyle: { 
+          fontWeight: 'bold',
+          fontSize: Platform.OS === 'ios' ? 16 : 18,
+        },
       }}
     >
       <Stack.Screen
@@ -61,21 +64,23 @@ const MainNavigator = () => {
         headerStyle: { backgroundColor: theme.colors.background.primary },
         headerTintColor: theme.colors.text.primary,
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName = 'home';
+          let iconName: any = 'home';
           if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
           else if (route.name === 'Search') iconName = focused ? 'search' : 'search-outline';
           else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
           else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
-          return <Ionicons name={iconName} size={focused ? 28 : 24} color={color} style={{ marginBottom: -2 }} />;
+          
+          const iconSize = Platform.OS === 'ios' ? (focused ? 24 : 20) : (focused ? 28 : 24);
+          return <Ionicons name={iconName} size={iconSize} color={color} style={{ marginBottom: -2 }} />;
         },
         tabBarActiveTintColor: theme.colors.primary[0],
         tabBarInactiveTintColor: theme.colors.text.secondary,
         tabBarStyle: {
           backgroundColor: isDark ? '#1a2233' : '#FFFFFF',
           borderTopColor: isDark ? '#232b3b' : '#E2E8F0',
-          height: 64,
-          paddingBottom: 6,
-          paddingTop: 4,
+          height: Platform.OS === 'ios' ? 58 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 4 : 6,
+          paddingTop: Platform.OS === 'ios' ? 2 : 4,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.08,
@@ -84,7 +89,7 @@ const MainNavigator = () => {
         },
         tabBarLabel: ({ focused, color }) => (
           <Text style={{
-            fontSize: 14,
+            fontSize: Platform.OS === 'ios' ? 12 : 14,
             fontWeight: focused ? 'bold' : 'normal',
             color,
             marginBottom: 2,

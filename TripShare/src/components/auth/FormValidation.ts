@@ -7,7 +7,14 @@ export const isPasswordValid = (password: string): boolean => {
 };
 
 export const isPhoneValid = (phone: string): boolean => {
-  return /^\+?[\d\s-]{8,}$/.test(phone);
+  if (!phone) return true; // Téléphone optionnel
+  
+  // Nettoyer le numéro (enlever espaces, tirets, parenthèses)
+  const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Vérifier que le numéro contient seulement des chiffres et fait au moins 8 caractères
+  // Ne doit PAS commencer par 0 (puisqu'on utilise l'indicatif pays)
+  return /^[1-9]\d{7,14}$/.test(cleaned);
 };
 
 export const isNameValid = (name: string): boolean => {

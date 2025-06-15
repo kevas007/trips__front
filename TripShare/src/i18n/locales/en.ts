@@ -1,11 +1,16 @@
 export default {
   auth: {
+    login: 'Login',
+    register: 'Sign up', 
+    forgot: 'Forgot password',
     email: 'Email',
     username: 'Username',
-    firstName: 'First name',
-    lastName: 'Last name',
+    firstName: 'First Name',
+    lastName: 'Last Name',
     password: 'Password',
-    login: 'Login',
+    confirmPassword: 'Confirm Password',
+    passwordsMatch: 'Passwords match ✓',
+    passwordsDontMatch: 'Passwords do not match',
     welcome: 'Welcome to TripShare',
     subtitle: 'Travel, Share, Connect',
     loginTitle: '🌍 Welcome back!',
@@ -14,6 +19,9 @@ export default {
     loginButton: '✈️ Explore the world',
     registerButton: '🚀 Start the adventure',
     forgotButton: '📧 Send link',
+    forgotCta: '📧 Send recovery link',
+    loginCta: '✈️ Sign in',
+    registerCta: '🚀 Start the adventure',
     appTagline: 'Transform your dreams into memories',
 
     // Placeholders
@@ -29,12 +37,14 @@ export default {
     // Options
     rememberMe: 'Remember me',
     acceptTerms: 'I accept the terms of use',
+    termsLink: 'terms of service',
     receiveNotifications: 'Receive travel inspirations',
     enableNotifications: 'Enable notifications',
     useBiometric: 'Use biometric authentication',
 
     // Navigation
     forgotPassword: '🔑 Forgot password?',
+    forgotLink: '🔑 Forgot password?',
     createAccount: '✨ Create account',
     alreadyMember: '🌍 Already a member? Sign in',
     backToLogin: '← Back to login',
@@ -80,7 +90,7 @@ export default {
       invalidCredentials: 'Invalid credentials',
       accountLocked: 'Account temporarily locked',
       emailInUse: 'This email address is already in use',
-      weakPassword: 'The password is too weak',
+      weakPassword: 'Password is too weak',
       invalidCode: 'Invalid verification code',
       tooManyAttempts: 'Too many attempts. Try again later'
     },
@@ -101,7 +111,7 @@ export default {
     // Validation
     validation: {
       email: 'Invalid email format',
-      password: 'Password must be at least 8 characters',
+      password: 'Password must contain at least 8 characters',
       passwordMatch: 'Passwords must match',
       phone: 'Invalid phone number format',
       required: 'This field is required',
@@ -110,7 +120,31 @@ export default {
       username: 'Username must be between 3 and 20 characters',
       terms: 'You must accept the terms of use'
     },
+
   },
+  
+  register: {
+    title: 'Create an account',
+    subtitle: 'Join the TripShare community',
+    steps: {
+      personalInfo: 'Personal information',
+      security: 'Security',
+      preferences: 'Preferences',
+      verification: 'Verification',
+    },
+    firstName: 'First name',
+    lastName: 'Last name',
+    email: 'Email',
+    phone: 'Phone',
+    phoneHint: '💡 Ex: 6 12 34 56 78 (without leading 0)',
+    username: 'Username',
+    password: 'Password',
+    confirmPassword: 'Confirm password',
+    passwordRequirements: 'Password requirements',
+    passwordLengthRequirement: 'At least 8 characters',
+    passwordComplexityRequirement: 'Uppercase, lowercase and numbers',
+  },
+
   home: {
     welcome: 'Hello! 👋',
     subtitle: 'Discover new adventures',
@@ -140,5 +174,68 @@ export default {
     searchDescription: 'Discover thousands of itineraries shared by the community',
     profile: 'Profile',
     profileDescription: 'Manage your trips, settings and statistics',
-  }
+    delete: 'Delete',
+    edit: 'Edit',
+  },
+
+  errors: {
+    networkError: 'Connection problem. Check your internet connection.',
+    unauthorized: 'Incorrect email or password',
+    badRequest: 'Invalid data',
+    forbidden: 'Access denied',
+    conflict: 'This email address is already in use',
+    validationError: 'Invalid data',
+    rateLimited: 'Too many attempts. Please try again later.',
+    serverError: 'Temporary server error. Please try again.',
+    unknownError: 'An unexpected error occurred',
+  },
+  preferences: {
+    notifications: 'Notifications',
+    emailNotifications: 'Email notifications',
+    emailNotificationsDesc: 'Receive important updates by email',
+    pushNotifications: 'Push notifications',
+    pushNotificationsDesc: 'Get alerted of new activities',
+    marketingNotifications: 'Marketing notifications',
+    marketingNotificationsDesc: 'Receive offers and promotions',
+    privacy: 'Privacy',
+    profileVisibility: 'Profile visibility',
+    profileVisibilityDesc: 'Choose who can see your profile',
+    locationSharing: 'Location sharing',
+    locationSharingDesc: 'Allow sharing your location',
+  },
+  privacy: {
+    public: 'Public',
+    private: 'Private',
+    friends: 'Friends',
+  },
+  verification: {
+    title: 'Verify your email',
+    subtitle: 'We sent a verification code to your email',
+    resend: 'Resend code',
+    verify: 'Verify',
+  },
+  nav: {
+    home: 'Home',
+    search: 'Search', 
+    profile: 'Profile',
+  },
+  country: 'Country',
+  
+  // Clés exactes utilisées par les composants (compatibilité)
+  '📧 Email address': '📧 Email address',
+  '🔒 Password': '🔒 Password',
+  '🔑 Confirm password': '🔑 Confirm password',
+  '👤 Username': '👤 Username',
+  '👤 First name': '👤 First name',
+  '👤 Last name': '👤 Last name',
+  '📱 Phone (optional)': '📱 Phone (optional)',
+  'Téléphone': '📱 Phone',
+  '📧 Adresse email': '📧 Email address',
+  '🔒 Mot de passe': '🔒 Password',
+  '🔑 Confirmer le mot de passe': '🔑 Confirm password',
+  'Nom d\'utilisateur': '👤 Username',
+  'Prénom': '👤 First name',
+  'Nom': '�� Last name',
+
+
 }; 

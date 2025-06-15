@@ -30,6 +30,10 @@ export interface Theme {
       border: string;
       shadow: string;
     };
+    border: {
+      primary: string;
+    };
+    inputBorder: string;
   };
   spacing: {
     xs: number;
@@ -74,6 +78,10 @@ export const lightTheme: Theme = {
       border: 'rgba(100, 116, 139, 0.15)',
       shadow: 'rgba(100, 116, 139, 0.10)',
     },
+    border: {
+      primary: '#e0e0e0',
+    },
+    inputBorder: '#e0e0e0',
   },
   spacing: {
     xs: 4,
@@ -118,6 +126,10 @@ export const darkTheme: Theme = {
       border: 'rgba(241, 245, 249, 0.1)',
       shadow: 'rgba(0, 0, 0, 0.3)',
     },
+    border: {
+      primary: '#334155',
+    },
+    inputBorder: '#334155',
   },
   spacing: {
     xs: 4,

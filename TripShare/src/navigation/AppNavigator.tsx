@@ -1,6 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { ActivityIndicator, View } from 'react-native';
@@ -9,10 +9,10 @@ import { useTheme } from '@/theme/ThemeContext';
 const Stack = createStackNavigator();
 
 const AppNavigator: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useSimpleAuth();
   const { theme } = useTheme();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={{ 
         flex: 1, 
