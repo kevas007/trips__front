@@ -2,21 +2,22 @@ import { Dimensions, Platform } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Largeurs d'écran de référence
-const DESIGN_WIDTH = 375; // iPhone X/11/12 Pro
-const DESIGN_HEIGHT = 812;
+// Largeur de référence pour le design (iPhone 14 Pro)
+const DESIGN_WIDTH = 393;
+const DESIGN_HEIGHT = 852;
 
-// Fonction pour calculer une taille responsive
-export const responsive = (size: number): number => {
-  const scale = screenWidth / DESIGN_WIDTH;
-  const newSize = size * scale;
-  
-  // Limiter la mise à l'échelle pour éviter des tailles trop extrêmes
-  if (Platform.OS === 'web') {
-    return Math.min(newSize, size * 1.2); // Max 120% sur web
-  }
-  
-  return Math.max(newSize, size * 0.85); // Min 85% sur mobile
+// Fonction responsive pour les composants
+export const responsive = (value: number, dimension: 'width' | 'height' = 'width'): number => {
+  const referenceValue = dimension === 'width' ? DESIGN_WIDTH : DESIGN_HEIGHT;
+  const currentValue = dimension === 'width' ? screenWidth : screenHeight;
+  return Math.round((currentValue / referenceValue) * value);
+};
+
+export const screenDimensions = {
+  width: screenWidth,
+  height: screenHeight,
+  isSmallScreen: screenWidth < 375,
+  isLargeScreen: screenWidth > 414,
 };
 
 // Fonction pour les tailles de police selon la plateforme
@@ -30,72 +31,70 @@ export const getFontSize = (size: number): number => {
   return Math.round(size * scale);
 };
 
-// Fonction pour les hauteurs d'inputs selon la plateforme
+// Fonction pour la hauteur des inputs
 export const getInputHeight = (): number => {
-  if (Platform.OS === 'web') {
-    return 48; // Hauteur standard web
-  }
-  
-  // Sur mobile, adapter à la taille d'écran
-  const baseHeight = 52;
-  const scale = screenWidth / DESIGN_WIDTH;
-  return Math.max(Math.round(baseHeight * scale), 44); // Minimum 44px pour l'accessibilité iOS
+  return Platform.OS === 'ios' ? 50 : 52;
 };
 
-// Fonction pour les espacements selon la plateforme
+// Fonction pour l'espacement adaptatif
 export const getSpacing = (spacing: number): number => {
   if (Platform.OS === 'web') {
     return spacing;
   }
   
-  // Sur mobile, ajuster légèrement
-  const scale = screenWidth / DESIGN_WIDTH;
-  return Math.round(spacing * Math.min(scale, 1.15));
+  const scale = Math.min(screenWidth / DESIGN_WIDTH, 1.1);
+  return Math.round(spacing * scale);
 };
 
-// Fonction pour les rayons de bordure selon la plateforme
+// Fonction pour les border radius adaptatifs
 export const getBorderRadius = (radius: number): number => {
   if (Platform.OS === 'web') {
     return radius;
   }
   
-  // Sur mobile, légèrement plus arrondi
-  return Math.round(radius * 1.1);
+  const scale = Math.min(screenWidth / DESIGN_WIDTH, 1.05);
+  return Math.round(radius * scale);
 };
 
-// Dimensions utiles
-export const screenDimensions = {
-  width: screenWidth,
-  height: screenHeight,
-  isSmallScreen: screenWidth < 350,
-  isMediumScreen: screenWidth >= 350 && screenWidth < 414,
-  isLargeScreen: screenWidth >= 414,
-  isTablet: screenWidth >= 768,
+// Espacement adaptatif
+export const spacing = {
+  xs: getSpacing(4),
+  sm: getSpacing(8),
+  md: getSpacing(16),
+  lg: getSpacing(24),
+  xl: getSpacing(32),
+  xxl: getSpacing(48),
 };
 
 // Tailles de police adaptatives
 export const fontSizes = {
-  xs: getFontSize(10),
-  sm: getFontSize(12),
-  base: getFontSize(14),
-  md: getFontSize(16),
-  lg: getFontSize(18),
-  xl: getFontSize(20),
-  '2xl': getFontSize(24),
-  '3xl': getFontSize(30),
-  '4xl': getFontSize(36),
+  xs: getFontSize(9),
+  sm: getFontSize(11),
+  base: getFontSize(13),
+  md: getFontSize(15),
+  lg: getFontSize(17),
+  xl: getFontSize(19),
+  '2xl': getFontSize(21),
+  '3xl': getFontSize(27),
+  '4xl': getFontSize(33),
 };
 
-// Espacements adaptatifs
-export const spacing = {
-  xs: getSpacing(4),
-  sm: getSpacing(8),
-  md: getSpacing(12),
-  lg: getSpacing(16),
-  xl: getSpacing(20),
-  '2xl': getSpacing(24),
-  '3xl': getSpacing(32),
-  '4xl': getSpacing(40),
+// Fonction helper pour définir les breakpoints
+export const isTablet = screenWidth >= 768;
+export const isDesktop = screenWidth >= 1024;
+
+// Marges et paddings responsive
+export const responsivePadding = {
+  horizontal: isTablet ? 32 : 16,
+  vertical: isTablet ? 24 : 16,
+};
+
+// Tailles d'icônes responsive
+export const iconSizes = {
+  small: responsive(16),
+  medium: responsive(24),
+  large: responsive(32),
+  xlarge: responsive(48),
 };
 
 export default {
@@ -107,4 +106,8 @@ export default {
   screenDimensions,
   fontSizes,
   spacing,
+  isTablet,
+  isDesktop,
+  responsivePadding,
+  iconSizes,
 }; 

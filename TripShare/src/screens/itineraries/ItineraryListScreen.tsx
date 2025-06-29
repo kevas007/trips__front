@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   cardAuthor: {
     fontSize: 13,
-    color: '#667eea',
+          color: '#008080',
     marginBottom: 2,
   },
   cardDest: {

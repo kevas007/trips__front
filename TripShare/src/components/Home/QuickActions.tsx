@@ -43,7 +43,7 @@ const quickActionsData: QuickAction[] = [
     subtitle: 'Trouvez des compagnons',
     icon: 'people-outline',
     emoji: '👥',
-    gradient: ['#667eea', '#764ba2'],
+            gradient: ['#008080', '#4FB3B3'], // Material Design 3 Teal
     action: () => console.log('Groupes ouverts'),
   },
   {
@@ -52,7 +52,7 @@ const quickActionsData: QuickAction[] = [
     subtitle: '2025 hotspots',
     icon: 'trending-up-outline',
     emoji: '🔥',
-    gradient: ['#f093fb', '#f5576c'],
+    gradient: ['#4FB3B3', '#008080'], // Material Design 3 Teal gradient
     action: () => console.log('Tendance ouverte'),
   },
   {
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   quickActionSubtitle: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#757575', // Material Design 3 secondary text
     textAlign: 'center',
     fontWeight: '500',
   },

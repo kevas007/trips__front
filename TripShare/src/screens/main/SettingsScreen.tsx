@@ -43,8 +43,8 @@ const Row: React.FC<RowProps> = ({ icon, label, children, onPress, danger }) => 
   return (
     <TouchableOpacity style={[styles.row, danger && { backgroundColor: theme.colors.semantic.error + '20' }]} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
       <View style={styles.rowLeft}>
-        <Ionicons name={icon} size={22} color={danger ? '#ff4f4f' : '#4f8cff'} style={{ marginRight: 14 }} />
-        <Text style={[styles.rowLabel, { color: theme.colors.text.primary }, danger && { color: '#ff4f4f' }]}>{label}</Text>
+        <Ionicons name={icon} size={22} color={danger ? theme.colors.semantic.error : theme.colors.primary[0]} style={{ marginRight: 14 }} />
+        <Text style={[styles.rowLabel, { color: theme.colors.text.primary }, danger && { color: theme.colors.semantic.error }]}>{label}</Text>
       </View>
       {children}
     </TouchableOpacity>
@@ -117,11 +117,11 @@ const SettingsScreen = () => {
       {/* À propos */}
       <Section title="À propos">
         <Row icon="information-circle" label="Version 1.0.0" />
-        <Row icon="help-circle" label="Support" onPress={() => Linking.openURL('mailto:support@tripshare.app?subject=Support TripShare')}/>
-        {/* <Row icon="globe" label="Site officiel" onPress={() => Linking.openURL('https://www.tripshare.app')} /> */}
+        <Row icon="help-circle" label="Support" onPress={() => Linking.openURL('mailto:support@trivenile.app?subject=Support Trivenile')}/>
+        {/* <Row icon="globe" label="Site officiel" onPress={() => Linking.openURL('https://www.trivenile.app')} /> */}
         <View style={{ alignItems: 'center', marginTop: 18, marginBottom: 8 }}>
-          <Text style={{ color: theme.colors.text.secondary, fontSize: 13 }}>
-            © {new Date().getFullYear()} TripShare. Tous droits réservés.
+          <Text style={{ color: theme.colors.text.secondary, fontSize: 3 }}>
+            © {new Date().getFullYear()} Trivenile. Tous droits réservés.
           </Text>
         </View>
       </Section>
@@ -132,10 +132,10 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   section: { padding: 18, paddingBottom: 0 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  sectionTitle: { fontSize: 7, fontWeight: 'bold', marginBottom: 12 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
-  rowLabel: { fontSize: 16 },
+  rowLabel: { fontSize: 5 },
 });
 
 export default SettingsScreen; 

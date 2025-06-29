@@ -29,20 +29,20 @@ const Button: React.FC<ButtonProps> = ({
   style,
 }) => {
   const getBgColor = () => {
-    if (variant === 'primary') return "#667eea";
+    if (variant === 'primary') return "#008080"; // Material 3 Teal
     if (variant === 'secondary') return COLORS.secondary[500];
     if (variant === 'destructive') return COLORS.error;
     if (variant === 'outline' || variant === 'ghost') return 'transparent';
-    return "#667eea";
+    return "#008080"; // Material 3 Teal
   };
   const getTextColor = () => {
     if (variant === 'primary' || variant === 'secondary' || variant === 'destructive') return '#fff';
-    if (variant === 'outline') return "#667eea";
+    if (variant === 'outline') return "#008080"; // Material 3 Teal
     if (variant === 'ghost') return COLORS.secondary[500];
     return '#fff';
   };
   const getBorder = () => {
-    if (variant === 'outline') return { borderWidth: 2, borderColor: "#667eea" };
+    if (variant === 'outline') return { borderWidth: 2, borderColor: "#008080" }; // Material 3 Teal
     if (variant === 'ghost') return { borderWidth: 0 };
     return { borderWidth: 0 };
   };
@@ -83,7 +83,7 @@ const Button: React.FC<ButtonProps> = ({
       ) : (
         <>
           {leftIcon && <>{leftIcon}</>}
-          <Text style={[styles.text, { color: getTextColor(), fontSize: getFontSize(16), fontWeight: '600' as const }]}> {children} </Text>
+          <Text style={[styles.text, { color: getTextColor(), fontSize: getFontSize(15), fontWeight: '600' as const }]}> {children} </Text>
           {rightIcon && <>{rightIcon}</>}
         </>
       )}

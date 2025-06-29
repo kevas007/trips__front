@@ -14,7 +14,7 @@ import { useAppTheme } from '../../hooks/useAppTheme';
 import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 
 const ChangePasswordScreen = ({ navigation }) => {
-  const { theme } = useAppTheme();
+  const { theme, isDark } = useAppTheme();
   // const { updatePassword } = useSimpleAuth(); // Fonctionnalité à implémenter
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -22,6 +22,11 @@ const ChangePasswordScreen = ({ navigation }) => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const updatePassword = async (current: string, newPass: string) => {
+    // TODO: Implémenter la logique de mise à jour du mot de passe
+    throw new Error('Fonctionnalité non implémentée');
+  };
 
   const handleSubmit = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -53,13 +58,16 @@ const ChangePasswordScreen = ({ navigation }) => {
   };
 
   const PasswordInput = ({ value, onChangeText, placeholder, showPassword, setShowPassword }) => (
-    <View style={styles.inputContainer}>
+    <View style={[styles.inputContainer, {
+      backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+      borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+    }]}>
       <TextInput
         style={[styles.input, { color: theme.colors.text.primary }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.text.secondary}
+        placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
         secureTextEntry={!showPassword}
       />
       <TouchableOpacity
@@ -131,7 +139,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   title: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
   },
   form: {
@@ -142,28 +150,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 12,
   },
   input: {
     flex: 1,
     height: 48,
-    fontSize: 16,
+    fontSize: 13,
   },
   eyeIcon: {
     padding: 8,
   },
   submitButton: {
     height: 48,
-    borderRadius: 8,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 24,
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
   },
 });

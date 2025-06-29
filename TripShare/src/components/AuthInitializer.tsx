@@ -23,7 +23,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
         <Ionicons 
           name="airplane" 
           size={64} 
-          color="#667eea" 
+          color="#008080"
         />
         <Text style={{
           color: '#ffffff',
@@ -43,7 +43,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
         </Text>
         <ActivityIndicator 
           size="large" 
-          color="#667eea" 
+          color="#008080"
         />
       </View>
     );

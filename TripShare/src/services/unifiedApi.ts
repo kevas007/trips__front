@@ -1,8 +1,16 @@
 import { authService } from './auth';
+import { API_CONFIG } from '../config/api';
+
+// ========== FORMAT RÉPONSE BACKEND GO ==========
+interface BackendResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
 
 // Service API unifié qui utilise authService pour les tokens
 class UnifiedApiService {
-  private baseURL = 'http://34.246.200.184:8000/api/v1';
+  private baseURL = API_CONFIG.BASE_URL;
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     // Récupérer le token depuis authService
@@ -16,6 +24,7 @@ class UnifiedApiService {
 
     console.log(`🚀 UnifiedAPI ${options.method || 'GET'} ${endpoint}`);
     console.log(`🔍 UnifiedAPI - Token disponible:`, !!token);
+    console.log(`🌐 UnifiedAPI - Base URL: ${this.baseURL}`);
 
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
@@ -25,11 +34,27 @@ class UnifiedApiService {
     console.log(`📡 UnifiedAPI Réponse: ${response.status}`);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const errorText = await response.text();
+      let errorData: BackendResponse;
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { success: false, error: errorText || `HTTP ${response.status}` };
+      }
+
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    const data: BackendResponse<T> = await response.json();
+    
+    // Vérifier le format de réponse du backend Go
+    if (!data.success) {
+      throw new Error(data.error || 'Erreur serveur');
+    }
+
+    // Retourner les données de réponse
+    return data.data as T;
   }
 
   async get<T>(endpoint: string): Promise<T> {

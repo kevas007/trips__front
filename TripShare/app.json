@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "TripShare",
-    "slug": "TripShare",
+    "name": "Trivenile",
+    "slug": "Trivenile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,14 +14,19 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tripshare.app",
+      "bundleIdentifier": "com.trivenile.app",
+      "buildNumber": "1.0.0",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "UIStatusBarStyle": "UIStatusBarStyleDefault"
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "tripshare.android",
+      "package": "trivenile.android",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -30,7 +35,14 @@
         "barStyle": "dark-content",
         "backgroundColor": "#ffffff",
         "translucent": false
+      },
+      "config": {
+        "enableDangerousExperimentalLeanBuilds": true
       }
+    },
+    "web": {
+      "favicon": "./assets/favicon_3d_32x32.png",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-secure-store",
@@ -43,6 +55,15 @@
       {
         "asset": "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf"
       }
-    ]
+    ],
+    "optimization": {
+      "tree-shaking": true,
+      "minify": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    }
   }
 }

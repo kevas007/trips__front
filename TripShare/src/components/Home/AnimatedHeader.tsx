@@ -69,7 +69,7 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
               )
             }>
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <Ionicons name="notifications-outline" size={24} color="#667eea" />
+              <Ionicons name="notifications-outline" size={24} color="#008080" />
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>3</Text>
               </View>
@@ -133,12 +133,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#1C1B1F', // Material Design 3 text
     marginBottom: 2,
   },
   inspirationText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#757575', // Material Design 3 secondary text
     fontWeight: '500',
   },
   notificationButton: {

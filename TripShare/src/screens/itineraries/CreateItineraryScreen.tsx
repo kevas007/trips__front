@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useAppTheme } from '../../hooks/useAppTheme';
 
 interface Step {
   city: string;
@@ -11,6 +12,7 @@ interface CreateItineraryScreenProps {
 }
 
 const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigation }) => {
+  const { theme, isDark } = useAppTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [steps, setSteps] = useState<Step[]>([{ city: '', date: '' }]);
@@ -36,96 +38,121 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Créer un itinéraire</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Titre de l'itinéraire"
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={[styles.input, { height: 80 }]}
-        placeholder="Description"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
-      <Text style={styles.subtitle}>Étapes</Text>
-      {steps.map((step, idx) => (
-        <View key={idx} style={styles.stepRow}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+      <View style={styles.content}>
+        <Text style={[styles.title, { color: theme.colors.text.primary }]}>Créer un nouvel itinéraire</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: theme.colors.text.primary }]}>Titre</Text>
           <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Ville"
-            value={step.city}
-            onChangeText={text => handleStepChange(idx, 'city', text)}
-          />
-          <TextInput
-            style={[styles.input, { flex: 1, marginLeft: 8 }]}
-            placeholder="Date"
-            value={step.date}
-            onChangeText={text => handleStepChange(idx, 'date', text)}
+            style={[styles.input, {
+              backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+              borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+              color: theme.colors.text.primary,
+            }]}
+            placeholder="Titre de votre itinéraire"
+            placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
           />
         </View>
-      ))}
-      <TouchableOpacity style={styles.addStepBtn} onPress={handleAddStep}>
-        <Text style={styles.addStepText}>+ Ajouter une étape</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-        <Text style={styles.shareBtnText}>Partager l'itinéraire</Text>
-      </TouchableOpacity>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: theme.colors.text.primary }]}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea, {
+              backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+              borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+              color: theme.colors.text.primary,
+            }]}
+            placeholder="Décrivez votre itinéraire"
+            placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
+            multiline
+            numberOfLines={4}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: theme.colors.text.primary }]}>Destination</Text>
+          <TextInput
+            style={[styles.input, {
+              backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+              borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+              color: theme.colors.text.primary,
+            }]}
+            placeholder="Où allez-vous ?"
+            placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: theme.colors.text.primary }]}>Durée (jours)</Text>
+          <TextInput
+            style={[styles.input, {
+              backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+              borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+              color: theme.colors.text.primary,
+            }]}
+            placeholder="Nombre de jours"
+            placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
+            keyboardType="numeric"
+          />
+        </View>
+
+        <TouchableOpacity 
+          style={[styles.createButton, { backgroundColor: theme.colors.primary[0] }]}
+          onPress={() => {
+            Alert.alert('Succès', 'Itinéraire créé avec succès !');
+            navigation.goBack();
+          }}
+        >
+          <Text style={styles.createButtonText}>Créer l'itinéraire</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  content: {
     padding: 20,
-    backgroundColor: '#fff',
-    flexGrow: 1,
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 30,
+    textAlign: 'center',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  subtitle: {
-    fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
   },
-  stepRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  addStepBtn: {
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-  },
-  addStepText: {
-    color: '#667eea',
-    fontWeight: 'bold',
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 16,
   },
-  shareBtn: {
-    backgroundColor: '#667eea',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
   },
-  shareBtnText: {
-    color: '#fff',
+  createButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: 'bold',
-    fontSize: 17,
   },
 });
 

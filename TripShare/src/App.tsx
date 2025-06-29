@@ -12,7 +12,7 @@ import './i18n';
 
 // Contexts
 import { SimpleAuthProvider, useSimpleAuth } from './contexts/SimpleAuthContext';
-import { ThemeProvider } from './theme/ThemeContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { useAppTheme } from './hooks/useAppTheme';
 
 // Navigation
@@ -34,7 +34,7 @@ const LoadingScreen: React.FC = () => {
       flex: 1, 
       justifyContent: 'center', 
       alignItems: 'center',
-      backgroundColor: '#667eea' // Couleur fixe pour éviter les erreurs de thème
+              backgroundColor: '#008080' // Couleur de chargement Material Design 3 Teal
     }}>
       <Ionicons 
         name="airplane" 

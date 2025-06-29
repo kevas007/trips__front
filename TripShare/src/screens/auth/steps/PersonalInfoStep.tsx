@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../contexts/ThemeContext';
+import { useAppTheme } from '../../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
 
 interface PersonalInfoStepProps {
@@ -19,7 +19,7 @@ interface PersonalInfoStepProps {
 
 const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({ onNext, initialData = {} }) => {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const { theme, isDark } = useAppTheme();
   const [formData, setFormData] = useState({
     firstName: initialData.firstName || '',
     lastName: initialData.lastName || '',
@@ -69,23 +69,32 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({ onNext, initialData
     keyboardType = 'default',
   }: any) => (
     <View style={styles.inputContainer}>
-      <View style={[styles.inputWrapper, error && styles.inputError]}>
+      <View style={[
+        styles.inputWrapper, 
+        {
+          backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+          borderColor: error 
+            ? theme.colors.semantic.error 
+            : (isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)'),
+        },
+        error && styles.inputError
+      ]}>
         <Ionicons
           name={icon}
           size={20}
-          color={error ? theme.colors.error : theme.colors.text}
+          color={error ? theme.colors.semantic.error : theme.colors.text.secondary}
           style={styles.inputIcon}
         />
         <TextInput
-          style={[styles.input, { color: theme.colors.text }]}
+          style={[styles.input, { color: theme.colors.text.primary }]}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.text + '80'}
+          placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
           value={value}
           onChangeText={onChangeText}
           keyboardType={keyboardType}
         />
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: theme.colors.semantic.error }]}>{error}</Text>}
     </View>
   );
 
@@ -130,7 +139,7 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({ onNext, initialData
         />
 
         <TouchableOpacity
-          style={[styles.nextButton, { backgroundColor: theme.colors.primary }]}
+          style={[styles.nextButton, { backgroundColor: theme.colors.primary[0] }]}
           onPress={handleNext}
         >
           <Text style={styles.nextButtonText}>{t('common.next')}</Text>
@@ -154,14 +163,13 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 50,
+    borderWidth: 1,
   },
   inputError: {
-    borderWidth: 1,
-    borderColor: '#FF3B30',
+    borderWidth: 2,
   },
   inputIcon: {
     marginRight: 12,
@@ -171,7 +179,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   errorText: {
-    color: '#FF3B30',
     fontSize: 12,
     marginTop: 4,
     marginLeft: 16,

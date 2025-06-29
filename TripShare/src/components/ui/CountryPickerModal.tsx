@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CountryOption } from '../../services/countryService';
-import { COLORS } from '../../design-system';
-import { getFontSize, getSpacing, getBorderRadius, getInputHeight } from '../../utils/responsive';
+import { getSpacing, getFontSize, getInputHeight } from '../../utils/responsive';
+import { useAppTheme } from '../../hooks/useAppTheme';
 
 interface CountryPickerModalProps {
   countries: CountryOption[];
@@ -28,36 +28,46 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
   onValueChange,
   loading = false,
 }) => {
+  const { theme, isDark } = useAppTheme();
   const [isVisible, setIsVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
+  const [filteredCountries, setFilteredCountries] = useState<CountryOption[]>(countries);
 
-  const selectedCountry = countries.find(c => c.value === selectedValue);
-  
-  const filteredCountries = countries.filter(country =>
-    country.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    country.code.toLowerCase().includes(searchText.toLowerCase()) ||
-    country.value.includes(searchText)
-  );
+  useEffect(() => {
+    if (countries.length > 0) {
+      const found = countries.find(c => c.value === selectedValue);
+      setSelectedCountry(found || null);
+    }
+  }, [countries, selectedValue]);
+
+  useEffect(() => {
+    const filtered = countries.filter(country =>
+      country.name.toLowerCase().includes(searchText.toLowerCase())
+    );
+    setFilteredCountries(filtered);
+  }, [searchText, countries]);
 
   const handleSelect = (country: CountryOption) => {
     onValueChange(country.value);
+    setSelectedCountry(country);
     setIsVisible(false);
     setSearchText('');
   };
 
   const renderCountryItem = ({ item }: { item: CountryOption }) => (
     <TouchableOpacity
-      style={styles.countryItem}
+      style={[styles.countryItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
       onPress={() => handleSelect(item)}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
     >
       <Text style={styles.flag}>{item.flag}</Text>
       <View style={styles.countryInfo}>
-        <Text style={styles.countryName}>{item.name}</Text>
-        <Text style={styles.countryCode}>{item.code} • {item.value}</Text>
+        <Text style={[styles.countryName, { color: isDark ? '#E6E1E5' : '#1C1B1F' }]}>{item.name}</Text>
+        <Text style={[styles.countryCode, { color: isDark ? 'rgba(230,225,229,0.7)' : '#79747E' }]}>{item.code} • {item.value}</Text>
       </View>
       {selectedValue === item.value && (
-                        <Ionicons name="checkmark" size={20} color="#667eea" />
+        <Ionicons name="checkmark" size={20} color="#008080" />
       )}
     </TouchableOpacity>
   );
@@ -65,8 +75,11 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement...</Text>
+        <View style={[styles.loadingContainer, {
+          backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+          borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+        }]}>
+          <Text style={[styles.loadingText, { color: isDark ? 'rgba(255,255,255,0.8)' : '#1C1B1F' }]}>Chargement...</Text>
         </View>
       </View>
     );
@@ -75,15 +88,18 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={styles.selector}
+        style={[styles.selector, {
+          backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+          borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+        }]}
         onPress={() => setIsVisible(true)}
         activeOpacity={0.8}
       >
         <Text style={styles.flag}>{selectedCountry?.flag || '🌍'}</Text>
-        <Text style={styles.selectedText} numberOfLines={1}>
-          {selectedCountry?.code || 'FR'} {selectedCountry?.value || '+33'}
+        <Text style={[styles.selectedText, { color: isDark ? '#E6E1E5' : '#1C1B1F' }]} numberOfLines={1}>
+          {selectedCountry?.code || 'BE'} {selectedCountry?.value || '+32'}
         </Text>
-        <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.8)" />
+        <Ionicons name="chevron-down" size={16} color={isDark ? 'rgba(255,255,255,0.8)' : 'rgba(28,27,31,0.8)'} />
       </TouchableOpacity>
 
       <Modal
@@ -94,25 +110,36 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
       >
         <View style={styles.modalOverlay}>
           <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { 
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(250, 250, 250, 0.95)' 
+            }]}>
               {/* Header */}
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Sélectionner un pays</Text>
+              <View style={[styles.modalHeader, { 
+                borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' 
+              }]}>
+                <Text style={[styles.modalTitle, { color: isDark ? '#E6E1E5' : '#1C1B1F' }]}>Sélectionner un pays</Text>
                 <TouchableOpacity
                   onPress={() => setIsVisible(false)}
                   style={styles.closeButton}
                 >
-                  <Ionicons name="close" size={24} color="#fff" />
+                  <Ionicons name="close" size={24} color={isDark ? '#E6E1E5' : '#1C1B1F'} />
                 </TouchableOpacity>
               </View>
 
               {/* Search */}
-              <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color="rgba(255,255,255,0.6)" style={styles.searchIcon} />
+              <View style={[styles.searchContainer, {
+                backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+              }]}>
+                <Ionicons 
+                  name="search" 
+                  size={20} 
+                  color={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'} 
+                  style={styles.searchIcon} 
+                />
                 <TextInput
-                  style={styles.searchInput}
+                  style={[styles.searchInput, { color: isDark ? '#E6E1E5' : '#1C1B1F' }]}
                   placeholder="Rechercher un pays..."
-                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
                   value={searchText}
                   onChangeText={setSearchText}
                 />
@@ -143,9 +170,7 @@ const styles = StyleSheet.create({
   selector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.13)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
     borderRadius: Platform.OS === 'web' ? 16 : 12,
     paddingVertical: Platform.OS === 'web' ? 16 : 8,
     paddingHorizontal: Platform.OS === 'web' ? 12 : 8,
@@ -158,7 +183,6 @@ const styles = StyleSheet.create({
   },
   selectedText: {
     flex: 1,
-    color: '#fff',
     fontSize: Platform.OS === 'web' ? getFontSize(16) : getFontSize(14),
     fontWeight: '500',
   },
@@ -166,14 +190,11 @@ const styles = StyleSheet.create({
     height: Platform.OS === 'web' ? 'auto' : getInputHeight() - 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.13)',
     borderRadius: Platform.OS === 'web' ? 16 : 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
     paddingVertical: Platform.OS === 'web' ? 16 : 8,
   },
   loadingText: {
-    color: 'rgba(255,255,255,0.8)',
     fontSize: getFontSize(14),
   },
   modalOverlay: {
@@ -186,7 +207,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'rgba(30, 41, 59, 0.95)',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -198,12 +218,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: getSpacing(20),
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   modalTitle: {
     fontSize: getFontSize(18),
     fontWeight: '600',
-    color: '#fff',
   },
   closeButton: {
     padding: getSpacing(4),
@@ -211,7 +229,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
     margin: getSpacing(20),
     paddingHorizontal: getSpacing(16),
@@ -222,7 +239,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#fff',
     fontSize: getFontSize(16),
   },
   countryList: {
@@ -233,19 +249,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: getSpacing(16),
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   countryInfo: {
     flex: 1,
     marginLeft: getSpacing(12),
   },
   countryName: {
-    color: '#fff',
     fontSize: getFontSize(16),
     fontWeight: '500',
   },
   countryCode: {
-    color: 'rgba(255,255,255,0.7)',
     fontSize: getFontSize(14),
     marginTop: getSpacing(2),
   },

@@ -26,7 +26,7 @@ const ProfileStack = () => {
         headerTintColor: theme.colors.text.primary,
         headerTitleStyle: { 
           fontWeight: 'bold',
-          fontSize: Platform.OS === 'ios' ? 16 : 18,
+          fontSize: Platform.OS === 'ios' ? 15 : 17,
         },
       }}
     >
@@ -76,8 +76,8 @@ const MainNavigator = () => {
         tabBarActiveTintColor: theme.colors.primary[0],
         tabBarInactiveTintColor: theme.colors.text.secondary,
         tabBarStyle: {
-          backgroundColor: isDark ? '#1a2233' : '#FFFFFF',
-          borderTopColor: isDark ? '#232b3b' : '#E2E8F0',
+          backgroundColor: theme.colors.background.card,
+          borderTopColor: theme.colors.glassmorphism.border,
           height: Platform.OS === 'ios' ? 58 : 64,
           paddingBottom: Platform.OS === 'ios' ? 4 : 6,
           paddingTop: Platform.OS === 'ios' ? 2 : 4,
@@ -89,7 +89,7 @@ const MainNavigator = () => {
         },
         tabBarLabel: ({ focused, color }) => (
           <Text style={{
-            fontSize: Platform.OS === 'ios' ? 12 : 14,
+            fontSize: Platform.OS === 'ios' ? 11 : 13,
             fontWeight: focused ? 'bold' : 'normal',
             color,
             marginBottom: 2,

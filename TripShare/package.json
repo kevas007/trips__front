@@ -1,7 +1,7 @@
 {
-  "name": "tripshare",
+  "name": "trivenile",
   "version": "1.0.0",
-  "description": "Partage social d'itinéraires de voyage avec IA",
+  "description": "Plateforme sociale de voyage nouvelle génération avec IA",
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
@@ -19,15 +19,15 @@
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
     "@expo/vector-icons": "^14.1.0",
-    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/datetimepicker": "^8.3.0",
-    "@react-native-picker/picker": "^2.11.0",
+    "@react-native-picker/picker": "2.11.1",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/stack": "^6.3.29",
     "axios": "^1.9.0",
     "date-fns": "^3.6.0",
-    "expo": "~53.0.0",
+    "expo": "53.0.13",
     "expo-apple-authentication": "^7.2.4",
     "expo-auth-session": "^6.2.0",
     "expo-crypto": "^14.1.5",
@@ -40,12 +40,12 @@
     "react": "19.0.0",
     "react-hook-form": "^7.51.3",
     "react-i18next": "^15.5.2",
-    "react-native": "0.79.2",
+    "react-native": "0.79.4",
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-safe-area-context": "5.4.0",
-    "react-native-screens": "~4.10.0",
-    "react-native-svg": "^15.12.0",
+    "react-native-screens": "~4.11.1",
+    "react-native-svg": "15.11.2",
     "yup": "^1.4.0",
     "zustand": "^4.5.7"
   },
@@ -57,6 +57,7 @@
     "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@babel/plugin-transform-react-jsx-source": "^7.27.1",
     "@babel/traverse": "^7.24.0",
+    "@squoosh/cli": "^0.7.1",
     "@types/jest": "^29.5.12",
     "@types/react": "~19.0.10",
     "@types/react-native": "~0.73.0",
@@ -67,6 +68,9 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "imagemin-cli": "^8.0.0",
+    "imagemin-optipng": "^8.0.0",
+    "imagemin-pngquant": "^10.0.0",
     "jest": "^29.7.0",
     "jest-expo": "~53.0.3",
     "metro": "^0.82.0",
@@ -84,16 +88,16 @@
     "expo",
     "ai-powered"
   ],
-  "author": "TripShare Team",
+  "author": "Trivenile Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tripshare/mobile-app"
+    "url": "https://github.com/trivenile/mobile-app"
   },
   "bugs": {
-    "url": "https://github.com/tripshare/mobile-app/issues"
+    "url": "https://github.com/trivenile/mobile-app/issues"
   },
-  "homepage": "https://tripshare.app",
+  "homepage": "https://trivenile.app",
   "private": false,
   "overrides": {
     "react": "19.0.0"

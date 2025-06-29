@@ -82,13 +82,13 @@ const AccountSecurityStep: React.FC<AccountSecurityStepProps> = ({ onNext, initi
         <Ionicons
           name={icon}
           size={20}
-          color={error ? '#FF3B30' : theme.colors.text}
+          color={error ? theme.theme.colors.semantic.error : theme.theme.colors.text.secondary}
           style={styles.inputIcon}
         />
         <TextInput
-          style={[styles.input, { color: theme.colors.text }]}
+          style={[styles.input, { color: theme.theme.colors.text.primary }]}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.text + '80'}
+          placeholderTextColor={theme.theme.colors.text.secondary + '80'}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
@@ -101,7 +101,7 @@ const AccountSecurityStep: React.FC<AccountSecurityStepProps> = ({ onNext, initi
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color={theme.colors.text}
+              color={theme.theme.colors.text.secondary}
             />
           </TouchableOpacity>
         )}

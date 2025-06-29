@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#667eea',
+                    color: '#008080',
     fontWeight: '600',
   },
 

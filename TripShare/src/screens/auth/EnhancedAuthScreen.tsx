@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, TouchableOpacity, Dimensions, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, TouchableOpacity, Dimensions, Animated, ActivityIndicator, ImageBackground, Alert, Easing } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthInput from '../../components/auth/AuthInput';
 import Button from '../../components/ui/Button';
@@ -7,17 +7,27 @@ import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, BORDER_RADIUS } from '../../design-system';
 import AppLogo from '../../components/ui/AppLogo';
+import { LOCAL_ASSETS } from '../../constants/assets';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { getFontSize, getSpacing, getBorderRadius, getInputHeight, screenDimensions } from '../../utils/responsive';
 import { countryService, CountryOption } from '../../services/countryService';
 import CountryPickerModal from '../../components/ui/CountryPickerModal';
-import { AppTheme } from '../../theme';
+import { Theme } from '../../types/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import { ErrorHandler } from '../../components/ui/ErrorHandler';
 import SocialAuthButtons from '../../components/auth/SocialAuthButtons';
 import { SocialAuthResult, SocialAuthError } from '../../services/socialAuth';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+
+type AuthStackParamList = {
+  AuthScreen: undefined;
+  TermsScreen: undefined;
+};
+
+type AuthNavigationProp = StackNavigationProp<AuthStackParamList>;
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +41,7 @@ const EnhancedAuthScreen = () => {
   const { t, i18n } = useTranslation();
   const { theme, isDark, toggleTheme } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<AuthNavigationProp>();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   
   // Store d'authentification
@@ -72,7 +83,7 @@ const EnhancedAuthScreen = () => {
     username: '',
     firstName: '',
     lastName: '',
-    countryCode: '+33',
+    countryCode: '+32',
     phone: '',
     email: '',
     password: '',
@@ -83,6 +94,15 @@ const EnhancedAuthScreen = () => {
   const [errors, setErrors] = useState<any>({});
   const [formAnim] = React.useState(new Animated.Value(0));
   const [headerAnim] = React.useState(new Animated.Value(0));
+  const [themeTransition] = React.useState(new Animated.Value(isDark ? 1 : 0));
+  
+  // Animations pour les éléments de voyage flottants
+  const [planeAnim] = React.useState(new Animated.Value(0));
+  const [boatAnim] = React.useState(new Animated.Value(0));
+  const [trainAnim] = React.useState(new Animated.Value(0));
+  const [carAnim] = React.useState(new Animated.Value(0));
+  const [balloonAnim] = React.useState(new Animated.Value(0));
+
   const [success, setSuccess] = useState(false);
   
   // États pour les pays
@@ -102,7 +122,73 @@ const EnhancedAuthScreen = () => {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Animations des éléments de voyage flottants
+    const startTravelAnimations = () => {
+      // Avion - traverse l'écran de gauche à droite
+      Animated.loop(
+        Animated.timing(planeAnim, {
+          toValue: 1,
+          duration: 12000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Bateau - mouvement ondulant
+      Animated.loop(
+        Animated.timing(boatAnim, {
+          toValue: 1,
+          duration: 8000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Train - mouvement horizontal régulier
+      Animated.loop(
+        Animated.timing(trainAnim, {
+          toValue: 1,
+          duration: 15000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Voiture - zigzag
+      Animated.loop(
+        Animated.timing(carAnim, {
+          toValue: 1,
+          duration: 10000,
+          easing: Easing.bezier(0.65, 0, 0.35, 1),
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Montgolfière - mouvement vertical lent
+      Animated.loop(
+        Animated.timing(balloonAnim, {
+          toValue: 1,
+          duration: 20000,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        })
+      ).start();
+    };
+
+    // Délai pour démarrer les animations après l'animation principale
+    setTimeout(startTravelAnimations, 1000);
   }, []);
+
+  // Animation de transition pour le changement de thème
+  useEffect(() => {
+    Animated.timing(themeTransition, {
+      toValue: isDark ? 1 : 0,
+      duration: 600, // Transition fluide de 600ms
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: false, // false car on anime opacity
+    }).start();
+  }, [isDark]);
 
   // Charger les pays au montage du composant
   useEffect(() => {
@@ -259,21 +345,194 @@ const EnhancedAuthScreen = () => {
   const styles = createStyles(isDark);
 
   return (
-    <LinearGradient
-      colors={
-        isDark 
-          ? ['#1a1b3a', '#2d1b69', '#8b5a9a'] 
-          : ['#4f46e5', '#7c3aed', '#ec4899', '#f59e0b']
-      }
-      locations={
-        isDark 
-          ? [0, 0.5, 1] 
-          : [0, 0.3, 0.7, 1]
-      }
-      start={[0, 0]}
-      end={[1, 1]}
-      style={{ flex: 1 }}
-    >
+    <View style={{ flex: 1 }}>
+      {/* Background Light Mode */}
+      <Animated.View style={{
+        ...StyleSheet.absoluteFillObject,
+        opacity: themeTransition.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 0] // Visible quand isDark = false
+        })
+      }}>
+        <ImageBackground
+          source={LOCAL_ASSETS.loginBackgrounds.light}
+          style={{ flex: 1 }}
+          resizeMode="cover"
+        />
+      </Animated.View>
+
+      {/* Background Dark Mode */}
+      <Animated.View style={{
+        ...StyleSheet.absoluteFillObject,
+        opacity: themeTransition.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 1] // Visible quand isDark = true
+        })
+      }}>
+        <ImageBackground
+          source={LOCAL_ASSETS.loginBackgrounds.dark}
+          style={{ flex: 1 }}
+          resizeMode="cover"
+        />
+      </Animated.View>
+
+      {/* Éléments de voyage animés flottants */}
+      <View style={styles.travelElementsContainer} pointerEvents="none">
+        {/* Avion */}
+        <Animated.View 
+          style={[
+            styles.travelElement,
+            {
+              top: '25%',
+              transform: [
+                {
+                  translateX: planeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-100, width + 100]
+                  })
+                },
+                {
+                  translateY: planeAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0, -20, 0]
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          <Text style={[styles.travelIcon, { fontSize: 21 }]}>✈️</Text>
+        </Animated.View>
+
+        {/* Bateau */}
+        <Animated.View 
+          style={[
+            styles.travelElement,
+            {
+              bottom: '35%',
+              right: '10%',
+              transform: [
+                {
+                  translateY: boatAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0, -15, 0]
+                  })
+                },
+                {
+                  rotate: boatAnim.interpolate({
+                    inputRange: [0, 0.25, 0.5, 0.75, 1],
+                    outputRange: ['0deg', '3deg', '0deg', '-3deg', '0deg']
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          <Text style={[styles.travelIcon, { fontSize: 25 }]}>🚢</Text>
+        </Animated.View>
+
+        {/* Train */}
+        <Animated.View 
+          style={[
+            styles.travelElement,
+            {
+              bottom: '15%',
+              transform: [
+                {
+                  translateX: trainAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [width + 50, -150]
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          <Text style={[styles.travelIcon, { fontSize: 23 }]}>🚂</Text>
+        </Animated.View>
+
+        {/* Voiture */}
+        <Animated.View 
+          style={[
+            styles.travelElement,
+            {
+              top: '60%',
+              left: '5%',
+              transform: [
+                {
+                  translateX: carAnim.interpolate({
+                    inputRange: [0, 0.25, 0.5, 0.75, 1],
+                    outputRange: [0, 30, 0, -30, 0]
+                  })
+                },
+                {
+                  translateY: carAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -200]
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          <Text style={[styles.travelIcon, { fontSize: 19 }]}>🚗</Text>
+        </Animated.View>
+
+        {/* Montgolfière */}
+        <Animated.View 
+          style={[
+            styles.travelElement,
+            {
+              top: '10%',
+              right: '20%',
+              transform: [
+                {
+                  translateY: balloonAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0, -40, 0]
+                  })
+                },
+                {
+                  translateX: balloonAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0, 15, 0]
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          <Text style={[styles.travelIcon, { fontSize: 27 }]}>🎈</Text>
+        </Animated.View>
+
+        {/* Fusée (bonus) */}
+        <Animated.View 
+          style={[
+            styles.travelElement,
+            {
+              top: '45%',
+              right: '5%',
+              transform: [
+                {
+                  translateY: planeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [300, -100]
+                  })
+                },
+                {
+                  rotate: planeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg']
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          <Text style={[styles.travelIcon, { fontSize: 17 }]}>🚀</Text>
+        </Animated.View>
+      </View>
+
       <SafeAreaView style={styles.safeArea}>
         <ScrollView 
           contentContainerStyle={[
@@ -288,12 +547,12 @@ const EnhancedAuthScreen = () => {
           showsVerticalScrollIndicator={false}
           style={Platform.OS === 'web' ? { height: screenDimensions.height } : { flex: 1 }}
         >
-      {/* Fond animé (simplifié) */}
-      <View style={styles.background} pointerEvents="none">
+      {/* Fond animé (simplifié) - supprimé car le background a déjà des éléments visuels */}
+      {/* <View style={styles.background} pointerEvents="none">
         <View style={[styles.floatingShape, styles.shape1]} />
         <View style={[styles.floatingShape, styles.shape2]} />
         <View style={[styles.floatingShape, styles.shape3]} />
-      </View>
+      </View> */}
 
       {/* Settings Panel */}
       <View style={styles.settingsPanel}>
@@ -301,15 +560,15 @@ const EnhancedAuthScreen = () => {
           style={[
             styles.settingBtn,
             { 
-              backgroundColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
-              borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)',
+              borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.2)',
             }
           ]}
           onPress={toggleTheme}
           activeOpacity={0.8}
           {...(Platform.OS === 'web' && { className: 'setting-btn' })}
         >
-          <Text style={{ fontSize: 20 }}>
+          <Text style={{ fontSize: 19 }}>
             {isDark ? '☀️' : '🌙'}
           </Text>
         </TouchableOpacity>
@@ -317,8 +576,8 @@ const EnhancedAuthScreen = () => {
           style={[
             styles.settingBtn,
             { 
-              backgroundColor: 'rgba(255,255,255,0.15)',
-              borderColor: 'rgba(255,255,255,0.2)',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+              borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
             }
           ]}
           onPress={toggleLanguage}
@@ -326,9 +585,9 @@ const EnhancedAuthScreen = () => {
           {...(Platform.OS === 'web' && { className: 'setting-btn' })}
         >
           <Text style={{ 
-            fontSize: getFontSize(12), 
+            fontSize: 13, 
             fontWeight: '700', 
-            color: '#fff',
+            color: isDark ? '#fff' : '#1C1B1F',
             letterSpacing: 0.5 
           }}>
             {getCurrentLanguageCode()}
@@ -342,10 +601,19 @@ const EnhancedAuthScreen = () => {
           opacity: headerAnim,
           transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
         }}>
-          <View style={styles.header}>
-            <AppLogo size={100} animated />
-            <Text style={styles.appName}>TripShare</Text>
-            <Text style={styles.tagline}>Transformez vos rêves en souvenirs • Voyagez, Partagez, Connectez</Text>
+          <View style={styles.logoContainer}>
+            <AppLogo 
+              size={getFontSize(100)} 
+              animated={true} 
+              variant="svg"
+              showText={false}
+            />
+            <Text style={[styles.appName, { color: isDark ? '#fff' : '#1C1B1F' }]}>
+                                  Trivenile
+            </Text>
+            <Text style={[styles.tagline, { color: isDark ? 'rgba(255,255,255,0.8)' : '#49454F' }]}>
+              Partagez vos aventures avec le monde ✨
+            </Text>
           </View>
         </Animated.View>
 
@@ -429,8 +697,8 @@ const EnhancedAuthScreen = () => {
                 ]}>
                   {countriesLoading ? (
                     <View style={[{ alignItems: 'center', justifyContent: 'center', flexDirection: 'row', height: getInputHeight() - 8, backgroundColor: 'rgba(255,255,255,0.13)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' }]}>
-                      <ActivityIndicator size="small" color="#667eea" />
-                      <Text style={{ marginLeft: 8, color: COLORS.secondary[600], fontSize: getFontSize(12) }}>
+                      <ActivityIndicator size="small" color="#008080" />
+                      <Text style={{ marginLeft: 8, color: COLORS.secondary[600], fontSize: 13 }}>
                         {t('common.loading')}
                       </Text>
                     </View>
@@ -514,7 +782,7 @@ const EnhancedAuthScreen = () => {
                 <View style={styles.passwordMatchIndicator}>
                   <Ionicons 
                     name={form.password === form.confirmPassword ? "checkmark-circle" : "close-circle"} 
-                    size={getFontSize(16)} 
+                    size={20} 
                     color={form.password === form.confirmPassword ? "#4ecdc4" : "#ef4444"} 
                   />
                   <Text style={[
@@ -540,12 +808,14 @@ const EnhancedAuthScreen = () => {
                 activeOpacity={0.8}
               >
                 {form.acceptTerms && (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={20} color="#fff" />
                 )}
               </TouchableOpacity>
               <Text style={styles.checkboxLabel}>
                 {t('auth.acceptTerms')}
-                <Text style={styles.termsLink}>{t('auth.termsLink')}</Text> <Text style={{ color: COLORS.error }}>*</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('TermsScreen')}>
+                  <Text style={styles.termsLink}>{t('auth.termsLink')}</Text>
+                </TouchableOpacity> <Text style={{ color: COLORS.error }}>*</Text>
               </Text>
             </View>
           )}
@@ -559,7 +829,7 @@ const EnhancedAuthScreen = () => {
                 activeOpacity={0.8}
               >
                 {form.rememberMe && (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={20} color="#fff" />
                 )}
               </TouchableOpacity>
               <Text style={styles.checkboxLabel}>{t('auth.rememberMe')}</Text>
@@ -586,7 +856,7 @@ const EnhancedAuthScreen = () => {
                 height: getInputHeight() + 8,
                 marginBottom: getSpacing(18),
                 marginTop: getSpacing(8),
-                shadowColor: '#764ba2',
+                shadowColor: '#008080',
                 shadowOffset: { width: 0, height: 8 },
                 shadowOpacity: 0.25,
                 shadowRadius: 20,
@@ -599,7 +869,7 @@ const EnhancedAuthScreen = () => {
             activeOpacity={0.92}
           >
             <View style={{
-              backgroundColor: success ? '#10b981' : '#667eea',
+              backgroundColor: success ? '#34C759' : '#008080',
               width: '100%',
               height: '100%',
               alignItems: 'center',
@@ -678,7 +948,7 @@ const EnhancedAuthScreen = () => {
       </View>
     </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 };
 
@@ -741,37 +1011,22 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
   },
-  header: {
+  logoContainer: {
     alignItems: 'center',
     marginBottom: 32,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: isDark
-      ? 'linear-gradient(135deg, #4c63d2 0%, #6853a0 100%)'
-      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
   },
   appName: {
     fontSize: getFontSize(36),
     fontWeight: '800',
-    color: '#fff',
+    color: isDark ? '#fff' : '#1C1B1F', // Material Design 3 - blanc en dark, noir en light
     marginBottom: getSpacing(8),
-    textShadowColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)',
+    textShadowColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 20,
   },
   tagline: {
-    fontSize: getFontSize(16),
-    color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.95)',
+    fontSize: getFontSize(13),
+    color: isDark ? 'rgba(255,255,255,0.8)' : '#49454F', // Material Design 3 - texte secondaire
     fontWeight: '500',
     textAlign: 'center',
     paddingHorizontal: getSpacing(12),
@@ -822,21 +1077,21 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     shadowRadius: 12,
   },
   modeBtnText: {
-    color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.85)',
+    color: isDark ? 'rgba(255,255,255,0.75)' : '#49454F', // Material Design 3 - texte adaptatif
     fontWeight: '700',
-    fontSize: getFontSize(12),
+    fontSize: getFontSize(11),
     letterSpacing: 0.1,
   },
   modeBtnTextActive: {
-    color: '#fff',
+    color: isDark ? '#fff' : '#1C1B1F', // Material Design 3 - texte actif adaptatif
   },
   formTitle: {
     fontSize: getFontSize(26),
     fontWeight: '700',
-    color: '#fff',
+    color: isDark ? '#fff' : '#1C1B1F', // Material Design 3 - adaptatif selon le thème
     textAlign: 'center',
     marginBottom: getSpacing(24),
-    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
     paddingHorizontal: getSpacing(8),
@@ -865,27 +1120,26 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     width: 22,
     height: 22,
     borderWidth: 2,
-    borderColor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.4)',
+    borderColor: isDark ? 'rgba(255,255,255,0.3)' : '#79747E',
     borderRadius: 6,
-    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.12)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-                backgroundColor: "#667eea",
-            borderColor: "#667eea",
+    backgroundColor: "#008080",
+    borderColor: "#008080",
   },
   checkboxLabel: {
-    color: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.98)',
-    fontSize: getFontSize(15),
+    color: isDark ? 'rgba(255,255,255,0.88)' : '#49454F', // Material Design 3 - texte lisible
+    fontSize: getFontSize(13),
     fontWeight: '500',
     marginLeft: getSpacing(8),
     flex: 1,
     flexWrap: 'wrap',
   },
   termsLink: {
-    color: COLORS.accent.yellow,
-    textDecorationLine: 'underline',
+    color: isDark ? COLORS.accent.yellow : '#008080', // Material Design 3 - teal en mode clair
     fontWeight: '700',
   },
   formNavigation: {
@@ -897,21 +1151,21 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 16,
-    backgroundColor: 'rgba(255,255,255,0.13)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
     height: 54,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
   },
   button: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#008080',
     borderRadius: getBorderRadius(18),
     height: getInputHeight() + 8,
     marginBottom: getSpacing(18),
     marginTop: getSpacing(8),
-    shadowColor: '#764ba2',
+    shadowColor: '#008080',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -923,20 +1177,19 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     borderWidth: 0,
   },
   buttonText: {
-    fontSize: getFontSize(16),
+    fontSize: getFontSize(13),
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   link: {
-    color: COLORS.accent.yellow,
+    color: isDark ? COLORS.accent.yellow : '#008080', // Material Design 3 - teal en mode clair, jaune en mode sombre
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 13,
     marginTop: 2,
     marginBottom: 2,
     textAlign: 'center',
-    textDecorationLine: 'underline',
   },
   formContainerWeb: {},
   loadingSpinner: {
@@ -974,15 +1227,15 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.3)',
   },
   dividerText: {
-    color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.8)',
-    fontSize: 14,
+    color: isDark ? 'rgba(255,255,255,0.6)' : '#49454F', // Material Design 3 - texte adaptatif
+    fontSize: 13,
     fontWeight: '600',
     marginHorizontal: 15,
     textAlign: 'center',
   },
   phoneHint: {
-    fontSize: getFontSize(12),
-    color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.7)',
+    fontSize: getFontSize(11),
+    color: isDark ? 'rgba(255,255,255,0.6)' : '#79747E', // Material Design 3 - texte hint
     marginTop: -getSpacing(12),
     marginBottom: getSpacing(8),
     paddingLeft: getSpacing(8),
@@ -996,18 +1249,57 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     paddingLeft: getSpacing(8),
   },
   passwordMatchText: {
-    fontSize: getFontSize(12),
+    fontSize: getFontSize(11),
     fontWeight: '600',
     marginLeft: getSpacing(6),
+    color: isDark ? 'rgba(255,255,255,0.8)' : '#49454F', // Material Design 3 - texte adaptatif
+  },
+  
+  // Styles pour les éléments de voyage animés
+  travelElementsContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+    pointerEvents: 'none',
+  },
+  travelElement: {
+    position: 'absolute',
+    zIndex: 1,
+  },
+  travelIcon: {
+    textAlign: 'center',
+    opacity: 0.6,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
 });
 
-// Injection des styles CSS pour les boutons sur web
+// Injection des styles CSS pour les boutons et animation globe sur web
 if (Platform.OS === 'web') {
-  if (typeof window !== 'undefined' && !document.querySelector('#settings-btn-styles')) {
+  if (typeof window !== 'undefined' && !document.querySelector('#auth-styles')) {
     const style = document.createElement('style');
-    style.id = 'settings-btn-styles';
+    style.id = 'auth-styles';
     style.textContent = `
+      @keyframes rotateGlobe {
+        0% { 
+          transform: rotate(0deg);
+          background-position: 0% 50%;
+        }
+        25% { 
+          background-position: 25% 50%;
+        }
+        50% { 
+          background-position: 50% 50%;
+        }
+        75% { 
+          background-position: 75% 50%;
+        }
+        100% { 
+          transform: rotate(360deg);
+          background-position: 100% 50%;
+        }
+      }
+      
       .setting-btn {
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         cursor: pointer !important;

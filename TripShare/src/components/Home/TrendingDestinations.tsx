@@ -5,13 +5,14 @@ import {
   View,
   Text,
   ScrollView,
-  ImageBackground,
   StyleSheet,
   Animated,    // <-- Ajouté si <Animated.View> est utilisé
   Dimensions,  // <-- Ajouté car Dimensions.get('window') est utilisé
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import OptimizedImage from '../ui/OptimizedImage';
+import { DESTINATION_PLACEHOLDERS } from '../../constants/assets';
 
 interface Destination {
   id: string;
@@ -41,7 +42,7 @@ const TrendingDestinations: React.FC<TrendingDestinationsProps> = ({
       name: 'Lisbonne',
       country: 'Portugal',
       emoji: '🇵🇹',
-      image: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=300',
+      image: DESTINATION_PLACEHOLDERS.paris,
       trending: true,
     },
     {
@@ -49,7 +50,7 @@ const TrendingDestinations: React.FC<TrendingDestinationsProps> = ({
       name: 'Séoul',
       country: 'Corée du Sud',
       emoji: '🇰🇷',
-      image: 'https://images.unsplash.com/photo-1549693578-d683be217e58?w=300',
+      image: DESTINATION_PLACEHOLDERS.tokyo,
       trending: true,
     },
     {
@@ -57,7 +58,7 @@ const TrendingDestinations: React.FC<TrendingDestinationsProps> = ({
       name: 'Medellín',
       country: 'Colombie',
       emoji: '🇨🇴',
-      image: 'https://images.unsplash.com/photo-1564759224907-65b0e3e1a0fc?w=300',
+      image: DESTINATION_PLACEHOLDERS.bali,
       trending: true,
     },
     {
@@ -65,7 +66,7 @@ const TrendingDestinations: React.FC<TrendingDestinationsProps> = ({
       name: 'Dubaï',
       country: 'Émirats Arabes Unis',
       emoji: '🇦🇪',
-      image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=300',
+      image: DESTINATION_PLACEHOLDERS.iceland,
       trending: true,
     },
   ];
@@ -96,10 +97,13 @@ const TrendingDestinations: React.FC<TrendingDestinationsProps> = ({
         >
           {filtered.map((destination) => (
             <TouchableOpacity key={destination.id} style={styles.destinationCard}>
-              <ImageBackground
-                source={{ uri: destination.image }}
+              <OptimizedImage
+                source={destination.image}
                 style={styles.destinationImage}
-                imageStyle={styles.destinationImageStyle}
+                containerStyle={styles.destinationImageStyle}
+                placeholder="🌎"
+                isBackground={true}
+                borderRadius={16}
               >
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.8)']}
@@ -114,7 +118,7 @@ const TrendingDestinations: React.FC<TrendingDestinationsProps> = ({
                     <Text style={styles.destinationCountry}>{destination.country}</Text>
                   </View>
                 </LinearGradient>
-              </ImageBackground>
+              </OptimizedImage>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -133,7 +137,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#1C1B1F', // Material Design 3 text
     marginBottom: 16,
   },
   destinationsScroll: {

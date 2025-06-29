@@ -116,7 +116,7 @@ const TravelPreferencesScreen = () => {
           <Ionicons
             name={option.icon as any}
             size={20}
-            color={selectedArray.includes(option.key) ? '#fff' : '#667eea'}
+                                color={selectedArray.includes(option.key) ? '#fff' : '#008080'}
             style={styles.chipIcon}
           />
           <Text
@@ -159,7 +159,7 @@ const TravelPreferencesScreen = () => {
                 name={style.icon as any}
                 size={20}
                 color={
-                  preferences.travelStyle === style.key ? '#fff' : '#667eea'
+                                      preferences.travelStyle === style.key ? '#fff' : '#008080'
                 }
                 style={styles.chipIcon}
               />
@@ -219,7 +219,12 @@ const TravelPreferencesScreen = () => {
       </View>
 
       <TouchableOpacity
-        style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+        style={[
+          styles.continueButton,
+          {
+            backgroundColor: '#008080', // Material Design 3 Teal
+          },
+        ]}
         onPress={handleSave}
         disabled={loading}
       >
@@ -245,13 +250,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e2e8f0',
   },
   title: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#1a202c',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 8,
     color: '#4a5568',
   },
   section: {
@@ -260,7 +265,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e2e8f0',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 10,
     fontWeight: '600',
     color: '#2d3748',
     marginBottom: 16,
@@ -281,32 +286,37 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   chipSelected: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#008080', // Material Design 3 Teal
     borderColor: '#5a67d8',
   },
   chipIcon: {
     marginRight: 6,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 6,
     color: '#4a5568',
   },
   chipTextSelected: {
     color: '#fff',
   },
-  saveButton: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#667eea',
-    borderRadius: 8,
+  continueButton: {
+    backgroundColor: '#008080', // Material Design 3 Teal
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.7,
+    justifyContent: 'center',
+    marginTop: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   saveButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 8,
     fontWeight: '600',
   },
 });

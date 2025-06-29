@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, StyleSheet, Platform, Animated, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { getInputHeight, getFontSize, getBorderRadius, getSpacing } from '../../utils/responsive';
 
@@ -65,13 +65,13 @@ const AuthInput: React.FC<AuthInputProps> = ({
     }
   }, [isFocused, error, isTouched, isValid]);
 
-  let borderColor = theme.colors.inputBorder || '#e0e0e0';
+  let borderColor = theme.colors.glassmorphism.border || '#e0e0e0';
   let shadowColor = 'transparent';
   let glowOpacity = 0;
   
   if (isFocused) {
-    borderColor = theme.colors.primary[0] || '#764ba2';
-    shadowColor = theme.colors.primary[0] || '#764ba2';
+          borderColor = theme.colors.primary[0] || '#008080';
+      shadowColor = theme.colors.primary[0] || '#008080';
     glowOpacity = 0.3;
   } else if (error && isTouched) {
     borderColor = theme.colors.semantic.error || '#ef4444';
@@ -143,7 +143,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
           size={Platform.OS === 'web' ? 20 : getFontSize(22)}
           color={
             isFocused 
-              ? (theme.colors.primary[0] || '#764ba2')
+              ? (theme.colors.primary[0] || '#008080')
               : (error && isTouched 
                   ? theme.colors.semantic.error 
                   : theme.colors.text.secondary)
@@ -153,7 +153,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
             { 
               opacity: isFocused ? 1 : 0.7,
               ...(Platform.OS !== 'web' && isFocused && {
-                shadowColor: theme.colors.primary[0] || '#764ba2',
+                shadowColor: theme.colors.primary[0] || '#008080',
                 shadowOffset: { width: 0, height: 0 },
                 shadowOpacity: 0.5,
                 shadowRadius: 4,
@@ -178,8 +178,8 @@ const AuthInput: React.FC<AuthInputProps> = ({
         placeholder={t(placeholder)}
         placeholderTextColor={
           isFocused 
-            ? (theme.colors.text.secondary + '88')
-            : (theme.colors.text.secondary + '66')
+            ? (theme.colors.text.secondary + '99')
+            : (theme.colors.text.secondary + '80')
         }
         value={value}
         onChangeText={(text: string) => {
@@ -206,7 +206,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
             size={Platform.OS === 'web' ? 20 : getFontSize(22)}
             color={
               isFocused 
-                ? (theme.colors.primary[0] || '#764ba2')
+                ? (theme.colors.primary[0] || '#008080')
                 : theme.colors.text.secondary
             }
           />

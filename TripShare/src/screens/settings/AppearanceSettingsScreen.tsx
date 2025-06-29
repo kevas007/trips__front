@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   title: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
   },
   content: {
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(79,140,255,0.1)',
+    backgroundColor: 'rgba(0,128,128,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -233,22 +233,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appearanceTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     marginBottom: 4,
   },
   appearanceDescription: {
-    fontSize: 14,
+    fontSize: 11,
   },
   selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(79,140,255,0.1)',
+    backgroundColor: 'rgba(0,128,128,0.1)',
   },
   selectButtonText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '500',
     marginRight: 4,
   },
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
   },
 });

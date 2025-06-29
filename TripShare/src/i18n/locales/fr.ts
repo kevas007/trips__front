@@ -11,7 +11,7 @@ export default {
     confirmPassword: 'Confirmer le mot de passe',
     passwordsMatch: 'Les mots de passe correspondent ✓',
     passwordsDontMatch: 'Les mots de passe ne correspondent pas',
-    loginCta: '✈️ Se connecter',
+    loginCta: 'Se connecter',
     registerCta: '🚀 Commencer l\'aventure',
     forgotCta: '📧 Envoyer le lien',
     forgotLink: '🔑 Mot de passe oublié ?',

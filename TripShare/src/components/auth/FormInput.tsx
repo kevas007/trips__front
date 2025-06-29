@@ -36,7 +36,7 @@ export const FormInput: FC<FormInputProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: theme.colors.text.primary }]}>{label}</Text>}
       <View
         style={[
           styles.inputContainer,
@@ -66,7 +66,7 @@ export const FormInput: FC<FormInputProps> = ({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.text.secondary}
+          placeholderTextColor={theme.colors.text.secondary + '80'}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
@@ -93,9 +93,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: 16,
     marginBottom: 8,
-    color: '#666',
+    fontWeight: '600',
   },
   inputContainer: {
     flexDirection: 'row',

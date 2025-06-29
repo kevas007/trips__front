@@ -34,3 +34,11 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+# Build artifacts
+android/.cxx/
+node_modules/
+.expo/
+dist/
+*.log
+.DS_Store
+Thumbs.db

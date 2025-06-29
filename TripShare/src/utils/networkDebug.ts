@@ -1,19 +1,20 @@
 // === src/utils/networkDebug.ts - DIAGNOSTIQUE RÉSEAU ===
 
 import { Platform } from 'react-native';
+import { API_CONFIG } from '../config/api';
 
 // ========== CONFIGURATION DEBUG ==========
 
 export const NETWORK_CONFIG = {
-  // URL du backend
-  BACKEND_URL: 'http://34.246.200.184:8000',
+  // URL du backend (utilise la configuration centralisée)
+  BACKEND_URL: API_CONFIG.BASE_URL,
   
-  // URLs de test alternatives
+  // URLs de test alternatives (port 8080 pour le backend Go)
   LOCALHOST_URLS: {
-    web: 'http://localhost:8000',
-    android_emulator: 'http://10.0.2.2:8000',
-    ios_simulator: 'http://localhost:8000',
-    physical_device: 'http://192.168.1.XXX:8000', // Remplacer par votre IP locale
+    web: 'http://localhost:8080',
+    android_emulator: 'http://10.0.2.2:8080',
+    ios_simulator: 'http://localhost:8080',
+    physical_device: 'http://192.168.0.220:8080', // IP locale configurée
   },
   
   // Timeouts
@@ -32,10 +33,15 @@ export class NetworkDiagnostic {
   static async testBasicConnectivity(): Promise<boolean> {
     try {
       // Test avec un service externe fiable
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), NETWORK_CONFIG.TIMEOUTS.quick);
+      
       const response = await fetch('https://httpbin.org/status/200', {
         method: 'GET',
-        timeout: NETWORK_CONFIG.TIMEOUTS.quick,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       return response.ok;
     } catch (error) {
       console.log('❌ Pas de connectivité internet basique');
@@ -55,13 +61,18 @@ export class NetworkDiagnostic {
     try {
       console.log(`🔍 Test connexion: ${url}`);
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), NETWORK_CONFIG.TIMEOUTS.normal);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
-        timeout: NETWORK_CONFIG.TIMEOUTS.normal,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       const responseTime = Date.now() - startTime;
       
@@ -191,37 +202,41 @@ export class NetworkDiagnostic {
       
       recommendations.push('Vérifiez que votre serveur backend est démarré');
       recommendations.push('Vérifiez les règles de firewall/antivirus');
-      recommendations.push('Testez manuellement: curl http://34.246.200.184:8000/');
+      recommendations.push(`Testez manuellement: curl ${NETWORK_CONFIG.BACKEND_URL}/`);
     }
     
     return recommendations;
   }
+
+  // Utilitaire pour log de configuration
+  static logCurrentConfig(): void {
+    console.log('🔧 Configuration réseau actuelle:');
+    console.log(`  • Environnement: ${API_CONFIG.ENV_NAME}`);
+    console.log(`  • URL Backend: ${API_CONFIG.BASE_URL}`);
+    console.log(`  • Timeout: ${API_CONFIG.REQUEST_TIMEOUT}ms`);
+    console.log(`  • Logs activés: ${API_CONFIG.ENABLE_LOGGING}`);
+  }
 }
 
-// ========== HOOK POUR DIAGNOSTIC AUTOMATIQUE ==========
+// ========== HOOK REACT ==========
 
 import { useState, useEffect } from 'react';
 
 export const useNetworkDiagnostic = (autoRun: boolean = false) => {
-  const [diagnostic, setDiagnostic] = useState<{
-    isRunning: boolean;
-    results: Awaited<ReturnType<typeof NetworkDiagnostic.runFullDiagnostic>> | null;
-  }>({
-    isRunning: false,
-    results: null,
-  });
+  const [isRunning, setIsRunning] = useState(false);
+  const [results, setResults] = useState<Awaited<ReturnType<typeof NetworkDiagnostic.runFullDiagnostic>> | null>(null);
 
   const runDiagnostic = async () => {
-    setDiagnostic({ isRunning: true, results: null });
-    
+    setIsRunning(true);
     try {
-      const results = await NetworkDiagnostic.runFullDiagnostic();
-      setDiagnostic({ isRunning: false, results });
-      return results;
+      const diagnosticResults = await NetworkDiagnostic.runFullDiagnostic();
+      setResults(diagnosticResults);
+      return diagnosticResults;
     } catch (error) {
-      console.error('Erreur diagnostic:', error);
-      setDiagnostic({ isRunning: false, results: null });
-      throw error;
+      console.error('Erreur pendant le diagnostic:', error);
+      return null;
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -232,62 +247,17 @@ export const useNetworkDiagnostic = (autoRun: boolean = false) => {
   }, [autoRun]);
 
   return {
-    ...diagnostic,
     runDiagnostic,
+    isRunning,
+    results,
+    // Raccourcis
+    isBackendReachable: results ? results.backendResults.some(r => r.result.success) : null,
+    hasInternet: results?.hasInternet ?? null,
+    recommendations: results?.recommendations ?? [],
   };
 };
 
-// ========== COMPOSANT DE DEBUG RÉSEAU ==========
-
-export const NetworkDebugInfo: React.FC = () => {
-  const { isRunning, results, runDiagnostic } = useNetworkDiagnostic();
-
-  return (
-    <View style={{ padding: 20, backgroundColor: '#f0f0f0' }}>
-      <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-        🔍 Debug Réseau
-      </Text>
-      
-      <TouchableOpacity
-        onPress={runDiagnostic}
-        disabled={isRunning}
-        style={{
-          backgroundColor: isRunning ? '#ccc' : '#007AFF',
-          padding: 12,
-          borderRadius: 8,
-          marginBottom: 15,
-        }}
-      >
-        <Text style={{ color: 'white', textAlign: 'center' }}>
-          {isRunning ? 'Test en cours...' : 'Lancer le diagnostic'}
-        </Text>
-      </TouchableOpacity>
-
-      {results && (
-        <ScrollView style={{ maxHeight: 300 }}>
-          <Text style={{ fontWeight: 'bold' }}>
-            📶 Internet: {results.hasInternet ? '✅' : '❌'}
-          </Text>
-          
-          <Text style={{ fontWeight: 'bold', marginTop: 10 }}>
-            🔗 Tests Backend:
-          </Text>
-          {results.backendResults.map((test, i) => (
-            <Text key={i} style={{ fontSize: 12, marginLeft: 10 }}>
-              {test.result.success ? '✅' : '❌'} {test.platform}: {test.result.message}
-            </Text>
-          ))}
-          
-          <Text style={{ fontWeight: 'bold', marginTop: 10 }}>
-            💡 Recommandations:
-          </Text>
-          {results.recommendations.map((rec, i) => (
-            <Text key={i} style={{ fontSize: 12, marginLeft: 10 }}>
-              {i + 1}. {rec}
-            </Text>
-          ))}
-        </ScrollView>
-      )}
-    </View>
-  );
-};
+// Auto-log de la config au démarrage en développement
+if (API_CONFIG.ENABLE_LOGGING) {
+  NetworkDiagnostic.logCurrentConfig();
+}

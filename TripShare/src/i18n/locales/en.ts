@@ -20,7 +20,7 @@ export default {
     registerButton: '🚀 Start the adventure',
     forgotButton: '📧 Send link',
     forgotCta: '📧 Send recovery link',
-    loginCta: '✈️ Sign in',
+    loginCta: ' Sign in',
     registerCta: '🚀 Start the adventure',
     appTagline: 'Transform your dreams into memories',
 

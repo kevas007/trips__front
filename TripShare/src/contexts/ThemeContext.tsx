@@ -1,13 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { lightTheme, darkTheme, AppTheme } from '../theme';
+import { lightTheme, darkTheme, Theme } from '../types/theme';
 
 type ThemeContextType = {
-  theme: AppTheme;
+  theme: Theme;
   isDark: boolean;
   toggleTheme: () => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  fontSize: 'Petit' | 'Normal' | 'Grand' | 'Très grand';
+  setFontSize: (size: 'Petit' | 'Normal' | 'Grand' | 'Très grand') => void;
 };
 
 const defaultTheme: ThemeContextType = {
@@ -15,6 +17,8 @@ const defaultTheme: ThemeContextType = {
   isDark: false,
   toggleTheme: () => {},
   setTheme: () => {},
+  fontSize: 'Normal',
+  setFontSize: () => {},
 };
 
 const ThemeContext = createContext<ThemeContextType>(defaultTheme);
@@ -23,6 +27,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const systemColorScheme = useColorScheme();
   const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('system');
   const [isDark, setIsDark] = useState(systemColorScheme === 'dark');
+  const [fontSize, setFontSize] = useState<'Petit' | 'Normal' | 'Grand' | 'Très grand'>('Normal');
   const [isLoading, setIsLoading] = useState(true);
 
   // Initialiser le thème immédiatement
@@ -72,6 +77,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isDark,
     toggleTheme,
     setTheme,
+    fontSize,
+    setFontSize,
   };
 
   return (

@@ -183,12 +183,12 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#1C1B1F', // Material Design 3 text
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#757575', // Material Design 3 secondary text
     fontWeight: '600',
     textAlign: 'center',
   },

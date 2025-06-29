@@ -1,4 +1,4 @@
-// === metro.config.js - CONFIGURATION CORRIGÉE ===
+// === metro.config.js - CONFIGURATION OPTIMISÉE POUR PRODUCTION ===
 
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
@@ -41,30 +41,81 @@ config.resolver = {
 };
 
 // ═══════════════════════════════════════
-// Configuration du transformer
+// Configuration du transformer OPTIMISÉE
 config.transformer = {
   ...config.transformer,
   
   // Configuration pour les assets
   assetPlugins: ['expo-asset/tools/hashAssetFiles'],
+  
+  // Minification pour production
+  minifierConfig: {
+    // Optimisations JavaScript
+    output: {
+      ascii_only: true,
+      comments: false,
+      inline_script: false,
+    },
+    // Compression maximale
+    compress: {
+      // Tree shaking agressif
+      dead_code: true,
+      drop_console: process.env.NODE_ENV === 'production',
+      drop_debugger: true,
+      keep_infinity: false,
+      reduce_vars: true,
+      unused: true,
+      // Optimisations supplémentaires
+      collapse_vars: true,
+      evaluate: true,
+      hoist_funs: true,
+      join_vars: true,
+      loops: true,
+      negate_iife: true,
+      properties: true,
+      sequences: true,
+      side_effects: true,
+      switches: true,
+      typeofs: true,
+    },
+    mangle: {
+      toplevel: false,
+    },
+  },
 };
 
 // ═══════════════════════════════════════
-// Configuration pour ignorer certains fichiers
+// Configuration pour ignorer les fichiers inutiles
 config.resolver.blockList = [
   // Ignorer les fichiers de test
   /.*\/__tests__\/.*/,
   /.*\.test\.(js|jsx|ts|tsx)$/,
   /.*\.spec\.(js|jsx|ts|tsx)$/,
   
-  // Ignorer les fichiers de configuration et système
+  // Ignorer les fichiers de documentation et config
   /.*\/\.git\/.*/,
   /.*\/\.DS_Store$/,
   /.*\/Thumbs\.db$/,
+  /.*\/\.md$/,
+  /.*\/LICENSE$/,
+  /.*\/CHANGELOG/,
   
   // Éviter les conflits de node_modules imbriqués
   /.*\/node_modules\/.*\/node_modules\/.*/,
+  
+  // Ignorer les sources maps en production
+  ...(process.env.NODE_ENV === 'production' ? [/.*\.map$/] : []),
 ];
+
+// ═══════════════════════════════════════
+// Optimisations pour la taille du bundle
+if (process.env.NODE_ENV === 'production') {
+  // Désactiver les source maps pour réduire la taille
+  config.resolver.sourceExts = config.resolver.sourceExts.filter(ext => ext !== 'map');
+  
+  // Optimiser les assets
+  config.transformer.assetRegistryPath = 'react-native/Libraries/Image/AssetRegistry';
+}
 
 // Exporter la configuration
 module.exports = config;

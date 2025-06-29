@@ -2,30 +2,30 @@ import { Theme } from '../types/theme.types';
 
 export const lightTheme: Theme = {
   colors: {
-    primary: ['#007AFF', '#0055FF', '#0033FF'],
-    accent: ['#FF3B30', '#FF2D55', '#FF9500'],
-    secondary: ['#5856D6', '#FF2D55', '#FF9500'],
+    primary: ['#008080', '#B2DFDF', '#FFFFFF'],
+    accent: ['#FF9500', '#FF3B30', '#34C759'],
+    secondary: ['#4FB3B3', '#D1F0EF', '#00B8A9'],
     background: {
-      primary: '#FFFFFF',
-      card: '#F5F5F5',
-      overlay: 'rgba(0, 0, 0, 0.5)',
-      gradient: ['#FFFFFF', '#F5F5F5'],
+      primary: '#FAFAFA',
+      card: '#FFFFFF',
+      overlay: 'rgba(28, 27, 31, 0.5)',
+      gradient: ['#FAFAFA', '#FFFFFF'],
     },
     text: {
-      primary: '#000000',
-      secondary: '#666666',
+      primary: '#1C1B1F',
+      secondary: '#757575',
       light: '#FFFFFF',
     },
     semantic: {
       success: '#34C759',
       warning: '#FF9500',
       error: '#FF3B30',
-      info: '#007AFF',
+      info: '#008080',
     },
     glassmorphism: {
       background: 'rgba(255, 255, 255, 0.8)',
-      border: 'rgba(255, 255, 255, 0.2)',
-      shadow: 'rgba(0, 0, 0, 0.1)',
+      border: 'rgba(0, 128, 128, 0.2)',
+      shadow: 'rgba(0, 128, 128, 0.1)',
     },
     border: '#E0E0E0',
     error: '#FF3B30',
@@ -46,22 +46,22 @@ export const lightTheme: Theme = {
   },
   typography: {
     h1: {
-      fontSize: 32,
+      fontSize: 29,
       fontWeight: 'bold',
     },
     h2: {
-      fontSize: 24,
+      fontSize: 21,
       fontWeight: 'bold',
     },
     h3: {
-      fontSize: 20,
+      fontSize: 17,
       fontWeight: 'bold',
     },
     body: {
-      fontSize: 16,
+      fontSize: 13,
     },
     caption: {
-      fontSize: 14,
+      fontSize: 11,
     },
   },
   shadows: {
@@ -100,32 +100,32 @@ export const lightTheme: Theme = {
 
 export const darkTheme: Theme = {
   colors: {
-    primary: ['#0A84FF', '#007AFF', '#0055FF'],
-    accent: ['#FF453A', '#FF375F', '#FF9F0A'],
-    secondary: ['#5E5CE6', '#FF375F', '#FF9F0A'],
+    primary: ['#4FB3B3', '#005F5F', '#002020'],
+    accent: ['#FF9F0A', '#FF453A', '#32D74B'],
+    secondary: ['#70D6C9', '#004F4C', '#4EA3A3'],
     background: {
-      primary: '#000000',
-      card: '#1C1C1E',
-      overlay: 'rgba(0, 0, 0, 0.7)',
-      gradient: ['#000000', '#1C1C1E'],
+      primary: '#1C1B1F',
+      card: '#1C1B1F',
+      overlay: 'rgba(230, 225, 229, 0.7)',
+      gradient: ['#1C1B1F', '#1C1B1F'],
     },
     text: {
-      primary: '#FFFFFF',
-      secondary: '#8E8E93',
-      light: '#FFFFFF',
+      primary: '#E6E1E5',
+      secondary: '#9E9E9E',
+      light: '#E6E1E5',
     },
     semantic: {
       success: '#32D74B',
       warning: '#FF9F0A',
       error: '#FF453A',
-      info: '#0A84FF',
+      info: '#4FB3B3',
     },
     glassmorphism: {
-      background: 'rgba(28, 28, 30, 0.8)',
-      border: 'rgba(255, 255, 255, 0.1)',
+      background: 'rgba(28, 27, 31, 0.8)',
+      border: 'rgba(79, 179, 179, 0.1)',
       shadow: 'rgba(0, 0, 0, 0.3)',
     },
-    border: '#2C2C2E',
+    border: '#424242',
     error: '#FF453A',
   },
   spacing: {
@@ -144,22 +144,22 @@ export const darkTheme: Theme = {
   },
   typography: {
     h1: {
-      fontSize: 32,
+      fontSize: 29,
       fontWeight: 'bold',
     },
     h2: {
-      fontSize: 24,
+      fontSize: 21,
       fontWeight: 'bold',
     },
     h3: {
-      fontSize: 20,
+      fontSize: 17,
       fontWeight: 'bold',
     },
     body: {
-      fontSize: 16,
+      fontSize: 13,
     },
     caption: {
-      fontSize: 14,
+      fontSize: 11,
     },
   },
   shadows: {
@@ -196,100 +196,8 @@ export const darkTheme: Theme = {
   },
 };
 
-export const theme = {
-  colors: {
-    primary: ['#007AFF', '#0055FF', '#0033FF'],
-    accent: ['#FF3B30', '#FF2D55', '#FF9500'],
-    secondary: ['#5856D6', '#FF2D55', '#FF9500'],
-    background: {
-      primary: '#FFFFFF',
-      card: '#F5F5F5',
-      overlay: 'rgba(0, 0, 0, 0.5)',
-      gradient: ['#FFFFFF', '#F5F5F5'],
-    },
-    text: {
-      primary: '#000000',
-      secondary: '#666666',
-      light: '#FFFFFF',
-    },
-    semantic: {
-      success: '#34C759',
-      warning: '#FF9500',
-      error: '#FF3B30',
-      info: '#007AFF',
-    },
-    glassmorphism: {
-      background: 'rgba(255, 255, 255, 0.8)',
-      border: 'rgba(255, 255, 255, 0.2)',
-      shadow: 'rgba(0, 0, 0, 0.1)',
-    },
-    border: '#E0E0E0',
-    error: '#FF3B30',
-  },
-  spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-  },
-  borderRadius: {
-    sm: 4,
-    md: 8,
-    lg: 12,
-    xl: 16,
-    full: 9999,
-  },
-  typography: {
-    h1: {
-      fontSize: 32,
-      fontWeight: 'bold',
-    },
-    h2: {
-      fontSize: 24,
-      fontWeight: 'bold',
-    },
-    h3: {
-      fontSize: 20,
-      fontWeight: 'bold',
-    },
-    body: {
-      fontSize: 16,
-    },
-    caption: {
-      fontSize: 14,
-    },
-  },
-  shadows: {
-    sm: {
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.18,
-      shadowRadius: 1.0,
-      elevation: 1,
-    },
-    md: {
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
-    lg: {
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-      shadowOpacity: 0.30,
-      shadowRadius: 4.65,
-      elevation: 8,
-    },
-  },
-}; 
+// Export par défaut pour compatibilité
+export const theme = lightTheme;
+
+// Export du type AppTheme pour compatibilité avec ThemeContext
+export type AppTheme = Theme; 

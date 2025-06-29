@@ -72,9 +72,9 @@ const VerificationStep: React.FC<VerificationStepProps> = ({ onNext, initialData
 
         <View style={styles.codeContainer}>
           <TextInput
-            style={[styles.codeInput, { color: theme.colors.text }]}
+            style={[styles.codeInput, { color: theme.theme.colors.text.primary }]}
             placeholder="000000"
-            placeholderTextColor={theme.colors.text + '40'}
+            placeholderTextColor={theme.theme.colors.text.secondary + '60'}
             value={verificationCode}
             onChangeText={setVerificationCode}
             keyboardType="number-pad"

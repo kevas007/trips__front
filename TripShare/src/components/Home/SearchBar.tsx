@@ -17,7 +17,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   fadeAnim,
   slideAnim,
 }) => {
-  const { theme } = useAppTheme();
+  const { theme, isDark } = useAppTheme();
 
   return (
     <Animated.View
@@ -29,11 +29,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
         },
       ]}>
       <View style={[styles.searchBox, { backgroundColor: theme.colors.background.card, shadowColor: theme.colors.glassmorphism.shadow }]}>
-        <Ionicons name="search-outline" size={20} color="#64748B" />
+        <Ionicons 
+          name="search-outline" 
+          size={20} 
+          color={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'} 
+        />
         <TextInput
           style={[styles.searchInput, { color: theme.colors.text.primary }]}
           placeholder="Rechercher des voyages, lieux..."
-          placeholderTextColor="#64748B"
+          placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />

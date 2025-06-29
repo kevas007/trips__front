@@ -29,10 +29,10 @@ export type ProfileStackParamList = {
 type ProfileScreenNavigationProp = StackNavigationProp<ProfileStackParamList>;
 
 const fontSizeMap = {
-  'Petit': 14,
-  'Normal': 17,
-  'Grand': 21,
-  'Très grand': 26,
+  'Petit': 6,
+  'Normal': 8,
+  'Grand': 10,
+  'Très grand': 12,
 };
 
 const styles = StyleSheet.create({

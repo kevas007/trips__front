@@ -133,7 +133,7 @@ const createStyles = (theme: any, isDark: boolean, fullWidth: boolean) => {
     },
     
     text: {
-      fontSize: 16,
+    fontSize: 15,
       fontWeight: '600',
       color: '#3C4043',
       textAlign: 'center',

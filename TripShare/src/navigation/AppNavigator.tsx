@@ -4,7 +4,7 @@ import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { ActivityIndicator, View } from 'react-native';
-import { useTheme } from '@/theme/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Stack = createStackNavigator();
 

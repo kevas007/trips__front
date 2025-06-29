@@ -1,0 +1,53 @@
+{
+  "cli": {
+    "version": ">= 13.2.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Debug"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release",
+        "config": {
+          "bundleIdentifier": "com.trivenile.app.preview"
+        }
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "ios": {
+        "buildConfiguration": "Release",
+        "bundleIdentifier": "com.trivenile.app"
+      },
+      "android": {
+        "buildType": "aab"
+      },
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "cache": {
+        "disabled": false
+      }
+    },
+    "production-apk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+} 

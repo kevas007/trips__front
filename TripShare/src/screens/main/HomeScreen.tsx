@@ -274,7 +274,7 @@ const [featuredTrips, setFeaturedTrips] = useState<TripCard[]>([
               ✨ "La vie est courte et le monde est vaste" ✨
             </Text>
             <Text style={[styles.footerSubtext, { color: theme.colors.text.secondary }]}>
-              Créez des souvenirs inoubliables avec TripShare
+              Créez des souvenirs inoubliables avec Trivenile
             </Text>
           </View>
         </ScrollView>
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   placeholderText: {
-    fontSize: 16,
+    fontSize: 13,
     fontStyle: 'italic',
     textAlign: 'center',
   },
@@ -314,13 +314,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   footerText: {
-    fontSize: 18,
+          fontSize: 15,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 8,
   },
   footerSubtext: {
-    fontSize: 14,
+    fontSize: 11,
     textAlign: 'center',
     fontWeight: '500',
   },

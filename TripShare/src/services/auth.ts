@@ -1,11 +1,44 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
-import { api } from './api'; // Utiliser le bon service API
+import { API_CONFIG } from '../config/api';
+import { User } from '../types/user';
 
-// Configuration API
-const API_BASE_URL = 'http://34.246.200.184:8000/api/v1';
+// ========== TYPES D'AUTHENTIFICATION - ALIGNÉS BACKEND GO ==========
 
-// Interface API simple
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string; // OBLIGATOIRE selon le backend Go
+  password: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+  refresh_token: string;
+}
+
+export interface AuthError {
+  code: string;
+  message: string;
+  field?: string;
+  details?: any;
+}
+
+// ========== FORMAT RÉPONSE BACKEND GO ==========
+interface BackendResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+// ========== CLIENT API SIMPLE ==========
 class ApiClient {
   private token: string | null = null;
 
@@ -17,131 +50,86 @@ class ApiClient {
     this.token = null;
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      ...options.headers as Record<string, string>,
     };
 
-    const response = await fetch(`http://34.246.200.184:8000/api/v1${endpoint}`, {
-      method: 'POST',
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    console.log(`🚀 ${options.method || 'GET'} ${url}`);
+
+    const response = await fetch(url, {
+      ...options,
       headers,
-      body: JSON.stringify(data),
     });
 
+    console.log(`📡 Réponse: ${response.status}`);
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      const errorResponse = {
+      const errorText = await response.text();
+      let errorData: BackendResponse;
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { success: false, error: errorText || `HTTP ${response.status}` };
+      }
+
+      throw {
         response: {
           status: response.status,
-          data: error,
+          data: errorData,
         },
       };
-      throw errorResponse;
     }
 
-    return response.json();
+    const data: BackendResponse<T> = await response.json();
+    
+    // Vérifier le format de réponse du backend Go
+    if (!data.success) {
+      throw {
+        response: {
+          status: response.status,
+          data: data,
+        },
+      };
+    }
+
+    return data.data as T;
+  }
+
+  async post<T>(endpoint: string, data?: any): Promise<T> {
+    return this.makeRequest<T>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async get<T>(endpoint: string): Promise<T> {
-    console.log('🔍 ApiClient.get - Token disponible:', !!this.token, 'Token (20 premiers chars):', this.token?.substring(0, 20) || 'AUCUN');
-    
-    // Debug mobile : Afficher le statut du token
-    const tokenStatus = `ApiClient GET ${endpoint}\n\nToken disponible: ${!!this.token}\nToken (20 chars): ${this.token?.substring(0, 20) || 'AUCUN'}`;
-    Alert.alert('🔍 DEBUG Token', tokenStatus);
-    
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(this.token && { Authorization: `Bearer ${this.token}` }),
-    };
+    return this.makeRequest<T>(endpoint, { method: 'GET' });
+  }
 
-    console.log('🔍 ApiClient.get - Headers envoyés:', headers);
-    
-    // Debug mobile : Afficher les headers
-    const hasAuthHeader = headers.hasOwnProperty('Authorization');
-    Alert.alert('🔍 DEBUG Headers', `Headers Authorization: ${hasAuthHeader ? 'PRÉSENT' : 'MANQUANT'}\n\nHeaders complets: ${JSON.stringify(headers, null, 2)}`);
-
-    const response = await fetch(`http://34.246.200.184:8000/api/v1${endpoint}`, {
-      method: 'GET',
-      headers,
+  async put<T>(endpoint: string, data?: any): Promise<T> {
+    return this.makeRequest<T>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
+  }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      const errorResponse = {
-        response: {
-          status: response.status,
-          data: error,
-        },
-      };
-      throw errorResponse;
-    }
-
-    return response.json();
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.makeRequest<T>(endpoint, { method: 'DELETE' });
   }
 }
 
 const apiClient = new ApiClient();
 
-// Types d'authentification
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
-  socialAuth?: {
-    provider: 'google' | 'apple';
-    id: string;
-    idToken: string;
-    name: string;
-    photoURL?: string;
-  };
-}
-
-export interface RegisterData {
-  username: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  countryCode: string;
-  phone: string;
-  acceptTerms: boolean;
-}
-
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  avatar?: string;
-  phone?: string;
-  countryCode?: string;
-  isEmailVerified: boolean;
-  isPhoneVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  token: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
-export interface AuthError {
-  code: string;
-  message: string;
-  field?: string;
-  details?: any;
-}
-
-// Configuration des tokens
+// ========== CONFIGURATION DES TOKENS ==========
 const TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
+// ========== SERVICE D'AUTHENTIFICATION ==========
 class AuthService {
   private token: string | null = null;
   private refreshToken: string | null = null;
@@ -154,31 +142,22 @@ class AuthService {
   // Initialisation des tokens depuis le storage
   private async initTokens() {
     try {
-      console.log('🔄 initTokens - Début de l\'initialisation');
+      console.log('🔄 Initialisation des tokens...');
       this.token = await AsyncStorage.getItem(TOKEN_KEY);
       this.refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
       
-      console.log('🔍 initTokens - Token récupéré:', !!this.token, 'Token (20 premiers chars):', this.token?.substring(0, 20) || 'AUCUN');
-      console.log('🔍 initTokens - RefreshToken récupéré:', !!this.refreshToken);
-      
-      // Debug mobile : Afficher les tokens récupérés
-      const initInfo = `Initialisation Tokens:\n\nToken trouvé: ${!!this.token}\nToken (20 chars): ${this.token?.substring(0, 20) || 'AUCUN'}\nRefreshToken: ${!!this.refreshToken}`;
-      Alert.alert('🔄 DEBUG initTokens', initInfo);
+      console.log('🔍 Token récupéré:', !!this.token);
+      console.log('🔍 RefreshToken récupéré:', !!this.refreshToken);
       
       if (this.token) {
         apiClient.setAuthToken(this.token);
-        console.log('🔑 Token restauré depuis le storage et défini dans ApiClient:', this.token.substring(0, 20) + '...');
-        Alert.alert('✅ DEBUG', 'Token restauré et défini dans ApiClient');
-      } else {
-        console.log('❌ Aucun token trouvé dans le storage');
-        Alert.alert('❌ DEBUG', 'Aucun token trouvé dans AsyncStorage');
+        console.log('🔑 Token restauré depuis le storage');
       }
       
       this.isInitialized = true;
-      console.log('✅ initTokens - Initialisation terminée');
+      console.log('✅ Initialisation terminée');
     } catch (error) {
       console.error('❌ Erreur lors de l\'initialisation des tokens:', error);
-      Alert.alert('❌ ERREUR initTokens', `Erreur: ${error}`);
       this.isInitialized = true;
     }
   }
@@ -201,116 +180,154 @@ class AuthService {
 
   // Connexion
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    await this.waitForInitialization();
+
     try {
-      const loginData = {
+      console.log('🔐 Connexion en cours...');
+
+      // Format exact attendu par le backend Go
+      const response = await apiClient.post<{
+        token: string;
+        refresh_token: string;
+        user: any; // Données publiques de l'utilisateur
+      }>('/auth/login', {
         email: credentials.email.toLowerCase().trim(),
         password: credentials.password,
+      });
+
+      const { token, refresh_token, user } = response;
+      
+      await this.saveTokens(token, refresh_token);
+      this.token = token;
+      this.refreshToken = refresh_token;
+      apiClient.setAuthToken(token);
+
+      console.log('✅ Connexion réussie');
+      
+      return {
+        user: this.normalizeUser(user),
+        token,
+        refresh_token,
       };
-      
-      const response = await apiClient.post('/auth/login', loginData) as any;
-      
-      // Adapter la réponse du backend Go
-      if (response.success && response.data) {
-        const authResponse: AuthResponse = {
-          user: {
-            id: response.data.user?.id?.toString() || '',
-            username: response.data.user?.username || '',
-            email: response.data.user?.email || '',
-            firstName: response.data.user?.first_name || '',
-            lastName: response.data.user?.last_name || '',
-            phone: response.data.user?.phone_number || '',
-            countryCode: '+33', // Par défaut
-            avatar: response.data.user?.avatar || undefined,
-            isEmailVerified: response.data.user?.verified || false,
-            isPhoneVerified: false,
-            createdAt: response.data.user?.created_at || new Date().toISOString(),
-            updatedAt: response.data.user?.updated_at || new Date().toISOString(),
-          },
-          token: response.data.token || '',
-          refreshToken: response.data.refresh_token || '',
-          expiresIn: 3600, // 1 heure par défaut
-        };
-        
-        await this.saveTokens(authResponse.token, authResponse.refreshToken);
-        return authResponse;
-      }
-      
-      throw new Error('Réponse invalide du serveur');
-    } catch (error) {
+
+    } catch (error: any) {
+      console.error('❌ Erreur de connexion:', error);
       throw this.handleAuthError(error);
     }
   }
 
   // Inscription
   async register(data: RegisterData): Promise<AuthResponse> {
+    await this.waitForInitialization();
+
     try {
-      // Validation côté client
-      this.validateRegisterData(data);
-      
-      // Transformer les données vers le format attendu par le backend Go
-      const backendData = {
+      console.log('📝 Inscription en cours...');
+
+      // Format exact attendu par le backend Go
+      // Validation côté client avant envoi - PROTECTION CONTRE UNDEFINED
+      if (!data.email || typeof data.email !== 'string') {
+        throw new Error('L\'email est obligatoire');
+      }
+      if (!data.username || typeof data.username !== 'string') {
+        throw new Error('Le nom d\'utilisateur est obligatoire');
+      }
+      if (!data.first_name || typeof data.first_name !== 'string') {
+        throw new Error('Le prénom est obligatoire');
+      }
+      if (!data.last_name || typeof data.last_name !== 'string') {
+        throw new Error('Le nom est obligatoire');
+      }
+      if (!data.phone_number || typeof data.phone_number !== 'string' || data.phone_number.trim().length === 0) {
+        throw new Error('Le numéro de téléphone est obligatoire');
+      }
+      if (!data.password || typeof data.password !== 'string') {
+        throw new Error('Le mot de passe est obligatoire');
+      }
+
+      const requestData = {
         email: data.email.toLowerCase().trim(),
-        username: data.username.trim(),
-        first_name: data.firstName.trim(),
-        last_name: data.lastName.trim(),
-        phone_number: data.phone?.trim() || '',
+        username: data.username.toLowerCase().trim(),
+        first_name: data.first_name.trim(),
+        last_name: data.last_name.trim(),
+        phone_number: data.phone_number.trim(),
         password: data.password,
       };
-      
-      const response = await apiClient.post('/auth/register', backendData) as any;
-      
-      // Adapter la réponse du backend Go vers notre format AuthResponse
-      if (response.success && response.data) {
-        const authResponse: AuthResponse = {
-          user: {
-            id: response.data.id?.toString() || '',
-            username: response.data.username || '',
-            email: response.data.email || '',
-            firstName: response.data.first_name || '',
-            lastName: response.data.last_name || '',
-            phone: response.data.phone_number || '',
-            countryCode: data.countryCode,
-            avatar: response.data.avatar || undefined,
-            isEmailVerified: response.data.verified || false,
-            isPhoneVerified: false,
-            createdAt: response.data.created_at || new Date().toISOString(),
-            updatedAt: response.data.updated_at || new Date().toISOString(),
-          },
-          token: response.data.token || '',
-          refreshToken: response.data.refresh_token || '',
-          expiresIn: 3600, // 1 heure par défaut
-        };
-        
-        await this.saveTokens(authResponse.token, authResponse.refreshToken);
-        return authResponse;
-      }
-      
-      throw new Error('Réponse invalide du serveur');
-    } catch (error) {
-      throw this.handleAuthError(error);
-    }
-  }
 
-  // Récupération de mot de passe
-  async forgotPassword(email: string): Promise<{ message: string }> {
-    try {
-      const response = await apiClient.post<{ message: string }>('/auth/forgot-password', { email });
-      return response;
-    } catch (error) {
-      throw this.handleAuthError(error);
-    }
-  }
-
-  // Réinitialisation de mot de passe
-  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    try {
-      const response = await apiClient.post<{ message: string }>('/auth/reset-password', {
-        token,
-        password: newPassword,
+      console.log('📝 Données envoyées au backend:', {
+        ...requestData,
+        password: '[HIDDEN]'
       });
-      return response;
-    } catch (error) {
+
+      const response = await apiClient.post<{
+        token: string;
+        refresh_token: string;
+        user: any;
+      }>('/auth/register', requestData);
+
+      const { token, refresh_token, user } = response;
+      
+      await this.saveTokens(token, refresh_token);
+      this.token = token;
+      this.refreshToken = refresh_token;
+      apiClient.setAuthToken(token);
+
+      console.log('✅ Inscription réussie');
+      
+      return {
+        user: this.normalizeUser(user),
+        token,
+        refresh_token,
+      };
+
+    } catch (error: any) {
+      console.error('❌ Erreur d\'inscription:', error);
       throw this.handleAuthError(error);
+    }
+  }
+
+  // Actualisation du token
+  async refreshAccessToken(): Promise<string> {
+    if (!this.refreshToken) {
+      throw new Error('Aucun refresh token disponible');
+    }
+
+    try {
+      const response = await apiClient.post<{
+        token: string;
+        refresh_token: string;
+      }>('/auth/refresh', {
+        refresh_token: this.refreshToken,
+      });
+
+      const { token, refresh_token } = response;
+      
+      await this.saveTokens(token, refresh_token);
+      this.token = token;
+      this.refreshToken = refresh_token;
+      apiClient.setAuthToken(token);
+
+      return token;
+    } catch (error) {
+      await this.clearTokens();
+      throw error;
+    }
+  }
+
+  // Vérification du token
+  async verifyToken(): Promise<User> {
+    await this.waitForInitialization();
+
+    if (!this.token) {
+      throw new Error('Aucun token disponible');
+    }
+
+    try {
+      // Utiliser un endpoint qui nécessite l'authentification
+      const userData = await apiClient.get<any>('/users/me');
+      return this.normalizeUser(userData);
+    } catch (error) {
+      await this.clearTokens();
+      throw error;
     }
   }
 
@@ -318,117 +335,55 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       if (this.token) {
-        await apiClient.post('/auth/logout', { refreshToken: this.refreshToken });
+        await apiClient.post('/auth/logout', {});
       }
     } catch (error) {
-      console.warn('Erreur lors de la déconnexion:', error);
+      console.error('Erreur lors de la déconnexion:', error);
     } finally {
       await this.clearTokens();
     }
   }
 
-  // Actualisation du token
-  async refreshAccessToken(): Promise<string> {
-    try {
-      if (!this.refreshToken) {
-        throw new Error('Aucun refresh token disponible');
-      }
-
-      const response = await apiClient.post<{ token: string; refreshToken: string }>('/auth/refresh', {
-        refreshToken: this.refreshToken,
-      });
-
-      await this.saveTokens(response.token, response.refreshToken);
-      return response.token;
-    } catch (error) {
-      await this.clearTokens();
-      throw this.handleAuthError(error);
-    }
-  }
-
-  // Vérification du statut d'authentification
-  async verifyToken(): Promise<User> {
-    try {
-      console.log('🔍 verifyToken - Début de la vérification');
-      console.log('🔍 verifyToken - isInitialized:', this.isInitialized);
-      
-      // Debug mobile : Afficher l'état initial
-      Alert.alert('🔍 DEBUG verifyToken', `Début vérification\n\nInitialisé: ${this.isInitialized}`);
-      
-      await this.waitForInitialization();
-      
-      console.log('🔍 verifyToken - Token dans AuthService:', !!this.token, 'Token (20 premiers chars):', this.token?.substring(0, 20) || 'AUCUN');
-      
-      // Debug mobile : Afficher l'état des tokens
-      const tokenInfo = `AuthService Token:\n\nDisponible: ${!!this.token}\nToken (20 chars): ${this.token?.substring(0, 20) || 'AUCUN'}\nLongueur: ${this.token?.length || 0}`;
-      Alert.alert('🔍 DEBUG AuthService', tokenInfo);
-      
-      if (!this.token) {
-        Alert.alert('❌ ERREUR', 'Aucun token disponible dans AuthService');
-        throw new Error('Aucun token disponible');
-      }
-
-      // S'assurer que le token est bien défini dans ApiClient
-      console.log('🔍 verifyToken - Définition du token dans ApiClient');
-      apiClient.setAuthToken(this.token);
-      Alert.alert('✅ DEBUG', 'Token défini dans ApiClient');
-
-      console.log('🔍 Vérification du token avec headers:', {
-        Authorization: `Bearer ${this.token.substring(0, 20)}...`
-      });
-
-      const response = await apiClient.get('/users/me') as any;
-      
-      // Adapter la réponse du backend Go vers notre format User
-      if (response.success && response.data) {
-        const user: User = {
-          id: response.data.id?.toString() || '',
-          username: response.data.username || '',
-          email: response.data.email || '',
-          firstName: response.data.first_name || '',
-          lastName: response.data.last_name || '',
-          phone: response.data.phone_number || '',
-          countryCode: '+33', // Par défaut
-          avatar: response.data.avatar || undefined,
-          isEmailVerified: response.data.verified || false,
-          isPhoneVerified: false,
-          createdAt: response.data.created_at || new Date().toISOString(),
-          updatedAt: response.data.updated_at || new Date().toISOString(),
-        };
-        return user;
-      }
-      
-      throw new Error('Réponse invalide du serveur');
-    } catch (error) {
-      await this.clearTokens();
-      throw this.handleAuthError(error);
-    }
+  // Normaliser les données utilisateur du backend vers le frontend
+  private normalizeUser(backendUser: any): User {
+    return {
+      id: parseInt(backendUser.id?.toString() || '0'),
+      email: backendUser.email || '',
+      username: backendUser.username || '',
+      first_name: backendUser.first_name || '',
+      last_name: backendUser.last_name || '',
+      preferred_currency: backendUser.preferred_currency,
+      language: backendUser.language,
+      timezone: backendUser.timezone,
+      email_verified: backendUser.email_verified || false,
+      is_active: backendUser.is_active || true,
+      is_admin: backendUser.is_admin || false,
+      last_login_at: backendUser.last_login_at,
+      preferences: backendUser.preferences,
+      privacy_settings: backendUser.privacy_settings,
+      notification_settings: backendUser.notification_settings,
+      stats: backendUser.stats,
+      badges: backendUser.badges,
+      created_at: backendUser.created_at || new Date().toISOString(),
+      updated_at: backendUser.updated_at || new Date().toISOString(),
+    };
   }
 
   // Sauvegarde des tokens
   private async saveTokens(token: string, refreshToken: string): Promise<void> {
     try {
-      console.log('💾 saveTokens - Début de la sauvegarde');
-      console.log('💾 saveTokens - Token (20 premiers chars):', token.substring(0, 20) + '...');
-      
-      // Debug mobile : Afficher la sauvegarde
-      const saveInfo = `Sauvegarde Tokens:\n\nToken (20 chars): ${token.substring(0, 20)}...\nLongueur token: ${token.length}`;
-      Alert.alert('💾 DEBUG saveTokens', saveInfo);
+      console.log('💾 Sauvegarde des tokens...');
       
       this.token = token;
       this.refreshToken = refreshToken;
       
-      await Promise.all([
-        AsyncStorage.setItem(TOKEN_KEY, token),
-        AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken),
-      ]);
-
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+      await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      
       apiClient.setAuthToken(token);
-      console.log('✅ saveTokens - Tokens sauvegardés et définis dans ApiClient');
-      Alert.alert('✅ DEBUG saveTokens', 'Tokens sauvegardés avec succès dans AsyncStorage et ApiClient');
+      console.log('✅ Tokens sauvegardés');
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde des tokens:', error);
-      Alert.alert('❌ ERREUR saveTokens', `Erreur: ${error}`);
       throw new Error('Impossible de sauvegarder les informations d\'authentification');
     }
   }
@@ -439,140 +394,53 @@ class AuthService {
       this.token = null;
       this.refreshToken = null;
       
-      await Promise.all([
-        AsyncStorage.removeItem(TOKEN_KEY),
-        AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
-      ]);
-
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+      
       apiClient.clearAuthToken();
+      console.log('🗑️ Tokens supprimés');
     } catch (error) {
-      console.error('Erreur lors de la suppression des tokens:', error);
+      console.error('❌ Erreur lors de la suppression des tokens:', error);
     }
   }
 
-  // Validation des données d'inscription
-  private validateRegisterData(data: RegisterData): void {
-    const errors: Partial<Record<keyof RegisterData, string>> = {};
-
-    if (!data.username || data.username.length < 3) {
-      errors.username = 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
-    }
-
-    if (!data.firstName || data.firstName.length < 2) {
-      errors.firstName = 'Le prénom doit contenir au moins 2 caractères';
-    }
-
-    if (!data.lastName || data.lastName.length < 2) {
-      errors.lastName = 'Le nom doit contenir au moins 2 caractères';
-    }
-
-    if (!data.email || !/\S+@\S+\.\S+/.test(data.email)) {
-      errors.email = 'Adresse email invalide';
-    }
-
-    if (!data.password || data.password.length < 6) {
-      errors.password = 'Le mot de passe doit contenir au moins 6 caractères';
-    }
-
-    if (data.password !== data.confirmPassword) {
-      errors.confirmPassword = 'Les mots de passe ne correspondent pas';
-    }
-
-    if (!data.phone || data.phone.length < 8) {
-      errors.phone = 'Numéro de téléphone invalide';
-    }
-
-    if (!data.acceptTerms) {
-      errors.acceptTerms = 'Vous devez accepter les conditions d\'utilisation';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      const error = new Error('Données d\'inscription invalides');
-      (error as any).validationErrors = errors;
-      throw error;
-    }
-  }
-
-  // Gestion des erreurs d'authentification
+  // Gestion des erreurs
   private handleAuthError(error: any): AuthError {
-    console.error('Erreur d\'authentification:', error);
-
-    // Erreur réseau
-    if (!error.response) {
-      return {
-        code: 'NETWORK_ERROR',
-        message: 'Problème de connexion. Vérifiez votre connexion internet.',
-      };
+    console.error('❌ Auth Error:', error);
+    
+    let errorMessage = 'Une erreur est survenue';
+    let errorCode = 'UNKNOWN_ERROR';
+    
+    if (error?.response?.data) {
+      const data = error.response.data;
+      
+      if (data.error) {
+        errorMessage = data.error;
+      }
+      
+      if (error.response.status === 401) {
+        errorCode = 'UNAUTHORIZED';
+        errorMessage = 'Email ou mot de passe incorrect';
+      } else if (error.response.status === 409) {
+        errorCode = 'CONFLICT';
+        errorMessage = 'Email ou nom d\'utilisateur déjà utilisé';
+      } else if (error.response.status >= 500) {
+        errorCode = 'SERVER_ERROR';
+        errorMessage = 'Erreur du serveur. Veuillez réessayer plus tard.';
+      }
+    } else if (error?.message?.includes('Network request failed') || error?.name === 'TypeError') {
+      errorCode = 'NETWORK_ERROR';
+      errorMessage = 'Problème de connexion. Vérifiez votre connexion internet.';
     }
 
-    const { status, data } = error.response;
-
-    // Erreurs de validation côté client
-    if (error.validationErrors) {
-      return {
-        code: 'VALIDATION_ERROR',
-        message: 'Données invalides',
-        details: error.validationErrors,
-      };
-    }
-
-    // Erreurs serveur spécifiques
-    switch (status) {
-      case 400:
-        return {
-          code: 'BAD_REQUEST',
-          message: data?.message || 'Données invalides',
-          field: data?.field,
-          details: data?.errors,
-        };
-
-      case 401:
-        return {
-          code: 'UNAUTHORIZED',
-          message: data?.message || 'Email ou mot de passe incorrect',
-        };
-
-      case 403:
-        return {
-          code: 'FORBIDDEN',
-          message: data?.message || 'Accès refusé',
-        };
-
-      case 409:
-        return {
-          code: 'CONFLICT',
-          message: data?.message || 'Cet email est déjà utilisé',
-          field: data?.field,
-        };
-
-      case 422:
-        return {
-          code: 'VALIDATION_ERROR',
-          message: 'Données invalides',
-          details: data?.errors,
-        };
-
-      case 429:
-        return {
-          code: 'RATE_LIMITED',
-          message: 'Trop de tentatives. Veuillez réessayer plus tard.',
-        };
-
-      case 500:
-        return {
-          code: 'SERVER_ERROR',
-          message: 'Erreur serveur temporaire. Veuillez réessayer.',
-        };
-
-      default:
-        return {
-          code: 'UNKNOWN_ERROR',
-          message: data?.message || 'Une erreur inattendue s\'est produite',
-        };
-    }
+    return {
+      code: errorCode,
+      message: errorMessage,
+      details: error,
+    };
   }
 
-  // Getters pour les tokens
+  // Méthodes utilitaires
   getToken(): string | null {
     return this.token;
   }
@@ -582,10 +450,10 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    const hasToken = !!this.token;
-    console.log('🔐 isAuthenticated check:', hasToken, 'token length:', this.token?.length || 0);
-    return hasToken;
+    return !!this.token;
   }
 }
 
 export const authService = new AuthService();
+export type { User };
+

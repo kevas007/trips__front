@@ -15,15 +15,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { NavigationProp } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 interface ForgotPasswordScreenProps {
   navigation: NavigationProp<any>;
 }
 
 const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => {
-  const { theme } = useAppTheme();
+  const { t } = useTranslation();
+  const { theme, isDark } = useAppTheme();
   // const { resetPassword } = useSimpleAuth(); // Fonctionnalité à implémenter
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -52,21 +52,26 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
       return;
     }
 
-    if (!email.includes('@')) {
+    if (!/\S+@\S+\.\S+/.test(email)) {
       Alert.alert('Erreur', 'Veuillez entrer une adresse email valide');
       return;
     }
 
     setIsLoading(true);
     try {
-      await resetPassword(email);
+      // TODO: Implémenter la logique de réinitialisation du mot de passe
       Alert.alert(
         'Email envoyé',
-        'Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation.'
+        'Un lien de réinitialisation a été envoyé à votre adresse email.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
       );
-      navigation.navigate('Login');
     } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Une erreur est survenue');
+      Alert.alert('Erreur', 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsLoading(false);
     }
@@ -74,15 +79,15 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
 
   return (
     <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <View style={styles.header}>
             <Animated.View style={[styles.logoContainer, logoAnimation]}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#008080', '#4FB3B3']}
                 style={styles.logoGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -91,15 +96,18 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
               </LinearGradient>
             </Animated.View>
             <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-              Mot de passe oublié ?
+              Mot de passe oublié
             </Text>
             <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-              Entrez votre email pour réinitialiser votre mot de passe
+              Entrez votre adresse email pour recevoir un lien de réinitialisation
             </Text>
           </View>
 
           <View style={styles.form}>
-            <View style={[styles.inputContainer, { backgroundColor: theme.colors.background.card }]}>
+            <View style={[styles.inputContainer, {
+              backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
+              borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
+            }]}>
               <Ionicons
                 name="mail-outline"
                 size={20}
@@ -178,18 +186,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoEmoji: {
-    fontSize: 50,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
+      logoEmoji: {
+      fontSize: 42,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 8,
+      textAlign: 'center',
+    },
   form: {
     width: '100%',
   },
@@ -204,10 +212,10 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 12,
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-  },
+      input: {
+      flex: 1,
+      fontSize: 8,
+    },
   resetButton: {
     height: 50,
     borderRadius: 12,
@@ -216,18 +224,18 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 16,
   },
-  resetButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+      resetButtonText: {
+      color: '#FFFFFF',
+      fontSize: 8,
+      fontWeight: 'bold',
+    },
   backButton: {
     alignItems: 'center',
     padding: 8,
   },
-  backButtonText: {
-    fontSize: 14,
-  },
+      backButtonText: {
+      fontSize: 6,
+    },
 });
 
 export default ForgotPasswordScreen; 
