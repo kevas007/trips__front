@@ -1,67 +1,38 @@
 // src/components/Home/SearchBar.tsx
 import React from 'react';
-import { View, TextInput, StyleSheet, Animated } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../hooks/useAppTheme';
+import { Theme } from '../../types/theme';
 
-interface SearchBarProps {
-  searchQuery: string;
-  setSearchQuery: (text: string) => void;
-  fadeAnim: Animated.Value;
-  slideAnim: Animated.Value;
+export interface SearchBarProps {
+  theme: Theme;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({
-  searchQuery,
-  setSearchQuery,
-  fadeAnim,
-  slideAnim,
-}) => {
-  const { theme, isDark } = useAppTheme();
-
+const SearchBar: React.FC<SearchBarProps> = ({ theme }) => {
   return (
-    <Animated.View
+    <TouchableOpacity 
       style={[
-        styles.searchContainer,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}>
-      <View style={[styles.searchBox, { backgroundColor: theme.colors.background.card, shadowColor: theme.colors.glassmorphism.shadow }]}>
-        <Ionicons 
-          name="search-outline" 
-          size={20} 
-          color={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'} 
-        />
-        <TextInput
-          style={[styles.searchInput, { color: theme.colors.text.primary }]}
-          placeholder="Rechercher des voyages, lieux..."
-          placeholderTextColor={isDark ? 'rgba(230,225,229,0.6)' : '#79747E'}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-    </Animated.View>
+        styles.searchBar, 
+        { backgroundColor: theme.colors.background.card }
+      ]}
+    >
+      <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
+      <Text style={[styles.searchText, { color: theme.colors.text.secondary }]}>
+        Où souhaitez-vous aller ?
+      </Text>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  searchBox: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 12,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    boxShadow: '0px 4px 8px rgba(0,0,0,0.1)',
+    marginBottom: 15,
   },
-  searchInput: {
-    flex: 1,
+  searchText: {
     marginLeft: 8,
     fontSize: 14,
   },

@@ -1,5 +1,5 @@
 import { authService } from './auth';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG, getFullApiUrl } from '../config/api';
 
 // ========== FORMAT RÉPONSE BACKEND GO ==========
 interface BackendResponse<T = any> {
@@ -22,11 +22,14 @@ class UnifiedApiService {
       ...options.headers as Record<string, string>,
     };
 
-    console.log(`🚀 UnifiedAPI ${options.method || 'GET'} ${endpoint}`);
+    // Utiliser getFullApiUrl pour construire l'URL complète avec le préfixe /api/v1/
+    const fullUrl = getFullApiUrl(endpoint);
+
+    console.log(`🚀 UnifiedAPI ${options.method || 'GET'} ${fullUrl}`);
     console.log(`🔍 UnifiedAPI - Token disponible:`, !!token);
     console.log(`🌐 UnifiedAPI - Base URL: ${this.baseURL}`);
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
     });

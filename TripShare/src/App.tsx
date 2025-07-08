@@ -63,7 +63,7 @@ const LoadingScreen: React.FC = () => {
 // ========== NAVIGATION PRINCIPALE ==========
 
 const AppNavigator: React.FC = () => {
-  const { isAuthenticated, isLoading } = useSimpleAuth();
+  const { isAuthenticated, isLoading, isNewUser } = useSimpleAuth();
   const { theme, isDark } = useAppTheme();
 
   if (isLoading) {
@@ -85,7 +85,7 @@ const AppNavigator: React.FC = () => {
       }}
     >
       <View style={{ flex: 1 }}>
-        {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
+        {!isAuthenticated || isNewUser ? <AuthNavigator /> : <MainNavigator />}
         <StatusBar style={isDark ? "light" : "dark"} />
       </View>
     </NavigationContainer>

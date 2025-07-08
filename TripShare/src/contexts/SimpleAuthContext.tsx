@@ -8,6 +8,7 @@ export interface SimpleAuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isNewUser: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
@@ -28,6 +29,7 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // ========== INITIALISATION ==========
   
@@ -47,6 +49,8 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
         try {
           // Vérifier auprès du serveur que le token est toujours valide
           const currentUser = await authService.verifyToken();
+          console.log('🔍 Utilisateur récupéré:', currentUser);
+          console.log('🔍 ID utilisateur:', currentUser?.id);
           setUser(currentUser);
           console.log('✅ Utilisateur validé:', currentUser.email);
         } catch (validationError) {
@@ -114,6 +118,7 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
       console.log('🔄 Tentative d\'inscription...');
       const response = await authService.register(data);
       setUser(response.user);
+      setIsNewUser(true);
       console.log('✅ Inscription réussie:', response.user.email);
 
     } catch (error) {
@@ -132,6 +137,7 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
       console.log('🔄 Déconnexion...');
       await authService.logout();
       setUser(null);
+      setIsNewUser(false);
       console.log('✅ Déconnexion réussie');
 
     } catch (error) {
@@ -148,6 +154,7 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
     isAuthenticated: !!user,
     isLoading,
     error,
+    isNewUser,
     login,
     register,
     logout,

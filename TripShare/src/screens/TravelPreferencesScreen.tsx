@@ -4,75 +4,185 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
   Alert,
+  ImageBackground,
+  SafeAreaView,
   ActivityIndicator,
+  Dimensions,
+  Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { apiService } from '../services/api';
-import { UserPreferences } from '../types/api';
+import { useAppTheme } from '../hooks/useAppTheme';
+import { api as apiService } from '../services/api';
+import { authService } from '../services/auth';
+import { UserTravelPreferences } from '../types/user';
+import { useNavigation } from '@react-navigation/native';
+import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { screenStyles } from './TravelPreferencesStyles';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types/navigation';
+import { CommonActions } from '@react-navigation/native';
 
-// Options de style de voyage
-const TRAVEL_STYLES = [
-  { key: 'luxury', label: 'Luxe', icon: 'diamond-outline' },
-  { key: 'mid-range', label: 'Confort', icon: 'bed-outline' },
-  { key: 'budget', label: 'Économique', icon: 'wallet-outline' },
-  { key: 'backpacker', label: 'Backpacker', icon: 'backpack-outline' },
+type NavigationProp = StackNavigationProp<RootStackParamList>;
+
+// Type local pour les préférences de l'interface utilisateur
+interface LocalUserPreferences {
+  budget: string;
+  transportModes: string[];
+  climatePreference: string;
+  tripDuration: string;
+  accommodationTypes: string[];
+  interests: string[];
+  dietaryRestrictions: string[];
+  accessibilityNeeds: string[];
+}
+
+// Options de budget quotidien
+const BUDGET_RANGES = [
+  { key: 'budget', label: 'Économique', icon: 'wallet' },
+  { key: 'moderate', label: 'Modéré', icon: 'card' },
+  { key: 'luxury', label: 'Luxe', icon: 'diamond' },
 ];
 
-// Intérêts de voyage
+// Options de transport
+const TRANSPORT_MODES = [
+  { key: 'car', label: 'Voiture', icon: 'car' },
+  { key: 'train', label: 'Train', icon: 'train' },
+  { key: 'plane', label: 'Avion', icon: 'airplane' },
+  { key: 'bus', label: 'Bus', icon: 'bus' },
+  { key: 'bike', label: 'Vélo', icon: 'bicycle' },
+  { key: 'walk', label: 'Marche', icon: 'walk' },
+];
+
+// Options de climat
+const CLIMATE_PREFERENCES = [
+  { key: 'tropical', label: 'Tropical', icon: 'sunny' },
+  { key: 'temperate', label: 'Tempéré', icon: 'partly-sunny' },
+  { key: 'cold', label: 'Froid', icon: 'snow' },
+];
+
+// Options de durée
+const TRIP_DURATIONS = [
+  { key: 'weekend', label: 'Week-end', icon: 'calendar' },
+  { key: 'week', label: '1 semaine', icon: 'calendar' },
+  { key: 'twoWeeks', label: '2 semaines', icon: 'calendar' },
+  { key: 'month', label: '1 mois+', icon: 'calendar' },
+];
+
+// Options d'hébergement
+const ACCOMMODATION_TYPES = [
+  { key: 'hotel', label: 'Hôtel', icon: 'bed' },
+  { key: 'hostel', label: 'Auberge', icon: 'people' },
+  { key: 'apartment', label: 'Appartement', icon: 'home' },
+  { key: 'camping', label: 'Camping', icon: 'bonfire' },
+  { key: 'resort', label: 'Resort', icon: 'umbrella' },
+];
+
+// Centres d'intérêt
 const INTERESTS = [
-  { key: 'culture', label: 'Culture', icon: 'museum-outline' },
-  { key: 'nature', label: 'Nature', icon: 'leaf-outline' },
-  { key: 'adventure', label: 'Aventure', icon: 'compass-outline' },
-  { key: 'food', label: 'Gastronomie', icon: 'restaurant-outline' },
-  { key: 'history', label: 'Histoire', icon: 'book-outline' },
-  { key: 'shopping', label: 'Shopping', icon: 'cart-outline' },
-  { key: 'nightlife', label: 'Vie nocturne', icon: 'moon-outline' },
-  { key: 'relaxation', label: 'Détente', icon: 'umbrella-outline' },
+  { key: 'culture', label: 'Culture', icon: 'library' },
+  { key: 'nature', label: 'Nature', icon: 'leaf' },
+  { key: 'adventure', label: 'Aventure', icon: 'compass' },
+  { key: 'relax', label: 'Détente', icon: 'sunny' },
+  { key: 'food', label: 'Gastronomie', icon: 'restaurant' },
+  { key: 'shopping', label: 'Shopping', icon: 'cart' },
+  { key: 'nightlife', label: 'Vie nocturne', icon: 'moon' },
+  { key: 'sports', label: 'Sports', icon: 'football' },
 ];
 
 // Restrictions alimentaires
 const DIETARY_RESTRICTIONS = [
-  { key: 'vegetarian', label: 'Végétarien', icon: 'nutrition-outline' },
-  { key: 'vegan', label: 'Végan', icon: 'leaf-outline' },
-  { key: 'gluten-free', label: 'Sans gluten', icon: 'ban-outline' },
-  { key: 'halal', label: 'Halal', icon: 'restaurant-outline' },
-  { key: 'kosher', label: 'Casher', icon: 'restaurant-outline' },
+  { key: 'vegetarian', label: 'Végétarien', icon: 'leaf' },
+  { key: 'vegan', label: 'Vegan', icon: 'nutrition' },
+  { key: 'glutenFree', label: 'Sans gluten', icon: 'warning' },
+  { key: 'lactoseFree', label: 'Sans lactose', icon: 'warning' },
+  { key: 'halal', label: 'Halal', icon: 'restaurant' },
+  { key: 'kosher', label: 'Casher', icon: 'restaurant' },
 ];
 
-// Accessibilité
-const ACCESSIBILITY = [
-  { key: 'wheelchair', label: 'Fauteuil roulant', icon: 'wheelchair-outline' },
-  { key: 'visual', label: 'Déficience visuelle', icon: 'eye-outline' },
-  { key: 'hearing', label: 'Déficience auditive', icon: 'ear-outline' },
-  { key: 'mobility', label: 'Mobilité réduite', icon: 'walk-outline' },
+// Besoins d'accessibilité
+const ACCESSIBILITY_NEEDS = [
+  { key: 'wheelchair', label: 'Fauteuil roulant', icon: 'accessibility' },
+  { key: 'visual', label: 'Déficience visuelle', icon: 'eye' },
+  { key: 'hearing', label: 'Déficience auditive', icon: 'ear' },
 ];
 
-const TravelPreferencesScreen = () => {
-  const navigation = useNavigation();
+export default function TravelPreferencesScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const { theme, isDark } = useAppTheme();
+  const { logout } = useSimpleAuth();
   const [loading, setLoading] = useState(false);
-  const [preferences, setPreferences] = useState<Partial<UserPreferences>>({
-    travelStyle: 'mid-range',
+  const [preferences, setPreferences] = useState<LocalUserPreferences>({
+    budget: '',
+    transportModes: [],
+    climatePreference: '',
+    tripDuration: '',
+    accommodationTypes: [],
     interests: [],
-    favoriteDestinations: [],
-    avoidedActivities: [],
     dietaryRestrictions: [],
-    accessibility: [],
+    accessibilityNeeds: []
   });
 
+  // Vérifier si au moins une préférence est sélectionnée
+  const hasSelectedPreferences = () => {
+    return preferences.budget !== '' ||
+      preferences.transportModes.length > 0 ||
+      preferences.climatePreference !== '' ||
+      preferences.tripDuration !== '' ||
+      preferences.accommodationTypes.length > 0 ||
+      preferences.interests.length > 0 ||
+      preferences.dietaryRestrictions.length > 0 ||
+      preferences.accessibilityNeeds.length > 0;
+  };
+
   const toggleArrayItem = (array: string[], item: string) => {
-    if (array.includes(item)) {
-      return array.filter(i => i !== item);
+    const index = array.indexOf(item);
+    if (index === -1) {
+      return [...array, item];
     }
-    return [...array, item];
+    return [...array.slice(0, index), ...array.slice(index + 1)];
+  };
+
+  const handlePress = (optionKey: string, fieldName: keyof LocalUserPreferences) => {
+    console.log('Pressing option:', optionKey, 'for field:', fieldName);
+    console.log('Current preferences:', preferences);
+
+    setPreferences(prev => {
+      if (fieldName === 'budget' || fieldName === 'climatePreference' || fieldName === 'tripDuration') {
+        // Single selection fields
+        return {
+          ...prev,
+          [fieldName]: optionKey
+        };
+      } else {
+        // Multiple selection fields
+        const currentArray = prev[fieldName] as string[] || [];
+        const newArray = toggleArrayItem(currentArray, optionKey);
+        console.log('Updating array:', { currentArray, newArray });
+        return {
+          ...prev,
+          [fieldName]: newArray
+        };
+      }
+    });
   };
 
   const handleSave = async () => {
     try {
       setLoading(true);
-      const response = await apiService.updatePreferences(preferences);
+
+      const backendPreferences: UserTravelPreferences = {
+        activities: preferences.interests || [],
+        accommodation: preferences.accommodationTypes || [],
+        transport: preferences.transportModes || [],
+        food: preferences.dietaryRestrictions || [],
+        budget: preferences.budget ? [preferences.budget] : [],
+        climate: preferences.climatePreference ? [preferences.climatePreference] : [],
+        culture: []
+      };
+
+      const response = await apiService.updatePreferences(backendPreferences);
       
       if (response.success) {
         Alert.alert(
@@ -81,7 +191,29 @@ const TravelPreferencesScreen = () => {
           [
             {
               text: 'Continuer',
-              onPress: () => navigation.navigate('Home' as never),
+              onPress: async () => {
+                try {
+                  // Vérifier le token pour rafraîchir les données utilisateur
+                  const user = await authService.verifyToken();
+                  if (user) {
+                    // Utiliser CommonActions pour réinitialiser la navigation
+                    navigation.dispatch(
+                      CommonActions.reset({
+                        index: 0,
+                        routes: [
+                          { name: 'Main' }
+                        ],
+                      })
+                    );
+                  }
+                } catch (error) {
+                  console.error('Erreur lors de la vérification du token:', error);
+                  Alert.alert(
+                    'Erreur',
+                    'Impossible de continuer. Veuillez réessayer.'
+                  );
+                }
+              }
             },
           ]
         );
@@ -98,227 +230,177 @@ const TravelPreferencesScreen = () => {
     }
   };
 
-  const renderOptionChips = (
-    options: Array<{ key: string; label: string; icon: string }>,
-    selectedArray: string[],
-    onToggle: (key: string) => void
-  ) => (
-    <View style={styles.chipContainer}>
-      {options.map(option => (
-        <TouchableOpacity
-          key={option.key}
-          style={[
-            styles.chip,
-            selectedArray.includes(option.key) && styles.chipSelected,
-          ]}
-          onPress={() => onToggle(option.key)}
-        >
-          <Ionicons
-            name={option.icon as any}
-            size={20}
-                                color={selectedArray.includes(option.key) ? '#fff' : '#008080'}
-            style={styles.chipIcon}
-          />
-          <Text
-            style={[
-              styles.chipText,
-              selectedArray.includes(option.key) && styles.chipTextSelected,
-            ]}
-          >
-            {option.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+  const handleSkip = () => {
+    // Utiliser le contexte d'authentification pour forcer la redirection
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Main' }],
+    });
+  };
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Vos Préférences de Voyage</Text>
-        <Text style={styles.subtitle}>
-          Personnalisez votre expérience de voyage
+  const renderSection = (title: string, options: any[], selectedValue: string | string[], isSingle: boolean = false) => {
+    const getFieldName = (title: string): keyof LocalUserPreferences => {
+      const normalizedTitle = title.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')  // Enlever les accents
+        .replace(/[^a-z]/g, '');          // Garder uniquement les lettres
+
+      console.log('Normalisation du titre:', { original: title, normalized: normalizedTitle });
+
+      switch (normalizedTitle) {
+        case 'transport': return 'transportModes';
+        case 'climat': return 'climatePreference';
+        case 'duree': return 'tripDuration';
+        case 'hebergement': return 'accommodationTypes';
+        case 'centresdinteret':
+        case 'centresinteret':
+        case 'centredinteret': return 'interests';
+        case 'restrictionsalimentaires': return 'dietaryRestrictions';
+        case 'accessibilite': return 'accessibilityNeeds';
+        case 'budget': return 'budget';
+        default:
+          console.warn(`Titre non reconnu: ${title}, normalisé: ${normalizedTitle}`);
+          return 'budget';
+      }
+    };
+
+    const fieldName = getFieldName(title);
+    console.log('Field name pour', title, ':', fieldName);
+
+    return (
+      <View style={screenStyles.section}>
+        <Text style={[screenStyles.sectionTitle, { color: theme.colors.text.primary }]}>
+          {title}
+          {!isSingle && <Text style={screenStyles.multiSelectHint}> (sélection multiple possible)</Text>}
         </Text>
-      </View>
+        <View style={screenStyles.chipContainer}>
+          {options.map(option => {
+            const isSelected = isSingle
+              ? selectedValue === option.key
+              : Array.isArray(selectedValue) && selectedValue.includes(option.key);
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Style de Voyage</Text>
-        <View style={styles.chipContainer}>
-          {TRAVEL_STYLES.map(style => (
-            <TouchableOpacity
-              key={style.key}
-              style={[
-                styles.chip,
-                preferences.travelStyle === style.key && styles.chipSelected,
-              ]}
-              onPress={() =>
-                setPreferences({ ...preferences, travelStyle: style.key as any })
-              }
-            >
-              <Ionicons
-                name={style.icon as any}
-                size={20}
-                color={
-                                      preferences.travelStyle === style.key ? '#fff' : '#008080'
-                }
-                style={styles.chipIcon}
-              />
-              <Text
+            return (
+              <TouchableOpacity
+                key={option.key}
                 style={[
-                  styles.chipText,
-                  preferences.travelStyle === style.key && styles.chipTextSelected,
+                  screenStyles.chip,
+                  isSelected && screenStyles.chipSelected,
+                  { 
+                    backgroundColor: isSelected ? theme.colors.primary[0] : theme.colors.background.card,
+                    borderColor: isSelected ? theme.colors.primary[0] : theme.colors.border.primary,
+                  }
                 ]}
+                onPress={() => handlePress(option.key, fieldName)}
+                activeOpacity={0.7}
               >
-                {style.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Ionicons
+                  name={option.icon}
+                  size={20}
+                  color={isSelected ? '#fff' : theme.colors.text.primary}
+                  style={screenStyles.chipIcon}
+                />
+                <Text style={[
+                  screenStyles.chipText,
+                  isSelected && screenStyles.chipTextSelected,
+                  { color: isSelected ? '#fff' : theme.colors.text.primary }
+                ]}>
+                  {option.label}
+                </Text>
+                {!isSingle && (
+                  <View style={[
+                    screenStyles.checkmark,
+                    isSelected && screenStyles.checkmarkSelected,
+                    { 
+                      borderColor: '#E0E0E0',
+                      backgroundColor: isSelected ? theme.colors.primary[0] : 'transparent'
+                    }
+                  ]}>
+                    {isSelected && (
+                      <Ionicons
+                        name="checkmark"
+                        size={12}
+                        color="#fff"
+                      />
+                    )}
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
+    );
+  };
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Centres d'Intérêt</Text>
-        {renderOptionChips(
-          INTERESTS,
-          preferences.interests || [],
-          (key) =>
-            setPreferences({
-              ...preferences,
-              interests: toggleArrayItem(preferences.interests || [], key),
-            })
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Restrictions Alimentaires</Text>
-        {renderOptionChips(
-          DIETARY_RESTRICTIONS,
-          preferences.dietaryRestrictions || [],
-          (key) =>
-            setPreferences({
-              ...preferences,
-              dietaryRestrictions: toggleArrayItem(
-                preferences.dietaryRestrictions || [],
-                key
-              ),
-            })
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Accessibilité</Text>
-        {renderOptionChips(
-          ACCESSIBILITY,
-          preferences.accessibility || [],
-          (key) =>
-            setPreferences({
-              ...preferences,
-              accessibility: toggleArrayItem(preferences.accessibility || [], key),
-            })
-        )}
-      </View>
-
-      <TouchableOpacity
-        style={[
-          styles.continueButton,
-          {
-            backgroundColor: '#008080', // Material Design 3 Teal
-          },
-        ]}
-        onPress={handleSave}
-        disabled={loading}
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
+      <ImageBackground
+        source={isDark ? require('../../assets/login_bg_dark.png') : require('../../assets/login_bg_light.png')}
+        style={screenStyles.backgroundImage}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveButtonText}>Enregistrer les Préférences</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.5)']}
+          style={screenStyles.gradient}
+        >
+          <ScrollView contentContainerStyle={screenStyles.container}>
+            <View style={screenStyles.header}>
+              <Text style={[screenStyles.title, { color: theme.colors.text.primary }]}>
+                Vos Préférences de Voyage
+              </Text>
+              <Text style={[screenStyles.subtitle, { color: theme.colors.text.secondary }]}>
+                Personnalisez votre expérience de voyage
+              </Text>
+            </View>
+
+            <View style={[screenStyles.card, {
+              backgroundColor: theme.colors.background.card,
+              shadowColor: theme.colors.text.primary
+            }]}>
+              {renderSection('Budget', BUDGET_RANGES, preferences.budget || '', true)}
+              {renderSection('Transport', TRANSPORT_MODES, preferences.transportModes || [])}
+              {renderSection('Climat', CLIMATE_PREFERENCES, preferences.climatePreference || '', true)}
+              {renderSection('Durée', TRIP_DURATIONS, preferences.tripDuration || '', true)}
+              {renderSection('Hébergement', ACCOMMODATION_TYPES, preferences.accommodationTypes || [])}
+              {renderSection('Centres d\'Intérêt', INTERESTS, preferences.interests || [])}
+              {renderSection('Restrictions Alimentaires', DIETARY_RESTRICTIONS, preferences.dietaryRestrictions || [])}
+              {renderSection('Accessibilité', ACCESSIBILITY_NEEDS, preferences.accessibilityNeeds || [])}
+            </View>
+
+            <View style={screenStyles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  screenStyles.saveButton,
+                  {
+                    opacity: (loading || !hasSelectedPreferences()) ? 0.7 : 1,
+                    backgroundColor: theme.colors.primary[0]
+                  }
+                ]}
+                onPress={handleSave}
+                disabled={loading || !hasSelectedPreferences()}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={screenStyles.saveButtonText}>
+                    Enregistrer
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[screenStyles.skipButton]}
+                onPress={handleSkip}
+              >
+                <Text style={[screenStyles.skipButtonText, { color: theme.colors.text.secondary }]}>
+                  Ignorer
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </LinearGradient>
+      </ImageBackground>
+    </SafeAreaView>
   );
-};
+}
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#f8fafc',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a202c',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 8,
-    color: '#4a5568',
-  },
-  section: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 16,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#edf2f7',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  chipSelected: {
-    backgroundColor: '#008080', // Material Design 3 Teal
-    borderColor: '#5a67d8',
-  },
-  chipIcon: {
-    marginRight: 6,
-  },
-  chipText: {
-    fontSize: 6,
-    color: '#4a5568',
-  },
-  chipTextSelected: {
-    color: '#fff',
-  },
-  continueButton: {
-    backgroundColor: '#008080', // Material Design 3 Teal
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: '600',
-  },
-});
-
-export default TravelPreferencesScreen; 
+const { width } = Dimensions.get('window'); 

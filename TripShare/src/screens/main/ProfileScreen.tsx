@@ -1,17 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  Platform,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Linking, FlatList, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import { useAppTheme } from '../../hooks/useAppTheme';
@@ -20,7 +9,6 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
-// Typage navigation
 export type ProfileStackParamList = {
   Profile: undefined;
   EditProfile: undefined;
@@ -28,63 +16,65 @@ export type ProfileStackParamList = {
 };
 type ProfileScreenNavigationProp = StackNavigationProp<ProfileStackParamList>;
 
-const fontSizeMap = {
-  'Petit': 6,
-  'Normal': 8,
-  'Grand': 10,
-  'Très grand': 12,
-};
-
 const styles = StyleSheet.create({
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    marginBottom: 16,
-  },
-  statBlock: {
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  badge: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    marginTop: 8,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    padding: 16,
-    margin: 24,
-    justifyContent: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: { alignItems: 'center', paddingTop: 32, paddingBottom: 16 },
+  avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 2, borderColor: '#008080', marginBottom: 8 },
+  username: { fontWeight: 'bold', fontSize: 20, color: '#222' },
+  name: { fontSize: 15, color: '#666', marginBottom: 4 },
+  bio: { color: '#444', fontSize: 14, textAlign: 'center', marginVertical: 8, maxWidth: 260 },
+  website: { color: '#008080', fontSize: 14, textAlign: 'center', marginBottom: 8, textDecorationLine: 'underline' },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginVertical: 12 },
+  statBlock: { alignItems: 'center', minWidth: 70 },
+  statValue: { fontWeight: 'bold', fontSize: 18, color: '#008080' },
+  statLabel: { fontSize: 12, color: '#888' },
+  actionsRow: { flexDirection: 'row', marginTop: 10, marginBottom: 8 },
+  editBtn: { backgroundColor: '#008080', borderRadius: 20, paddingHorizontal: 32, paddingVertical: 8, marginHorizontal: 4 },
+  editText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  followBtn: { backgroundColor: '#008080', borderRadius: 20, paddingHorizontal: 32, paddingVertical: 8, marginHorizontal: 4 },
+  followText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  msgBtn: { backgroundColor: '#e0f7fa', borderRadius: 20, padding: 8, marginHorizontal: 4 },
+  badgesRow: { flexDirection: 'row', marginTop: 12, marginBottom: 8, paddingHorizontal: 8 },
+  badgeCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#e0f7fa', alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  badgeText: { color: '#008080', fontWeight: 'bold', fontSize: 12 },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 16, margin: 24, justifyContent: 'center', backgroundColor: '#e53935' },
+  logoutText: { color: '#fff', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
+  topRightRow: { position: 'absolute', top: 16, right: 16, flexDirection: 'row', zIndex: 10 },
+  shareBtn: { backgroundColor: '#e0f7fa', borderRadius: 20, padding: 8, marginLeft: 8 },
+  gridContainer: { marginTop: 16, paddingHorizontal: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
+  gridItem: { width: (Dimensions.get('window').width - 32) / 3, aspectRatio: 1, backgroundColor: '#f0f0f0', margin: 4, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
+  gridIcon: { color: '#bbb' },
+  gridText: { color: '#bbb', fontSize: 12, marginTop: 4 },
+  emptyGridText: { textAlign: 'center', color: '#888', marginTop: 24, fontSize: 15 },
 });
+
+const Stat = ({ label, value }: { label: string; value: number }) => (
+  <View style={styles.statBlock}>
+    <Text style={styles.statValue}>{value}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>
+);
 
 const ProfileScreen: React.FC = () => {
   const { user: currentUser, logout } = useSimpleAuth();
-  const { theme, fontSize } = useAppTheme();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { t } = useTranslation();
 
+  // Simule des voyages/posts (à remplacer par l'API réelle)
+  const posts = user && user.posts ? user.posts : [];
+
   const loadProfile = async () => {
     try {
       const userData = await profileService.getProfile();
-      setUser(userData);
+      if (userData && userData.user && userData.profile) {
+        setUser({ ...userData.user, ...userData.profile });
+      } else {
+        setUser(null);
+      }
     } catch (error) {
       setUser(null);
     } finally {
@@ -98,113 +88,134 @@ const ProfileScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background.primary, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={theme.colors.primary[0]} />
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#008080" />
       </View>
     );
   }
   if (!user) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background.primary, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: theme.colors.text.primary, fontSize: fontSizeMap[fontSize], marginBottom: 20 }}>Impossible de charger le profil utilisateur.</Text>
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#222', fontSize: 15, marginBottom: 20 }}>Impossible de charger le profil utilisateur.</Text>
       </View>
     );
   }
 
+  const isCurrentUser = !!currentUser && String(user.id) === String(currentUser.id);
+  console.log('user.id:', user.id, 'currentUser.id:', currentUser?.id, 'isCurrentUser:', isCurrentUser);
+
+  // Handler pour partager le profil
+  const handleShare = () => {
+    // À adapter avec le vrai lien de profil
+    const url = `https://tonapp.com/user/${user.username}`;
+    Linking.openURL(url);
+  };
+
+  // Handler pour aller aux paramètres
+  const handleSettings = () => {
+    navigation.navigate('Settings');
+  };
+
   return (
-    <LinearGradient
-      colors={theme.colors.background.gradient as any}
-      style={{ flex: 1 }}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top', 'bottom']}>
+      {/* Top right actions */}
+      <View style={styles.topRightRow}>
+        {isCurrentUser && (
+          <TouchableOpacity onPress={handleSettings} style={styles.shareBtn}>
+            <Ionicons name="settings-outline" size={22} color="#008080" />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity onPress={handleShare} style={styles.shareBtn}>
+          <Ionicons name="share-social-outline" size={22} color="#008080" />
+        </TouchableOpacity>
+      </View>
+      <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* Header */}
-        <View style={{ alignItems: 'center', marginTop: 40 }}>
-          {/* Bouton paramètres en haut à droite */}
-          <TouchableOpacity
-            style={{ position: 'absolute', top: 0, right: 24, zIndex: 10, padding: 8, backgroundColor: theme.colors.background.card, borderRadius: 24 }}
-            onPress={() => navigation.navigate('Settings')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="settings-outline" size={26} color={theme.colors.primary[0]} />
-          </TouchableOpacity>
+        <View style={styles.header}>
           <Image
-            source={user.avatar_url ? { uri: user.avatar_url } : { uri: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(user.email || user.username || 'user')}` }}
-            style={[
-              styles.avatar,
-              {
-                borderColor: theme.colors.primary[0],
-                backgroundColor: theme.colors.background.card,
-                // boxShadow web only
-                ...(Platform.OS === 'web' ? { boxShadow: `0px 4px 10px ${theme.colors.primary[0]}55` } : {}),
-              },
-            ]}
+            source={user.avatar_url ? { uri: user.avatar_url } : require('../../assets/logo.svg')}
+            style={styles.avatar}
           />
-          <Text style={{ fontSize: fontSizeMap[fontSize] + 10, fontWeight: 'bold', color: theme.colors.text.primary, marginBottom: 4 }}>
-            {user.first_name} {user.last_name}
-          </Text>
-          <Text style={{ fontSize: fontSizeMap[fontSize], color: theme.colors.text.secondary, marginBottom: 2 }}>@{user.username}</Text>
-          <Text style={{ fontSize: fontSizeMap[fontSize] - 1, color: theme.colors.text.secondary, marginBottom: 12 }}>{user.email}</Text>
-          <TouchableOpacity
-            style={[styles.editButton, { backgroundColor: theme.colors.primary[0] }]}
-            onPress={() => navigation.navigate('EditProfile')}
-          >
-            <Ionicons name="create-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: fontSizeMap[fontSize] - 1 }}>Éditer le profil</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Statistiques */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginVertical: 28 }}>
-          <View style={styles.statBlock}>
-            <Ionicons name="airplane" size={24} color={theme.colors.primary[0]} />
-            <Text style={{ fontSize: fontSizeMap[fontSize] + 2, fontWeight: 'bold', color: theme.colors.text.primary, marginTop: 4 }}>{user.stats?.total_trips ?? 0}</Text>
-            <Text style={{ fontSize: fontSizeMap[fontSize] - 2, color: theme.colors.text.secondary, marginTop: 2 }}>Voyages</Text>
+          <Text style={styles.username}>@{user.username}</Text>
+          <Text style={styles.name}>{user.first_name} {user.last_name}</Text>
+          {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
+          {user.website ? (
+            <TouchableOpacity onPress={() => Linking.openURL(user.website)}>
+              <Text style={styles.website}>{user.website}</Text>
+            </TouchableOpacity>
+          ) : null}
+          <View style={styles.statsRow}>
+            <Stat label="Voyages" value={user.stats?.total_trips ?? 0} />
+            <Stat label="Abonnés" value={user.stats?.total_followers ?? 0} />
+            <Stat label="Abonnements" value={user.stats?.total_following ?? 0} />
+            <Stat label="Likes" value={user.stats?.total_likes ?? 0} />
           </View>
-          <View style={styles.statBlock}>
-            <Ionicons name="earth" size={24} color={theme.colors.primary[0]} />
-            <Text style={{ fontSize: fontSizeMap[fontSize] + 2, fontWeight: 'bold', color: theme.colors.text.primary, marginTop: 4 }}>{user.stats?.total_countries ?? 0}</Text>
-            <Text style={{ fontSize: fontSizeMap[fontSize] - 2, color: theme.colors.text.secondary, marginTop: 2 }}>Pays</Text>
-          </View>
-          <View style={styles.statBlock}>
-            <Ionicons name="people" size={24} color={theme.colors.primary[0]} />
-            <Text style={{ fontSize: fontSizeMap[fontSize] + 2, fontWeight: 'bold', color: theme.colors.text.primary, marginTop: 4 }}>{user.stats?.total_followers ?? 0}</Text>
-            <Text style={{ fontSize: fontSizeMap[fontSize] - 2, color: theme.colors.text.secondary, marginTop: 2 }}>Abonnés</Text>
-          </View>
-          <View style={styles.statBlock}>
-            <Ionicons name="heart" size={24} color={theme.colors.primary[0]} />
-            <Text style={{ fontSize: fontSizeMap[fontSize] + 2, fontWeight: 'bold', color: theme.colors.text.primary, marginTop: 4 }}>{user.stats?.total_likes ?? 0}</Text>
-            <Text style={{ fontSize: fontSizeMap[fontSize] - 2, color: theme.colors.text.secondary, marginTop: 2 }}>Likes</Text>
+          <View style={styles.actionsRow}>
+            {isCurrentUser ? (
+              <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+                <Text style={styles.editText}>Modifier profil</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.followBtn} onPress={() => {/* suivre/désabonner */}}>
+                  <Text style={styles.followText}>{user.is_followed ? 'Se désabonner' : 'Suivre'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.msgBtn} onPress={() => {/* message */}}>
+                  <Ionicons name="chatbubble-outline" size={18} color="#008080" />
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
-        {/* Bio */}
-        {user.bio ? (
-          <View style={{ marginHorizontal: 24, marginBottom: 18 }}>
-            <Text style={{ color: theme.colors.text.primary, fontWeight: 'bold', fontSize: fontSizeMap[fontSize] }}>À propos de moi</Text>
-            <Text style={{ color: theme.colors.text.secondary, fontSize: fontSizeMap[fontSize], marginTop: 6 }}>{user.bio}</Text>
-          </View>
-        ) : null}
+        {/* Badges ou Highlights */}
+        {user.badges && user.badges.length > 0 && (
+          <ScrollView horizontal style={styles.badgesRow} showsHorizontalScrollIndicator={false}>
+            {user.badges.map((badge: string, idx: number) => (
+              <View key={idx} style={styles.badgeCircle}>
+                <Text style={styles.badgeText}>{badge}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
-        {/* Badges */}
-        {user.stats?.badges && user.stats.badges.length > 0 && (
-          <View style={{ marginHorizontal: 24, marginBottom: 18 }}>
-            <Text style={{ color: theme.colors.text.primary, fontWeight: 'bold', fontSize: fontSizeMap[fontSize] }}>Badges</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
-              {user.stats.badges.map((badge: string, idx: number) => (
-                <View key={idx} style={[styles.badge, { backgroundColor: theme.colors.primary[0] + '22' }] }>
-                  <Text style={{ color: theme.colors.primary[0], fontWeight: 'bold', fontSize: fontSizeMap[fontSize] - 2 }}>{badge}</Text>
-                </View>
+        {/* Grille de posts/voyages */}
+        <View style={styles.gridContainer}>
+          {posts.length === 0 ? (
+            <View>
+              <View style={styles.grid}>
+                {[...Array(6)].map((_, idx) => (
+                  <View key={idx} style={styles.gridItem}>
+                    <Ionicons name="image-outline" size={32} style={styles.gridIcon} />
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.emptyGridText}>Aucun voyage pour l'instant</Text>
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {posts.map((post: any, idx: number) => (
+                <TouchableOpacity key={idx} style={styles.gridItem} onPress={() => {/* ouvrir le post */}}>
+                  {post.image_url ? (
+                    <Image source={{ uri: post.image_url }} style={{ width: '100%', height: '100%', borderRadius: 10 }} />
+                  ) : (
+                    <Ionicons name="image-outline" size={32} style={styles.gridIcon} />
+                  )}
+                </TouchableOpacity>
               ))}
             </View>
-          </View>
+          )}
+        </View>
+
+        {/* Déconnexion */}
+        {isCurrentUser && (
+          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+            <Ionicons name="log-out-outline" size={20} color="#fff" />
+            <Text style={styles.logoutText}>Se déconnecter</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 };
 

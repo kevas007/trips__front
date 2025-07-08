@@ -1,37 +1,52 @@
 // ========== TYPES UTILISATEUR - ALIGNÉS AVEC LE BACKEND GO ==========
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  
-  // Champs optionnels du backend Go
-  preferred_currency?: string;
-  language?: string;
-  timezone?: string;
-  email_verified: boolean;
-  is_active: boolean;
-  is_admin: boolean;
-  last_login_at?: string;
-  
-  // Relations/Propriétés complexes (JSONB dans le backend)
-  preferences?: UserPreferences;
-  privacy_settings?: PrivacySettings;
-  notification_settings?: NotificationSettings;
-  stats?: UserStats;
-  badges?: UserBadge[];
-  
-  // Timestamps
-  created_at: string;
-  updated_at: string;
+  name: string;
+  username?: string;
+  avatar?: string;
+  bio?: string;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  settings: UserSettings;
+  stats: UserStats;
+  preferences: UserTravelPreferences;
 }
 
-// ========== PRÉFÉRENCES UTILISATEUR ==========
-export interface UserPreferences {
-  theme?: string;
-  notifications?: boolean;
+export interface UserSettings {
+  biometricEnabled: boolean;
+  notificationsEnabled: boolean;
+  emailNotifications: boolean;
+  language: string;
+  currency: string;
+  timezone: string;
+  privacyLevel: 'public' | 'friends' | 'private';
+  autoSync: boolean;
+  dataCollection: boolean;
+}
+
+export interface UserStats {
+  tripsCreated: number;
+  tripsShared: number;
+  tripsLiked: number;
+  followers: number;
+  following: number;
+  totalViews: number;
+  totalLikes: number;
+  countriesVisited: number;
+  citiesVisited: number;
+}
+
+export interface UserTravelPreferences {
+  activities?: string[];
+  accommodation?: string[];
+  transport?: string[];
+  food?: string[];
+  budget?: string[];
+  climate?: string[];
+  culture?: string[];
 }
 
 // ========== PARAMÈTRES DE CONFIDENTIALITÉ ==========
@@ -59,18 +74,6 @@ export interface NotificationSettings {
   trip_reminder: boolean;
   email_notifications: boolean;
   push_notifications: boolean;
-}
-
-// ========== STATISTIQUES UTILISATEUR ==========
-export interface UserStats {
-  trips_created: number;
-  countries_visited: number;
-  followers: number;
-  following: number;
-  total_likes: number;
-  total_comments: number;
-  total_photos: number;
-  total_distance: number; // en kilomètres
 }
 
 // ========== BADGES ==========
@@ -112,12 +115,6 @@ export interface UserProfile {
   travel_preferences?: UserTravelPreferences;
   created_at: string;
   updated_at: string;
-}
-
-// ========== PRÉFÉRENCES DE VOYAGE ==========
-export interface UserTravelPreferences {
-  // Structure à définir selon les besoins du backend
-  [key: string]: any;
 }
 
 // ========== TYPES POUR LES DONNÉES PUBLIQUES ==========

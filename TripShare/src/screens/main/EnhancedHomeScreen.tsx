@@ -9,12 +9,15 @@ import {
   Dimensions,
   Platform,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
 import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import { PlaneAnimation, BoatAnimation } from '../auth/TravelAnimations';
+import { authService } from '../../services/auth';
+import { tripShareApi } from '../../services/tripShareApi';
 
 const { width } = Dimensions.get('window');
 
@@ -198,6 +201,47 @@ const EnhancedHomeScreen: React.FC<EnhancedHomeScreenProps> = ({ navigation }) =
     setShowWelcomeTips(false);
   };
 
+  // Fonction de test d'authentification pour diagnostiquer les problèmes
+  const testAuthentication = async () => {
+    try {
+      Alert.alert('🔧 Test d\'Authentification', 'Démarrage des tests...');
+      
+      // Test 1: Vérifier le statut d'authentification
+      const isAuth = authService.isAuthenticated();
+      const token = authService.getToken();
+      
+      console.log('🔍 Test Auth Status:', { isAuth, hasToken: !!token });
+      
+      if (!isAuth || !token) {
+        Alert.alert('❌ Non authentifié', 'Aucun token trouvé. Veuillez vous connecter.');
+        return;
+      }
+      
+      // Test 2: Vérifier le token avec le backend
+      try {
+        const user = await authService.verifyToken();
+        Alert.alert('✅ Authentification OK', `Utilisateur: ${user.email}\nNom: ${user.name}`);
+        console.log('✅ VerifyToken réussi:', user);
+      } catch (verifyError: any) {
+        console.error('❌ Erreur verifyToken:', verifyError);
+        Alert.alert('❌ Erreur VerifyToken', `Erreur: ${verifyError.message}\nStatus: ${verifyError?.response?.status || 'N/A'}`);
+      }
+      
+      // Test 3: Test avec TripShareApi
+      try {
+        const profile = await tripShareApi.getProfile();
+        console.log('✅ TripShareApi réussi:', profile);
+      } catch (apiError: any) {
+        console.error('❌ Erreur TripShareApi:', apiError);
+        Alert.alert('❌ Erreur TripShareApi', `Erreur: ${apiError.message}`);
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Erreur générale:', error);
+      Alert.alert('❌ Erreur', `Erreur: ${error.message}`);
+    }
+  };
+
   const renderProgressSection = () => (
     <View style={[
       styles.progressSection,
@@ -293,7 +337,7 @@ const EnhancedHomeScreen: React.FC<EnhancedHomeScreenProps> = ({ navigation }) =
                     {
                       backgroundColor: index === currentTipIndex 
                         ? theme.colors.primary[0] 
-                        : theme.colors.text.disabled,
+                        : theme.colors.text.secondary,
                     },
                   ]}
                 />
@@ -506,6 +550,39 @@ const EnhancedHomeScreen: React.FC<EnhancedHomeScreenProps> = ({ navigation }) =
 
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+      {/* Header personnalisé avec bg dégradé */}
+      <View style={styles.mainHeader}>
+        <View style={styles.headerGradient}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerGreeting}>
+                Bonjour {user?.name || 'Voyageur'} ! 👋
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                Prêt pour votre prochaine aventure ?
+              </Text>
+            </View>
+            <View style={styles.headerRight}>
+              <TouchableOpacity style={styles.headerButton}>
+                <Ionicons name="notifications-outline" size={24} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={testAuthentication}
+              >
+                <Ionicons name="bug-outline" size={24} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => navigation.navigate('Profile')}
+              >
+                <Ionicons name="person-circle-outline" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -524,16 +601,6 @@ const EnhancedHomeScreen: React.FC<EnhancedHomeScreenProps> = ({ navigation }) =
             transform: [{ translateY: slideAnim }],
           }}
         >
-          {/* Header de bienvenue */}
-          <View style={styles.welcomeHeader}>
-            <Text style={[styles.welcomeText, { color: theme.colors.text.primary }]}>
-              Bonjour {user?.firstName || 'Voyageur'} ! 👋
-            </Text>
-            <Text style={[styles.welcomeSubtext, { color: theme.colors.text.secondary }]}>
-              Prêt pour votre prochaine aventure ?
-            </Text>
-          </View>
-
           {/* Section progression */}
           {renderProgressSection()}
 
@@ -583,6 +650,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
+
   welcomeHeader: {
     marginBottom: 24,
   },
@@ -875,6 +943,50 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  mainHeader: {
+    height: 150,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#008080',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  headerGradient: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 20,
+    justifyContent: 'center',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerGreeting: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  headerButton: {
+    padding: 8,
   },
 });
 

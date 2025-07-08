@@ -25,6 +25,8 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 type AuthStackParamList = {
   AuthScreen: undefined;
   TermsScreen: undefined;
+  OnboardingScreen: undefined;
+  TravelPreferencesScreen: undefined;
 };
 
 type AuthNavigationProp = StackNavigationProp<AuthStackParamList>;
@@ -240,11 +242,12 @@ const EnhancedAuthScreen = () => {
   const validate = () => {
     const newErrors: any = {};
     if (mode === 'register') {
+      if (!form.email) newErrors.email = 'Champ requis';
       if (!form.username) newErrors.username = 'Champ requis';
+      else if (form.username.length < 3) newErrors.username = 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
       if (!form.firstName) newErrors.firstName = 'Champ requis';
       if (!form.lastName) newErrors.lastName = 'Champ requis';
       if (!form.phone) newErrors.phone = 'Champ requis';
-      if (!form.email) newErrors.email = 'Champ requis';
       if (!form.password) newErrors.password = 'Champ requis';
       if (form.password !== form.confirmPassword) newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
       if (!form.acceptTerms) newErrors.acceptTerms = 'Obligatoire';
@@ -272,16 +275,15 @@ const EnhancedAuthScreen = () => {
         });
       } else if (mode === 'register') {
         await register({
-          username: form.username,
-          firstName: form.firstName,
-          lastName: form.lastName,
           email: form.email,
+          username: form.username,
+          first_name: form.firstName,
+          last_name: form.lastName,
+          phone_number: `${form.countryCode}${form.phone}`,
           password: form.password,
-          confirmPassword: form.confirmPassword,
-          countryCode: form.countryCode,
-          phone: form.phone,
-          acceptTerms: form.acceptTerms,
         });
+        // La navigation sera gérée par AuthNavigator
+        return;
       } else if (mode === 'forgot') {
         // Fonctionnalité de mot de passe oublié à implémenter
         console.log('Mot de passe oublié pour:', form.email);
@@ -839,11 +841,24 @@ const EnhancedAuthScreen = () => {
           {/* Affichage des erreurs */}
           {error && (
             <ErrorHandler
-              error={error}
+              error={{
+                code: 'NETWORK_ERROR',
+                message: error,
+                details: null
+              }}
               onRetry={handleSubmitWithSuccess}
               onClear={clearError}
               compact
             />
+          )}
+
+          {/* Affichage des erreurs spécifiques d'inscription */}
+          {mode === 'register' && error && (
+            <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 8 }}>
+              {error.includes('déjà utilisé') || error.includes('duplicate') || error.includes('existe déjà')
+                ? "Cet email ou nom d'utilisateur est déjà utilisé."
+                : error}
+            </Text>
           )}
 
           {/* Bouton de soumission */}

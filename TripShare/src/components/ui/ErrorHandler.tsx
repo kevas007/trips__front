@@ -76,14 +76,27 @@ export const ErrorHandler: React.FC<ErrorHandlerProps> = ({
 
   if (compact) {
     return (
-      <View style={[styles.compactContainer, { backgroundColor: `${errorColor}15` }, style]}>
+      <View style={[
+        styles.compactContainer, 
+        { 
+          backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+          borderColor: isDark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)',
+          borderWidth: 1,
+        }, 
+        style
+      ]}>
         <Ionicons 
           name={getErrorIcon(error.code)} 
           size={16} 
           color={errorColor} 
           style={styles.compactIcon}
         />
-        <Text style={[styles.compactText, { color: errorColor }]}>
+        <Text style={[
+          styles.compactText, 
+          { 
+            color: isDark ? '#fff' : '#1f2937' // Couleur adaptée au thème
+          }
+        ]}>
           {error.message}
         </Text>
         {onClear && (

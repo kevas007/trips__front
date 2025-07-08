@@ -34,6 +34,7 @@
     "expo-image-picker": "~16.1.4",
     "expo-linear-gradient": "~14.1.4",
     "expo-local-authentication": "~16.0.4",
+    "expo-location": "^18.1.6",
     "expo-secure-store": "~14.2.3",
     "expo-status-bar": "~2.2.3",
     "i18next": "^25.2.1",
@@ -43,11 +44,14 @@
     "react-native": "0.79.4",
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-gesture-handler": "~2.24.0",
+    "react-native-maps": "^1.24.3",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "yup": "^1.4.0",
-    "zustand": "^4.5.7"
+    "zustand": "^4.5.7",
+    "react-native-webview": "13.13.5",
+    "expo-clipboard": "~7.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

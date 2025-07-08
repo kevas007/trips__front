@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG, getFullApiUrl } from '../config/api';
 import { User } from '../types/user';
 
 // ========== TYPES D'AUTHENTIFICATION - ALIGNÉS BACKEND GO ==========
@@ -7,6 +7,14 @@ import { User } from '../types/user';
 export interface LoginCredentials {
   email: string;
   password: string;
+  rememberMe?: boolean;
+  socialAuth?: {
+    provider: string;
+    id: string;
+    idToken: string;
+    name?: string;
+    photoURL?: string;
+  };
 }
 
 export interface RegisterData {
@@ -57,7 +65,7 @@ class ApiClient {
       ...options.headers as Record<string, string>,
     };
 
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    const url = getFullApiUrl(endpoint);
     console.log(`🚀 ${options.method || 'GET'} ${url}`);
 
     const response = await fetch(url, {
@@ -292,6 +300,7 @@ class AuthService {
     }
 
     try {
+      console.log('🔄 Tentative de rafraîchissement du token...');
       const response = await apiClient.post<{
         token: string;
         refresh_token: string;
@@ -306,8 +315,10 @@ class AuthService {
       this.refreshToken = refresh_token;
       apiClient.setAuthToken(token);
 
+      console.log('✅ Token rafraîchi avec succès');
       return token;
     } catch (error) {
+      console.error('❌ Erreur lors du rafraîchissement du token:', error);
       await this.clearTokens();
       throw error;
     }
@@ -324,48 +335,130 @@ class AuthService {
     try {
       // Utiliser un endpoint qui nécessite l'authentification
       const userData = await apiClient.get<any>('/users/me');
-      return this.normalizeUser(userData);
-    } catch (error) {
+      console.log('🔍 Données brutes de /users/me:', userData);
+      
+      // Gérer la structure { user: {...}, profile: {...} } retournée par le backend
+      let userToNormalize = userData;
+      if (userData && userData.user && userData.profile) {
+        // Fusionner user et profile comme dans le ProfileScreen
+        userToNormalize = { ...userData.user, ...userData.profile };
+        console.log('🔍 Données fusionnées user+profile:', userToNormalize);
+      }
+      
+      const normalizedUser = this.normalizeUser(userToNormalize);
+      console.log('🔍 Utilisateur normalisé:', normalizedUser);
+      return normalizedUser;
+    } catch (error: any) {
+      // Si l'erreur est 401, tenter de rafraîchir le token
+      if (error?.response?.status === 401 && this.refreshToken) {
+        try {
+          await this.refreshAccessToken();
+          // Réessayer la requête avec le nouveau token
+          const userData = await apiClient.get<any>('/users/me');
+          return this.normalizeUser(userData);
+        } catch (refreshError) {
+          await this.clearTokens();
+          throw refreshError;
+        }
+      }
       await this.clearTokens();
       throw error;
     }
   }
 
-  // Déconnexion
+  // Vérification de la validité du token
+  async checkTokenValidity(): Promise<boolean> {
+    try {
+      if (!this.token) {
+        console.log('❌ Aucun token trouvé - Déconnexion automatique');
+        await this.logout();
+        return false;
+      }
+
+      // Vérifier le token avec le backend
+      await this.verifyToken();
+      return true;
+    } catch (error) {
+      console.error('❌ Token invalide - Déconnexion automatique:', error);
+      await this.logout();
+      return false;
+    }
+  }
+
+  // Déconnexion améliorée
   async logout(): Promise<void> {
     try {
+      console.log('🔄 Déconnexion en cours...');
+      
+      // Appeler l'endpoint de déconnexion si on a un token
       if (this.token) {
-        await apiClient.post('/auth/logout', {});
+        try {
+          await apiClient.post('/auth/logout');
+        } catch (error) {
+          console.warn('⚠️ Erreur lors de la déconnexion côté serveur:', error);
+        }
       }
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-    } finally {
+
+      // Nettoyer les tokens locaux
       await this.clearTokens();
+      this.token = null;
+      this.refreshToken = null;
+      apiClient.clearAuthToken();
+
+      console.log('✅ Déconnexion réussie');
+    } catch (error) {
+      console.error('❌ Erreur lors de la déconnexion:', error);
+      // Forcer le nettoyage même en cas d'erreur
+      await this.clearTokens();
+      this.token = null;
+      this.refreshToken = null;
+      apiClient.clearAuthToken();
     }
   }
 
   // Normaliser les données utilisateur du backend vers le frontend
   private normalizeUser(backendUser: any): User {
     return {
-      id: parseInt(backendUser.id?.toString() || '0'),
+      id: backendUser.id?.toString() || '',
       email: backendUser.email || '',
+      name: `${backendUser.first_name || ''} ${backendUser.last_name || ''}`.trim(),
       username: backendUser.username || '',
-      first_name: backendUser.first_name || '',
-      last_name: backendUser.last_name || '',
-      preferred_currency: backendUser.preferred_currency,
-      language: backendUser.language,
-      timezone: backendUser.timezone,
-      email_verified: backendUser.email_verified || false,
-      is_active: backendUser.is_active || true,
-      is_admin: backendUser.is_admin || false,
-      last_login_at: backendUser.last_login_at,
-      preferences: backendUser.preferences,
-      privacy_settings: backendUser.privacy_settings,
-      notification_settings: backendUser.notification_settings,
-      stats: backendUser.stats,
-      badges: backendUser.badges,
-      created_at: backendUser.created_at || new Date().toISOString(),
-      updated_at: backendUser.updated_at || new Date().toISOString(),
+      avatar: backendUser.avatar_url || backendUser.avatar,
+      bio: backendUser.bio,
+      verified: backendUser.email_verified || false,
+      createdAt: backendUser.created_at || new Date().toISOString(),
+      updatedAt: backendUser.updated_at || new Date().toISOString(),
+      settings: {
+        biometricEnabled: false,
+        notificationsEnabled: true,
+        emailNotifications: true,
+        language: backendUser.language || 'fr',
+        currency: backendUser.preferred_currency || 'EUR',
+        timezone: backendUser.timezone || 'Europe/Paris',
+        privacyLevel: 'public',
+        autoSync: true,
+        dataCollection: true,
+      },
+      stats: {
+        tripsCreated: backendUser.stats?.total_trips || 0,
+        tripsShared: backendUser.stats?.total_trips || 0,
+        tripsLiked: 0,
+        followers: backendUser.stats?.total_followers || 0,
+        following: backendUser.stats?.total_following || 0,
+        totalViews: 0,
+        totalLikes: backendUser.stats?.total_likes || 0,
+        countriesVisited: 0,
+        citiesVisited: 0,
+      },
+      preferences: backendUser.travel_preferences || {
+        activities: [],
+        accommodation: [],
+        transport: [],
+        food: [],
+        budget: [],
+        climate: [],
+        culture: [],
+      },
     };
   }
 
@@ -451,6 +544,17 @@ class AuthService {
 
   isAuthenticated(): boolean {
     return !!this.token;
+  }
+
+  // Méthodes pour gérer le token
+  setToken(token: string): void {
+    this.token = token;
+    apiClient.setAuthToken(token);
+  }
+
+  clearToken(): void {
+    this.token = null;
+    apiClient.clearAuthToken();
   }
 }
 

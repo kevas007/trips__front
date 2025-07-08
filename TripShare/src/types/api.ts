@@ -2,28 +2,25 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { Trip, TripFilters } from './trip';
 
 // ========== TYPES ET INTERFACES ==========
 
-export interface ApiResponse<T = any> {
+export interface APIResponse<T> {
   success: boolean;
-  data?: T;
-  message?: string;
+  data: T;
   error?: string;
-  code?: number;
-  timestamp?: string;
 }
 
-export interface PaginatedResponse<T> {
-  items: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
+export interface APIService {
+  getTrips(filters: TripFilters): Promise<APIResponse<Trip[]>>;
+  updatePreferences(preferences: any): Promise<APIResponse<any>>;
+}
+
+export interface APIError {
+  message: string;
+  code?: string;
+  status?: number;
 }
 
 // Types d'authentification
@@ -103,12 +100,13 @@ export interface UserStats {
 }
 
 export interface UserPreferences {
-  travelStyle: 'luxury' | 'mid-range' | 'budget' | 'backpacker';
-  interests: string[];
-  favoriteDestinations: string[];
-  avoidedActivities: string[];
-  dietaryRestrictions: string[];
-  accessibility: string[];
+  activities?: string[];
+  accommodation?: string[];
+  transport?: string[];
+  food?: string[];
+  budget?: string[];
+  climate?: string[];
+  culture?: string[];
 }
 
 // Types voyage
@@ -247,8 +245,8 @@ export interface BookingInfo {
 
 export interface Contact {
   name: string;
-  phone?: string;
   email?: string;
+  phone?: string;
   website?: string;
 }
 
@@ -425,9 +423,9 @@ export interface SearchFilters {
 const API_CONFIG = {
   baseURL: __DEV__ 
     ? Platform.select({
-        ios: 'http://localhost:8083/api/v1',
-        android: 'http://10.0.2.2:8083/api/v1', // Émulateur Android
-        web: 'http://localhost:8083/api/v1',
+        ios: 'http://localhsot:8000/api/v1',
+        android: 'http://localhsot:8000/api/v1', // IP réseau pour device physique
+        web: 'http://localhsot:8000/api/v1',
       })
     : 'https://api.tripshare.app/v1',
   
@@ -607,7 +605,7 @@ class ApiService {
   }
 
   private async performTokenRefresh(): Promise<void> {
-    const response = await axios.post<ApiResponse<{
+    const response = await axios.post<APIResponse<{
       accessToken: string;
       refreshToken: string;
       expiresIn: number;
@@ -692,9 +690,9 @@ class ApiService {
 
   // ========== MÉTHODES D'AUTHENTIFICATION ==========
 
-  async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponse>> {
+  async login(credentials: LoginCredentials): Promise<APIResponse<AuthResponse>> {
     try {
-      const response = await this.client.post<ApiResponse<AuthResponse>>('/auth/login', {
+      const response = await this.client.post<APIResponse<AuthResponse>>('/auth/login', {
         ...credentials,
         deviceInfo: await this.getDeviceInfo(),
       });
@@ -712,9 +710,9 @@ class ApiService {
     }
   }
 
-  async register(data: RegisterData): Promise<ApiResponse<AuthResponse>> {
+  async register(data: RegisterData): Promise<APIResponse<AuthResponse>> {
     try {
-      const response = await this.client.post<ApiResponse<AuthResponse>>('/auth/register', {
+      const response = await this.client.post<APIResponse<AuthResponse>>('/auth/register', {
         ...data,
         deviceInfo: await this.getDeviceInfo(),
       });
@@ -732,7 +730,7 @@ class ApiService {
     }
   }
 
-  async logout(): Promise<ApiResponse> {
+  async logout(): Promise<APIResponse<void>> {
     try {
       // Notifier le serveur de la déconnexion
       if (this.authToken) {
@@ -741,18 +739,18 @@ class ApiService {
         });
       }
 
-      return { success: true, message: 'Déconnexion réussie' };
+      return { success: true, data: undefined, message: 'Déconnexion réussie' };
     } catch (error) {
       console.warn('⚠️ Logout request failed:', error);
-      return { success: true, message: 'Déconnexion locale réussie' };
+      return { success: true, data: undefined, message: 'Déconnexion locale réussie' };
     } finally {
       await this.clearTokens();
     }
   }
 
-  async forgotPassword(email: string): Promise<ApiResponse> {
+  async forgotPassword(email: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>('/auth/forgot-password', {
+      const response = await this.client.post<APIResponse<void>>('/auth/forgot-password', {
         email,
         deviceInfo: await this.getDeviceInfo(),
       });
@@ -762,9 +760,9 @@ class ApiService {
     }
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<ApiResponse> {
+  async resetPassword(token: string, newPassword: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>('/auth/reset-password', {
+      const response = await this.client.post<APIResponse<void>>('/auth/reset-password', {
         token,
         newPassword,
       });
@@ -774,9 +772,9 @@ class ApiService {
     }
   }
 
-  async verifyEmail(token: string): Promise<ApiResponse> {
+  async verifyEmail(token: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>('/auth/verify-email', {
+      const response = await this.client.post<APIResponse<void>>('/auth/verify-email', {
         token,
       });
       return response.data;
@@ -787,43 +785,43 @@ class ApiService {
 
   // ========== MÉTHODES UTILISATEUR ==========
 
-  async getCurrentUser(): Promise<ApiResponse<User>> {
+  async getCurrentUser(): Promise<APIResponse<User>> {
     try {
-      const response = await this.client.get<ApiResponse<User>>('/users/me');
+      const response = await this.client.get<APIResponse<User>>('/users/me');
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updateProfile(data: Partial<User>): Promise<ApiResponse<User>> {
+  async updateProfile(data: Partial<User>): Promise<APIResponse<User>> {
     try {
-      const response = await this.client.put<ApiResponse<User>>('/users/me', data);
+      const response = await this.client.put<APIResponse<User>>('/users/me', data);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updateSettings(settings: Partial<UserSettings>): Promise<ApiResponse<UserSettings>> {
+  async updateSettings(settings: Partial<UserSettings>): Promise<APIResponse<UserSettings>> {
     try {
-      const response = await this.client.put<ApiResponse<UserSettings>>('/users/me/settings', settings);
+      const response = await this.client.put<APIResponse<UserSettings>>('/users/me/settings', settings);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updatePreferences(preferences: Partial<UserPreferences>): Promise<ApiResponse<UserPreferences>> {
+  async updatePreferences(preferences: Partial<UserPreferences>): Promise<APIResponse<UserPreferences>> {
     try {
-      const response = await this.client.put<ApiResponse<UserPreferences>>('/users/me/preferences', preferences);
+      const response = await this.client.put<APIResponse<UserPreferences>>('/users/me/preferences', preferences);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async uploadAvatar(imageUri: string): Promise<ApiResponse<{ avatarUrl: string }>> {
+  async uploadAvatar(imageUri: string): Promise<APIResponse<{ avatarUrl: string }>> {
     try {
       const formData = new FormData();
       formData.append('avatar', {
@@ -832,7 +830,7 @@ class ApiService {
         name: 'avatar.jpg',
       } as any);
 
-      const response = await this.client.post<ApiResponse<{ avatarUrl: string }>>(
+      const response = await this.client.post<APIResponse<{ avatarUrl: string }>>(
         '/users/me/avatar',
         formData,
         {
@@ -849,9 +847,9 @@ class ApiService {
     }
   }
 
-  async deleteAccount(): Promise<ApiResponse> {
+  async deleteAccount(): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.delete<ApiResponse>('/users/me');
+      const response = await this.client.delete<APIResponse<void>>('/users/me');
       
       if (response.data.success) {
         await this.clearTokens();
@@ -865,7 +863,7 @@ class ApiService {
 
   // ========== MÉTHODES VOYAGES ==========
 
-  async getTrips(page = 1, limit = 20, filters?: SearchFilters): Promise<ApiResponse<PaginatedResponse<Trip>>> {
+  async getTrips(page = 1, limit = 20, filters?: SearchFilters): Promise<APIResponse<PaginatedResponse<Trip>>> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -873,7 +871,7 @@ class ApiService {
         ...this.serializeFilters(filters),
       });
 
-      const response = await this.client.get<ApiResponse<PaginatedResponse<Trip>>>(
+      const response = await this.client.get<APIResponse<PaginatedResponse<Trip>>>(
         `/trips?${params}`
       );
       return response.data;
@@ -882,45 +880,45 @@ class ApiService {
     }
   }
 
-  async getTripById(tripId: string): Promise<ApiResponse<Trip>> {
+  async getTripById(tripId: string): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.get<ApiResponse<Trip>>(`/trips/${tripId}`);
+      const response = await this.client.get<APIResponse<Trip>>(`/trips/${tripId}`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async createTrip(trip: Partial<Trip>): Promise<ApiResponse<Trip>> {
+  async createTrip(trip: Partial<Trip>): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip>>('/trips', trip);
+      const response = await this.client.post<APIResponse<Trip>>('/trips', trip);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updateTrip(tripId: string, trip: Partial<Trip>): Promise<ApiResponse<Trip>> {
+  async updateTrip(tripId: string, trip: Partial<Trip>): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.put<ApiResponse<Trip>>(`/trips/${tripId}`, trip);
+      const response = await this.client.put<APIResponse<Trip>>(`/trips/${tripId}`, trip);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async deleteTrip(tripId: string): Promise<ApiResponse> {
+  async deleteTrip(tripId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.delete<ApiResponse>(`/trips/${tripId}`);
+      const response = await this.client.delete<APIResponse<void>>(`/trips/${tripId}`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async duplicateTrip(tripId: string, title?: string): Promise<ApiResponse<Trip>> {
+  async duplicateTrip(tripId: string, title?: string): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip>>(`/trips/${tripId}/duplicate`, {
+      const response = await this.client.post<APIResponse<Trip>>(`/trips/${tripId}/duplicate`, {
         title,
       });
       return response.data;
@@ -929,18 +927,18 @@ class ApiService {
     }
   }
 
-  async publishTrip(tripId: string): Promise<ApiResponse<Trip>> {
+  async publishTrip(tripId: string): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip>>(`/trips/${tripId}/publish`);
+      const response = await this.client.post<APIResponse<Trip>>(`/trips/${tripId}/publish`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async unpublishTrip(tripId: string): Promise<ApiResponse<Trip>> {
+  async unpublishTrip(tripId: string): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip>>(`/trips/${tripId}/unpublish`);
+      const response = await this.client.post<APIResponse<Trip>>(`/trips/${tripId}/unpublish`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
@@ -949,9 +947,9 @@ class ApiService {
 
   // ========== COLLABORATION ==========
 
-  async inviteCollaborator(tripId: string, email: string, role: 'editor' | 'viewer'): Promise<ApiResponse> {
+  async inviteCollaborator(tripId: string, email: string, role: 'editor' | 'viewer'): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>(`/trips/${tripId}/collaborators`, {
+      const response = await this.client.post<APIResponse<void>>(`/trips/${tripId}/collaborators`, {
         email,
         role,
       });
@@ -961,9 +959,9 @@ class ApiService {
     }
   }
 
-  async removeCollaborator(tripId: string, userId: string): Promise<ApiResponse> {
+  async removeCollaborator(tripId: string, userId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.delete<ApiResponse>(
+      const response = await this.client.delete<APIResponse<void>>(
         `/trips/${tripId}/collaborators/${userId}`
       );
       return response.data;
@@ -972,9 +970,9 @@ class ApiService {
     }
   }
 
-  async updateCollaboratorRole(tripId: string, userId: string, role: 'editor' | 'viewer'): Promise<ApiResponse> {
+  async updateCollaboratorRole(tripId: string, userId: string, role: 'editor' | 'viewer'): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.put<ApiResponse>(
+      const response = await this.client.put<APIResponse<void>>(
         `/trips/${tripId}/collaborators/${userId}`,
         { role }
       );
@@ -986,45 +984,45 @@ class ApiService {
 
   // ========== ENGAGEMENT SOCIAL ==========
 
-  async likeTrip(tripId: string): Promise<ApiResponse> {
+  async likeTrip(tripId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>(`/trips/${tripId}/like`);
+      const response = await this.client.post<APIResponse<void>>(`/trips/${tripId}/like`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async unlikeTrip(tripId: string): Promise<ApiResponse> {
+  async unlikeTrip(tripId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.delete<ApiResponse>(`/trips/${tripId}/like`);
+      const response = await this.client.delete<APIResponse<void>>(`/trips/${tripId}/like`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async saveTrip(tripId: string): Promise<ApiResponse> {
+  async saveTrip(tripId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>(`/trips/${tripId}/save`);
+      const response = await this.client.post<APIResponse<void>>(`/trips/${tripId}/save`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async unsaveTrip(tripId: string): Promise<ApiResponse> {
+  async unsaveTrip(tripId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.delete<ApiResponse>(`/trips/${tripId}/save`);
+      const response = await this.client.delete<APIResponse<void>>(`/trips/${tripId}/save`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async shareTrip(tripId: string, platform: string): Promise<ApiResponse<{ shareUrl: string }>> {
+  async shareTrip(tripId: string, platform: string): Promise<APIResponse<{ shareUrl: string }>> {
     try {
-      const response = await this.client.post<ApiResponse<{ shareUrl: string }>>(
+      const response = await this.client.post<APIResponse<{ shareUrl: string }>>(
         `/trips/${tripId}/share`,
         { platform }
       );
@@ -1034,9 +1032,9 @@ class ApiService {
     }
   }
 
-  async rateTrip(tripId: string, rating: number, review?: string): Promise<ApiResponse> {
+  async rateTrip(tripId: string, rating: number, review?: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>(`/trips/${tripId}/rate`, {
+      const response = await this.client.post<APIResponse<void>>(`/trips/${tripId}/rate`, {
         rating,
         review,
       });
@@ -1048,9 +1046,9 @@ class ApiService {
 
   // ========== DÉCOUVERTE ET RECHERCHE ==========
 
-  async getFeaturedTrips(category: 'discover' | 'trending' | 'nearby' = 'discover', page = 1): Promise<ApiResponse<PaginatedResponse<Trip>>> {
+  async getFeaturedTrips(category: 'discover' | 'trending' | 'nearby' = 'discover', page = 1): Promise<APIResponse<PaginatedResponse<Trip>>> {
     try {
-      const response = await this.client.get<ApiResponse<PaginatedResponse<Trip>>>(
+      const response = await this.client.get<APIResponse<PaginatedResponse<Trip>>>(
         `/discover/trips?category=${category}&page=${page}`
       );
       return response.data;
@@ -1059,7 +1057,7 @@ class ApiService {
     }
   }
 
-  async searchTrips(query: string, filters?: SearchFilters, page = 1): Promise<ApiResponse<PaginatedResponse<Trip>>> {
+  async searchTrips(query: string, filters?: SearchFilters, page = 1): Promise<APIResponse<PaginatedResponse<Trip>>> {
     try {
       const params = new URLSearchParams({
         q: query,
@@ -1067,7 +1065,7 @@ class ApiService {
         ...this.serializeFilters(filters),
       });
 
-      const response = await this.client.get<ApiResponse<PaginatedResponse<Trip>>>(
+      const response = await this.client.get<APIResponse<PaginatedResponse<Trip>>>(
         `/search/trips?${params}`
       );
       return response.data;
@@ -1076,9 +1074,9 @@ class ApiService {
     }
   }
 
-  async getPopularDestinations(): Promise<ApiResponse<Array<{ destination: string; count: number; image: string }>>> {
+  async getPopularDestinations(): Promise<APIResponse<Array<{ destination: string; count: number; image: string }>>> {
     try {
-      const response = await this.client.get<ApiResponse<Array<{ destination: string; count: number; image: string }>>>(
+      const response = await this.client.get<APIResponse<Array<{ destination: string; count: number; image: string }>>>(
         '/discover/destinations'
       );
       return response.data;
@@ -1087,9 +1085,9 @@ class ApiService {
     }
   }
 
-  async getTrendingTags(): Promise<ApiResponse<Array<{ tag: string; count: number }>>> {
+  async getTrendingTags(): Promise<APIResponse<Array<{ tag: string; count: number }>>> {
     try {
-      const response = await this.client.get<ApiResponse<Array<{ tag: string; count: number }>>>(
+      const response = await this.client.get<APIResponse<Array<{ tag: string; count: number }>>>(
         '/discover/tags'
       );
       return response.data;
@@ -1098,9 +1096,9 @@ class ApiService {
     }
   }
 
-  async getSuggestedUsers(): Promise<ApiResponse<UserProfile[]>> {
+  async getSuggestedUsers(): Promise<APIResponse<UserProfile[]>> {
     try {
-      const response = await this.client.get<ApiResponse<UserProfile[]>>('/discover/users');
+      const response = await this.client.get<APIResponse<UserProfile[]>>('/discover/users');
       return response.data;
     } catch (error) {
       return this.handleError(error);
@@ -1109,9 +1107,9 @@ class ApiService {
 
   // ========== INTELLIGENCE ARTIFICIELLE ==========
 
-  async generateItinerary(request: AIItineraryRequest): Promise<ApiResponse<Trip>> {
+  async generateItinerary(request: AIItineraryRequest): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip>>('/ai/generate-itinerary', request);
+      const response = await this.client.post<APIResponse<Trip>>('/ai/generate-itinerary', request);
       return response.data;
     } catch (error) {
       return this.handleError(error);
@@ -1122,9 +1120,9 @@ class ApiService {
     budget?: string;
     interests?: string[];
     travelStyle?: string;
-  }): Promise<ApiResponse<AIRecommendation[]>> {
+  }): Promise<APIResponse<AIRecommendation[]>> {
     try {
-      const response = await this.client.post<ApiResponse<AIRecommendation[]>>(
+      const response = await this.client.post<APIResponse<AIRecommendation[]>>(
         `/ai/recommendations/${tripId}`,
         preferences
       );
@@ -1138,9 +1136,9 @@ class ApiService {
     maxDailyDistance?: number;
     preferredTransport?: string[];
     budgetLimits?: boolean;
-  }): Promise<ApiResponse<Trip>> {
+  }): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip>>(
+      const response = await this.client.post<APIResponse<Trip>>(
         `/ai/optimize/${tripId}`,
         constraints
       );
@@ -1150,14 +1148,14 @@ class ApiService {
     }
   }
 
-  async estimateBudget(destination: string, duration: number, travelStyle: string): Promise<ApiResponse<{
+  async estimateBudget(destination: string, duration: number, travelStyle: string): Promise<APIResponse<{
     estimatedBudget: number;
     currency: string;
     breakdown: Record<string, number>;
     confidence: number;
   }>> {
     try {
-      const response = await this.client.post<ApiResponse<{
+      const response = await this.client.post<APIResponse<{
         estimatedBudget: number;
         currency: string;
         breakdown: Record<string, number>;
@@ -1173,9 +1171,9 @@ class ApiService {
     }
   }
 
-  async getChatResponse(tripId: string, message: string): Promise<ApiResponse<{ response: string; suggestions?: string[] }>> {
+  async getChatResponse(tripId: string, message: string): Promise<APIResponse<{ response: string; suggestions?: string[] }>> {
     try {
-      const response = await this.client.post<ApiResponse<{ response: string; suggestions?: string[] }>>(
+      const response = await this.client.post<APIResponse<{ response: string; suggestions?: string[] }>>(
         `/ai/chat/${tripId}`,
         { message }
       );
@@ -1187,54 +1185,54 @@ class ApiService {
 
   // ========== BUDGET ET FINANCES ==========
 
-  async getBudget(tripId: string): Promise<ApiResponse<TripBudget>> {
+  async getBudget(tripId: string): Promise<APIResponse<TripBudget>> {
     try {
-      const response = await this.client.get<ApiResponse<TripBudget>>(`/trips/${tripId}/budget`);
+      const response = await this.client.get<APIResponse<TripBudget>>(`/trips/${tripId}/budget`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updateBudget(tripId: string, budget: Partial<TripBudget>): Promise<ApiResponse<TripBudget>> {
+  async updateBudget(tripId: string, budget: Partial<TripBudget>): Promise<APIResponse<TripBudget>> {
     try {
-      const response = await this.client.put<ApiResponse<TripBudget>>(`/trips/${tripId}/budget`, budget);
+      const response = await this.client.put<APIResponse<TripBudget>>(`/trips/${tripId}/budget`, budget);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async addExpense(tripId: string, expense: Omit<Expense, 'id' | 'createdAt'>): Promise<ApiResponse<Expense>> {
+  async addExpense(tripId: string, expense: Omit<Expense, 'id' | 'createdAt'>): Promise<APIResponse<Expense>> {
     try {
-      const response = await this.client.post<ApiResponse<Expense>>(`/trips/${tripId}/expenses`, expense);
+      const response = await this.client.post<APIResponse<Expense>>(`/trips/${tripId}/expenses`, expense);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updateExpense(tripId: string, expenseId: string, expense: Partial<Expense>): Promise<ApiResponse<Expense>> {
+  async updateExpense(tripId: string, expenseId: string, expense: Partial<Expense>): Promise<APIResponse<Expense>> {
     try {
-      const response = await this.client.put<ApiResponse<Expense>>(`/trips/${tripId}/expenses/${expenseId}`, expense);
+      const response = await this.client.put<APIResponse<Expense>>(`/trips/${tripId}/expenses/${expenseId}`, expense);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async deleteExpense(tripId: string, expenseId: string): Promise<ApiResponse> {
+  async deleteExpense(tripId: string, expenseId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.delete<ApiResponse>(`/trips/${tripId}/expenses/${expenseId}`);
+      const response = await this.client.delete<APIResponse<void>>(`/trips/${tripId}/expenses/${expenseId}`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async splitExpense(tripId: string, expenseId: string, splits: ExpenseSplit[]): Promise<ApiResponse<SharedExpense>> {
+  async splitExpense(tripId: string, expenseId: string, splits: ExpenseSplit[]): Promise<APIResponse<SharedExpense>> {
     try {
-      const response = await this.client.post<ApiResponse<SharedExpense>>(
+      const response = await this.client.post<APIResponse<SharedExpense>>(
         `/trips/${tripId}/expenses/${expenseId}/split`,
         { splits }
       );
@@ -1244,9 +1242,9 @@ class ApiService {
     }
   }
 
-  async settleExpense(tripId: string, expenseId: string, settlement: Omit<Settlement, 'id' | 'date'>): Promise<ApiResponse<Settlement>> {
+  async settleExpense(tripId: string, expenseId: string, settlement: Omit<Settlement, 'id' | 'date'>): Promise<APIResponse<Settlement>> {
     try {
-      const response = await this.client.post<ApiResponse<Settlement>>(
+      const response = await this.client.post<APIResponse<Settlement>>(
         `/trips/${tripId}/expenses/${expenseId}/settle`,
         settlement
       );
@@ -1256,7 +1254,7 @@ class ApiService {
     }
   }
 
-  async uploadReceipt(tripId: string, expenseId: string, imageUri: string): Promise<ApiResponse<{ receiptUrl: string }>> {
+  async uploadReceipt(tripId: string, expenseId: string, imageUri: string): Promise<APIResponse<{ receiptUrl: string }>> {
     try {
       const formData = new FormData();
       formData.append('receipt', {
@@ -1265,7 +1263,7 @@ class ApiService {
         name: 'receipt.jpg',
       } as any);
 
-      const response = await this.client.post<ApiResponse<{ receiptUrl: string }>>(
+      const response = await this.client.post<APIResponse<{ receiptUrl: string }>>(
         `/trips/${tripId}/expenses/${expenseId}/receipt`,
         formData,
         {
@@ -1284,28 +1282,28 @@ class ApiService {
 
   // ========== SOCIAL ET FOLLOWERS ==========
 
-  async followUser(userId: string): Promise<ApiResponse> {
+  async followUser(userId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.post<ApiResponse>(`/users/${userId}/follow`);
+      const response = await this.client.post<APIResponse<void>>(`/users/${userId}/follow`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async unfollowUser(userId: string): Promise<ApiResponse> {
+  async unfollowUser(userId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.delete<ApiResponse>(`/users/${userId}/follow`);
+      const response = await this.client.delete<APIResponse<void>>(`/users/${userId}/follow`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async getFollowers(userId?: string, page = 1): Promise<ApiResponse<PaginatedResponse<UserProfile>>> {
+  async getFollowers(userId?: string, page = 1): Promise<APIResponse<PaginatedResponse<UserProfile>>> {
     try {
       const endpoint = userId ? `/users/${userId}/followers` : '/users/me/followers';
-      const response = await this.client.get<ApiResponse<PaginatedResponse<UserProfile>>>(
+      const response = await this.client.get<APIResponse<PaginatedResponse<UserProfile>>>(
         `${endpoint}?page=${page}`
       );
       return response.data;
@@ -1314,10 +1312,10 @@ class ApiService {
     }
   }
 
-  async getFollowing(userId?: string, page = 1): Promise<ApiResponse<PaginatedResponse<UserProfile>>> {
+  async getFollowing(userId?: string, page = 1): Promise<APIResponse<PaginatedResponse<UserProfile>>> {
     try {
       const endpoint = userId ? `/users/${userId}/following` : '/users/me/following';
-      const response = await this.client.get<ApiResponse<PaginatedResponse<UserProfile>>>(
+      const response = await this.client.get<APIResponse<PaginatedResponse<UserProfile>>>(
         `${endpoint}?page=${page}`
       );
       return response.data;
@@ -1326,9 +1324,9 @@ class ApiService {
     }
   }
 
-  async getFeed(page = 1): Promise<ApiResponse<PaginatedResponse<Trip>>> {
+  async getFeed(page = 1): Promise<APIResponse<PaginatedResponse<Trip>>> {
     try {
-      const response = await this.client.get<ApiResponse<PaginatedResponse<Trip>>>(
+      const response = await this.client.get<APIResponse<PaginatedResponse<Trip>>>(
         `/feed?page=${page}`
       );
       return response.data;
@@ -1339,7 +1337,7 @@ class ApiService {
 
   // ========== NOTIFICATIONS ==========
 
-  async getNotifications(page = 1): Promise<ApiResponse<PaginatedResponse<{
+  async getNotifications(page = 1): Promise<APIResponse<PaginatedResponse<{
     id: string;
     type: string;
     title: string;
@@ -1349,7 +1347,7 @@ class ApiService {
     createdAt: string;
   }>>> {
     try {
-      const response = await this.client.get<ApiResponse<PaginatedResponse<any>>>(
+      const response = await this.client.get<APIResponse<PaginatedResponse<any>>>(
         `/notifications?page=${page}`
       );
       return response.data;
@@ -1358,27 +1356,27 @@ class ApiService {
     }
   }
 
-  async markNotificationAsRead(notificationId: string): Promise<ApiResponse> {
+  async markNotificationAsRead(notificationId: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.put<ApiResponse>(`/notifications/${notificationId}/read`);
+      const response = await this.client.put<APIResponse<void>>(`/notifications/${notificationId}/read`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async markAllNotificationsAsRead(): Promise<ApiResponse> {
+  async markAllNotificationsAsRead(): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.put<ApiResponse>('/notifications/read-all');
+      const response = await this.client.put<APIResponse<void>>('/notifications/read-all');
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updatePushToken(token: string): Promise<ApiResponse> {
+  async updatePushToken(token: string): Promise<APIResponse<void>> {
     try {
-      const response = await this.client.put<ApiResponse>('/users/me/push-token', {
+      const response = await this.client.put<APIResponse<void>>('/users/me/push-token', {
         token,
         platform: Platform.OS,
       });
@@ -1390,9 +1388,9 @@ class ApiService {
 
   // ========== GÉOLOCALISATION ==========
 
-  async getNearbyTrips(latitude: number, longitude: number, radius = 50): Promise<ApiResponse<Trip[]>> {
+  async getNearbyTrips(latitude: number, longitude: number, radius = 50): Promise<APIResponse<Trip[]>> {
     try {
-      const response = await this.client.get<ApiResponse<Trip[]>>(
+      const response = await this.client.get<APIResponse<Trip[]>>(
         `/discover/nearby?lat=${latitude}&lng=${longitude}&radius=${radius}`
       );
       return response.data;
@@ -1401,7 +1399,7 @@ class ApiService {
     }
   }
 
-  async searchPlaces(query: string, location?: { latitude: number; longitude: number }): Promise<ApiResponse<Location[]>> {
+  async searchPlaces(query: string, location?: { latitude: number; longitude: number }): Promise<APIResponse<Location[]>> {
     try {
       const params = new URLSearchParams({ q: query });
       if (location) {
@@ -1409,14 +1407,14 @@ class ApiService {
         params.append('lng', location.longitude.toString());
       }
 
-      const response = await this.client.get<ApiResponse<Location[]>>(`/places/search?${params}`);
+      const response = await this.client.get<APIResponse<Location[]>>(`/places/search?${params}`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async getPlaceDetails(placeId: string): Promise<ApiResponse<Location & {
+  async getPlaceDetails(placeId: string): Promise<APIResponse<Location & {
     photos: string[];
     reviews: Array<{
       rating: number;
@@ -1429,7 +1427,7 @@ class ApiService {
     phone?: string;
   }>> {
     try {
-      const response = await this.client.get<ApiResponse<any>>(`/places/${placeId}`);
+      const response = await this.client.get<APIResponse<any>>(`/places/${placeId}`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
@@ -1438,7 +1436,7 @@ class ApiService {
 
   // ========== ANALYTICS ET STATISTIQUES ==========
 
-  async getTripAnalytics(tripId: string): Promise<ApiResponse<{
+  async getTripAnalytics(tripId: string): Promise<APIResponse<{
     views: { date: string; count: number }[];
     likes: { date: string; count: number }[];
     demographics: {
@@ -1453,14 +1451,14 @@ class ApiService {
     };
   }>> {
     try {
-      const response = await this.client.get<ApiResponse<any>>(`/trips/${tripId}/analytics`);
+      const response = await this.client.get<APIResponse<any>>(`/trips/${tripId}/analytics`);
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async getUserAnalytics(): Promise<ApiResponse<{
+  async getUserAnalytics(): Promise<APIResponse<{
     totalViews: number;
     totalLikes: number;
     totalShares: number;
@@ -1472,7 +1470,7 @@ class ApiService {
     };
   }>> {
     try {
-      const response = await this.client.get<ApiResponse<any>>('/users/me/analytics');
+      const response = await this.client.get<APIResponse<any>>('/users/me/analytics');
       return response.data;
     } catch (error) {
       return this.handleError(error);
@@ -1481,18 +1479,18 @@ class ApiService {
 
   // ========== IMPORT/EXPORT ==========
 
-  async importFromEmail(email: string): Promise<ApiResponse<Trip[]>> {
+  async importFromEmail(email: string): Promise<APIResponse<Trip[]>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip[]>>('/import/email', { email });
+      const response = await this.client.post<APIResponse<Trip[]>>('/import/email', { email });
       return response.data;
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async exportTrip(tripId: string, format: 'pdf' | 'json' | 'ics'): Promise<ApiResponse<{ downloadUrl: string }>> {
+  async exportTrip(tripId: string, format: 'pdf' | 'json' | 'ics'): Promise<APIResponse<{ downloadUrl: string }>> {
     try {
-      const response = await this.client.post<ApiResponse<{ downloadUrl: string }>>(
+      const response = await this.client.post<APIResponse<{ downloadUrl: string }>>(
         `/trips/${tripId}/export`,
         { format }
       );
@@ -1502,9 +1500,9 @@ class ApiService {
     }
   }
 
-  async importFromUrl(url: string): Promise<ApiResponse<Trip>> {
+  async importFromUrl(url: string): Promise<APIResponse<Trip>> {
     try {
-      const response = await this.client.post<ApiResponse<Trip>>('/import/url', { url });
+      const response = await this.client.post<APIResponse<Trip>>('/import/url', { url });
       return response.data;
     } catch (error) {
       return this.handleError(error);
@@ -1523,7 +1521,7 @@ class ApiService {
     }
   }
 
-  async getAppConfig(): Promise<ApiResponse<{
+  async getAppConfig(): Promise<APIResponse<{
     features: Record<string, boolean>;
     limits: Record<string, number>;
     maintenance: boolean;
@@ -1534,7 +1532,7 @@ class ApiService {
     };
   }>> {
     try {
-      const response = await this.client.get<ApiResponse<any>>('/config');
+      const response = await this.client.get<APIResponse<any>>('/config');
       return response.data;
     } catch (error) {
       return this.handleError(error);
@@ -1640,35 +1638,42 @@ class ApiService {
     return serialized;
   }
 
-  private normalizeError(error: any): Error {
+  private normalizeError(error: any): APIError {
     if (error.response) {
       // Erreur de réponse HTTP
       const message = error.response.data?.message || 
                      error.response.data?.error || 
                      `Erreur HTTP ${error.response.status}`;
       
-      const normalizedError = new Error(message);
-      (normalizedError as any).code = error.response.status;
-      (normalizedError as any).data = error.response.data;
+      const normalizedError: APIError = {
+        message,
+        code: error.response.status.toString(),
+        status: error.response.status,
+      };
       
       return normalizedError;
     } else if (error.request) {
       // Erreur de réseau
-      return new Error('Erreur de connexion. Vérifiez votre connexion internet.');
+      return {
+        message: 'Erreur de connexion. Vérifiez votre connexion internet.',
+        code: 'network_error',
+        status: 503,
+      };
     } else {
       // Autre erreur
-      return new Error(error.message || 'Une erreur inattendue s\'est produite');
+      return {
+        message: error.message || 'Une erreur inattendue s\'est produite',
+        code: 'unknown_error',
+        status: 500,
+      };
     }
   }
 
-  private handleError(error: any): ApiResponse {
-    const normalizedError = this.normalizeError(error);
-    
+  private handleError(error: APIError): APIResponse<void> {
     return {
       success: false,
-      error: normalizedError.message,
-      code: (normalizedError as any).code,
-      timestamp: new Date().toISOString(),
+      data: undefined,
+      error: error.message,
     };
   }
 

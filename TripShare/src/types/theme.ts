@@ -28,6 +28,9 @@ export interface Theme {
       border: string;
       shadow: string;
     };
+    border: {
+      primary: string;
+    };
   };
   spacing: {
     xs: number;
@@ -104,30 +107,33 @@ export interface Translations {
 // constants/themes.ts
 export const lightTheme: Theme = {
   colors: {
-    primary: ['#008080', '#B2DFDF', '#FFFFFF'], // md_theme_light_primary, primaryContainer, onPrimary
-    accent: ['#FF9500', '#34C759'], // Orange et vert compatibles
-    secondary: ['#4FB3B3', '#D1F0EF', '#00B8A9'], // md_theme_light_secondary, secondaryContainer, tertiary
+    primary: ['#008080', '#B2DFDF', '#FFFFFF'],
+    accent: ['#FF6B6B', '#FFE2E2', '#FFFFFF'],
+    secondary: ['#6C757D', '#E9ECEF', '#FFFFFF'],
     background: {
-      primary: '#FAFAFA', // md_theme_light_background
-      card: '#FFFFFF', // md_theme_light_surface
-      overlay: 'rgba(28, 27, 31, 0.8)', // md_theme_light_onBackground avec transparence
-      gradient: ['#FAFAFA', '#FFFFFF'], // Background vers surface
+      primary: '#FAFAFA',
+      card: '#FFFFFF',
+      overlay: 'rgba(28, 27, 31, 0.8)',
+      gradient: ['#FAFAFA', '#FFFFFF'],
     },
     text: {
-      primary: '#1C1B1F', // md_theme_light_onBackground
-      secondary: '#757575', // Gris moyen pour texte secondaire
-      light: '#FFFFFF', // md_theme_light_onPrimary
+      primary: '#1C1B1F',
+      secondary: '#757575',
+      light: '#FFFFFF',
     },
     semantic: {
       success: '#34C759',
       warning: '#FF9500',
       error: '#FF3B30',
-      info: '#008080', // md_theme_light_primary
+      info: '#008080',
     },
     glassmorphism: {
       background: 'rgba(255, 255, 255, 0.7)',
-      border: 'rgba(0, 128, 128, 0.15)', // Bordure teal subtile
-      shadow: 'rgba(0, 128, 128, 0.10)', // Ombre teal
+      border: 'rgba(0, 128, 128, 0.15)',
+      shadow: 'rgba(0, 128, 128, 0.10)',
+    },
+    border: {
+      primary: '#E0E0E0',
     },
   },
   spacing: {
@@ -147,30 +153,33 @@ export const lightTheme: Theme = {
 
 export const darkTheme: Theme = {
   colors: {
-    primary: ['#4FB3B3', '#005F5F', '#002020'], // md_theme_dark_primary, primaryContainer, onPrimary
-    accent: ['#FF9F0A', '#32D74B'], // Orange et vert sombres
-    secondary: ['#70D6C9', '#004F4C', '#4EA3A3'], // md_theme_dark_secondary, secondaryContainer, tertiary
+    primary: ['#00B3B3', '#004D4D', '#000000'],
+    accent: ['#FF8585', '#802D2D', '#000000'],
+    secondary: ['#ADB5BD', '#343A40', '#000000'],
     background: {
-      primary: '#1C1B1F', // md_theme_dark_background
-      card: '#1C1B1F', // md_theme_dark_surface
-      overlay: 'rgba(230, 225, 229, 0.7)', // md_theme_dark_onBackground avec transparence
-      gradient: ['#1C1B1F', '#1C1B1F'], // Background vers surface
+      primary: '#121212',
+      card: '#1E1E1E',
+      overlay: 'rgba(0, 0, 0, 0.8)',
+      gradient: ['#121212', '#1E1E1E'],
     },
     text: {
-      primary: '#E6E1E5', // md_theme_dark_onBackground
-      secondary: '#9E9E9E', // Gris moyen pour mode sombre
-      light: '#E6E1E5', // md_theme_dark_onSurface
+      primary: '#FFFFFF',
+      secondary: '#BDBDBD',
+      light: '#000000',
     },
     semantic: {
       success: '#32D74B',
-      warning: '#FF9F0A',
+      warning: '#FFD60A',
       error: '#FF453A',
-      info: '#4FB3B3', // md_theme_dark_primary
+      info: '#00B3B3',
     },
     glassmorphism: {
-      background: 'rgba(28, 27, 31, 0.6)',
-      border: 'rgba(79, 179, 179, 0.1)', // Bordure teal sombre
-      shadow: 'rgba(0, 0, 0, 0.3)',
+      background: 'rgba(0, 0, 0, 0.7)',
+      border: 'rgba(0, 179, 179, 0.15)',
+      shadow: 'rgba(0, 179, 179, 0.10)',
+    },
+    border: {
+      primary: '#333333',
     },
   },
   spacing: {

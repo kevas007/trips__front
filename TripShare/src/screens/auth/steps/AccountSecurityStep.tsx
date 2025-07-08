@@ -106,7 +106,7 @@ const AccountSecurityStep: React.FC<AccountSecurityStepProps> = ({ onNext, initi
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: '#1B1818FF' }]}>{error}</Text>}
     </View>
   );
 
@@ -153,7 +153,7 @@ const AccountSecurityStep: React.FC<AccountSecurityStepProps> = ({ onNext, initi
         </View>
 
         <TouchableOpacity
-          style={[styles.nextButton, { backgroundColor: theme.colors.primary }]}
+          style={[styles.nextButton, { backgroundColor: '#008080' }]}
           onPress={handleNext}
         >
           <Text style={styles.nextButtonText}>{t('common.next')}</Text>
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderWidth: 1,
-    borderColor: '#FF3B30',
+    borderColor: '#ef4444',
   },
   inputIcon: {
     marginRight: 12,
@@ -197,10 +197,10 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   errorText: {
-    color: '#FF3B30',
     fontSize: 12,
     marginTop: 4,
     marginLeft: 16,
+    fontWeight: '500',
   },
   passwordRequirements: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

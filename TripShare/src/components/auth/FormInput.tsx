@@ -83,7 +83,7 @@ export const FormInput: FC<FormInputProps> = ({
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: theme.colors.semantic?.error || '#ef4444' }]}>{error}</Text>}
     </View>
   );
 };
@@ -117,8 +117,8 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   errorText: {
-    color: '#FF3B30',
     fontSize: 14,
     marginTop: 4,
+    fontWeight: '500',
   },
 }); 

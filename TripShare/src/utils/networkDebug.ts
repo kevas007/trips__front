@@ -9,12 +9,12 @@ export const NETWORK_CONFIG = {
   // URL du backend (utilise la configuration centralisée)
   BACKEND_URL: API_CONFIG.BASE_URL,
   
-  // URLs de test alternatives (port 8080 pour le backend Go)
+  // URLs de test alternatives (port 8000 pour le backend Go)
   LOCALHOST_URLS: {
-    web: 'http://localhost:8080',
-    android_emulator: 'http://10.0.2.2:8080',
-    ios_simulator: 'http://localhost:8080',
-    physical_device: 'http://192.168.0.220:8080', // IP locale configurée
+    web: 'http://localhsot:8000',
+    android_emulator: 'http://localhsot:8000',
+    ios_simulator: 'http://localhsot:8000',
+    physical_device: 'http://localhsot:8000', // IP locale configurée
   },
   
   // Timeouts
@@ -190,14 +190,14 @@ export class NetworkDiagnostic {
       
       // Recommandations spécifiques par plateforme
       if (Platform.OS === 'android') {
-        recommendations.push('Android Emulator: Utilisez 10.0.2.2 au lieu de localhost');
-        recommendations.push('Android Physical: Utilisez l\'IP de votre machine (192.168.x.x)');
+        recommendations.push('Android Emulator: Utilisez localhsot (IP réseau)');
+        recommendations.push('Android Physical: Utilisez l\'IP de votre machine (localhsot)');
       } else if (Platform.OS === 'ios') {
-        recommendations.push('iOS Simulator: localhost devrait fonctionner');
-        recommendations.push('iOS Physical: Utilisez l\'IP de votre machine (192.168.x.x)');
+        recommendations.push('iOS Simulator: Utilisez localhsot (IP réseau)');
+        recommendations.push('iOS Physical: Utilisez l\'IP de votre machine (localhsot)');
       } else if (Platform.OS === 'web') {
         recommendations.push('Web: Vérifiez que le serveur autorise CORS');
-        recommendations.push('Web: localhost devrait fonctionner en développement');
+        recommendations.push('Web: Utilisez localhsot au lieu de localhost');
       }
       
       recommendations.push('Vérifiez que votre serveur backend est démarré');

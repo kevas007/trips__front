@@ -12,326 +12,175 @@ import {
   Alert,
   Platform,
   useWindowDimensions,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { Theme } from '../../types/theme';
+import TripCard from './TripCard';
 
-interface TripCard {
-  id: string;
-  title: string;
-  destination: string;
-  days: number;
-  likes: number;
-  image: string;
-  author: string;
-  tags: string[];
-  emoji: string;
-  price: string;
+export interface FeaturedTripsProps {
+  theme: Theme;
 }
 
-interface FeaturedTripsProps {
-  featuredTrips: TripCard[];
-  searchQuery: string;
-}
-
-const FeaturedTrips: React.FC<FeaturedTripsProps> = ({
-  featuredTrips,
-  searchQuery,
-}) => {
-  const window = useWindowDimensions();
-  const isWeb = Platform.OS === 'web';
-
-  // Filtrer par titre ou destination si searchQuery non vide
-  const filteredTrips = featuredTrips.filter((trip) =>
-    trip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trip.destination.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (filteredTrips.length === 0) {
-    return <Text style={styles.emptyText}>Aucun voyage trouvé.</Text>;
-  }
-
-  // Pour calculer la largeur d’une carte :
-  // - Sur mobile, on garde 85% de la largeur pour le FlatList horizontal
-  // - Sur web, on veut 30% de la largeur pour permettre au moins 3 cartes côte à côte avec de l’espace
-  const CARD_WIDTH = isWeb
-    ? window.width * 0.30
-    : window.width * 0.85;
-
-  const renderTripCard = ({ item }: { item: TripCard }) => (
-    <TouchableOpacity
-      style={[styles.tripCard, { width: CARD_WIDTH }]}
-      onPress={() =>
-        Alert.alert(
-          `${item.emoji} ${item.title}`,
-          `Voyage de ${item.days} jours à ${item.destination} par ${item.author}`
-        )
-      }
-    >
-      <ImageBackground
-        source={{ uri: item.image }}
-        style={styles.tripCardImage}
-        imageStyle={styles.tripCardImageStyle}
-      >
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={styles.tripCardOverlay}
-        >
-          <View style={styles.tripCardHeader}>
-            <View style={styles.tripCardTags}>
-              {item.tags.slice(0, 2).map((tag, idx) => (
-                <View key={idx} style={styles.tripCardTag}>
-                  <Text style={styles.tripCardTagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-            <TouchableOpacity style={styles.likeButton}>
-              <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.tripCardFooter}>
-            <Text style={styles.tripCardEmoji}>{item.emoji}</Text>
-            <Text style={styles.tripCardTitle}>{item.title}</Text>
-            <Text style={styles.tripCardDestination}>{item.destination}</Text>
-            <View style={styles.tripCardMeta}>
-              <Text style={styles.tripCardDays}>{item.days} jours</Text>
-              <Text style={styles.tripCardPrice}>{item.price}</Text>
-            </View>
-            <View style={styles.tripCardStats}>
-              <Ionicons name="heart" size={14} color="#FF6B9D" />
-              <Text style={styles.tripCardLikes}>{item.likes}</Text>
-              <Text style={styles.tripCardAuthor}> • {item.author}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </ImageBackground>
-    </TouchableOpacity>
-  );
+const FeaturedTrips: React.FC<FeaturedTripsProps> = ({ theme }) => {
+  const featuredTrips = [
+    {
+      id: '1',
+      user: {
+        username: 'emma_voyage',
+        avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+        level: 'Globe-trotter',
+        trips: 25,
+      },
+      location: 'Bali, Indonésie',
+      images: ['https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800'],
+      description: 'Circuit de 7 jours à la découverte des plus beaux temples et rizières de Bali',
+      likes: 1234,
+      comments: 89,
+      duration: '7 jours',
+      budget: '€800',
+      tags: ['Nature', 'Culture', 'Photo'],
+      createdAt: '2h',
+      difficulty: 'Modéré',
+      transport: ['🚗 Voiture', '🛵 Scooter'],
+      highlights: ['Temple de Tanah Lot', 'Rizières de Tegalalang', 'Mont Batur'],
+      steps: [
+        {
+          id: 's1',
+          title: 'Arrivée et installation',
+          description: 'Check-in à l\'hôtel près des Champs-Élysées',
+          duration: '2h',
+          type: 'accommodation',
+          order: 1,
+          activities: [
+            {
+              id: 'a1',
+              title: 'Check-in Hôtel',
+              type: 'accommodation',
+              priority: 'high',
+              status: 'planned',
+              photos: [],
+              createdBy: 'system',
+              createdAt: '2024-03-15',
+              updatedAt: '2024-03-15'
+            }
+          ]
+        },
+        {
+          id: 's2',
+          title: 'Découverte de la Tour Eiffel',
+          description: 'Visite de la Tour Eiffel et déjeuner au restaurant 58 Tour Eiffel',
+          duration: '4h',
+          type: 'sightseeing',
+          order: 2,
+          activities: [
+            {
+              id: 'a2',
+              title: 'Montée Tour Eiffel',
+              type: 'sightseeing',
+              priority: 'high',
+              status: 'planned',
+              photos: [],
+              createdBy: 'system',
+              createdAt: '2024-03-15',
+              updatedAt: '2024-03-15'
+            },
+            {
+              id: 'a3',
+              title: 'Déjeuner 58 Tour Eiffel',
+              type: 'restaurant',
+              priority: 'medium',
+              status: 'planned',
+              photos: [],
+              createdBy: 'system',
+              createdAt: '2024-03-15',
+              updatedAt: '2024-03-15'
+            }
+          ]
+        },
+        {
+          id: 's3',
+          title: 'Balade sur les Champs-Élysées',
+          description: 'Shopping et dîner sur la plus belle avenue du monde',
+          duration: '3h',
+          type: 'shopping',
+          order: 3,
+          activities: [
+            {
+              id: 'a4',
+              title: 'Shopping',
+              type: 'shopping',
+              priority: 'low',
+              status: 'planned',
+              photos: [],
+              createdBy: 'system',
+              createdAt: '2024-03-15',
+              updatedAt: '2024-03-15'
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: '2',
+      user: {
+        username: 'world_alex',
+        avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
+        level: 'Aventurier',
+        trips: 15,
+      },
+      location: 'Alpes Suisses',
+      images: ['https://images.unsplash.com/photo-1531256456869-ce942a665e80?w=800'],
+      description: 'Trek de 4 jours dans les Alpes Suisses, des paysages à couper le souffle !',
+      likes: 892,
+      comments: 67,
+      duration: '4 jours',
+      budget: '€600',
+      tags: ['Montagne', 'Trek', 'Nature'],
+      createdAt: '5h',
+      difficulty: 'Difficile',
+      transport: ['🚶‍♂️ Marche', '🚡 Téléphérique'],
+      highlights: ['Lac de Lucerne', 'Mont Pilatus', 'Grindelwald'],
+    },
+  ];
 
   return (
-    <View style={styles.tripsContainer}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>✨ Voyages Inspirants</Text>
-        <TouchableOpacity onPress={() => console.log('Voir tout')}>
-          <Text style={styles.seeAllText}>Voir tout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {isWeb ? (
-        // === Version Web : grille "space-between" ===
-        <View style={[styles.webGridContainer, { paddingHorizontal: window.width * 0.02 }]}>
-          {filteredTrips.map((trip) => (
-            <View key={trip.id} style={[styles.tripCard, { width: CARD_WIDTH, marginBottom: 20 }]}>
-              <TouchableOpacity
-                style={{ flex: 1, borderRadius: 20, overflow: 'hidden' }}
-                onPress={() =>
-                  Alert.alert(
-                    `${trip.emoji} ${trip.title}`,
-                    `Voyage de ${trip.days} jours à ${trip.destination} par ${trip.author}`
-                  )
-                }
-              >
-                <ImageBackground
-                  source={{ uri: trip.image }}
-                  style={styles.tripCardImage}
-                  imageStyle={styles.tripCardImageStyle}
-                >
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.8)']}
-                    style={styles.tripCardOverlay}
-                  >
-                    <View style={styles.tripCardHeader}>
-                      <View style={styles.tripCardTags}>
-                        {trip.tags.slice(0, 2).map((tag, idx) => (
-                          <View key={idx} style={styles.tripCardTag}>
-                            <Text style={styles.tripCardTagText}>{tag}</Text>
-                          </View>
-                        ))}
-                      </View>
-                      <TouchableOpacity style={styles.likeButton}>
-                        <Ionicons name="heart-outline" size={20} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.tripCardFooter}>
-                      <Text style={styles.tripCardEmoji}>{trip.emoji}</Text>
-                      <Text style={styles.tripCardTitle}>{trip.title}</Text>
-                      <Text style={styles.tripCardDestination}>{trip.destination}</Text>
-                      <View style={styles.tripCardMeta}>
-                        <Text style={styles.tripCardDays}>{trip.days} jours</Text>
-                        <Text style={styles.tripCardPrice}>{trip.price}</Text>
-                      </View>
-                      <View style={styles.tripCardStats}>
-                        <Ionicons name="heart" size={14} color="#FF6B9D" />
-                        <Text style={styles.tripCardLikes}>{trip.likes}</Text>
-                        <Text style={styles.tripCardAuthor}> • {trip.author}</Text>
-                      </View>
-                    </View>
-                  </LinearGradient>
-                </ImageBackground>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      ) : (
-        // === Version Mobile : FlatList horizontale ===
-        <FlatList
-          data={filteredTrips}
-          renderItem={renderTripCard}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tripsList}
-          snapToInterval={CARD_WIDTH + 15}
-          snapToAlignment="start"
-          decelerationRate="fast"
-        />
-      )}
+    <View style={styles.container}>
+      <Text style={[styles.title, { color: theme.colors.text.primary }]}>
+        Voyages à la Une
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {featuredTrips.map((trip) => (
+          <View key={trip.id} style={styles.tripContainer}>
+            <TripCard trip={trip} theme={theme} />
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 };
 
-export default FeaturedTrips;
-
 const styles = StyleSheet.create({
-  tripsContainer: {
-    marginBottom: 30,
+  container: {
+    marginBottom: 20,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-  seeAllText: {
-    fontSize: 14,
-                    color: '#008080',
-    fontWeight: '600',
-  },
-
-  // === Conteneur grille Web ===
-  webGridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-
-  // === Styles communs aux cartes ===
-  tripsList: {
-    paddingHorizontal: 20,
-  },
-  tripCard: {
-    height: 280,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-    marginRight: 15, // marginRight appliquée seulement en mobile
-  },
-  tripCardImage: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  tripCardImageStyle: {
-    borderRadius: 20,
-  },
-  tripCardOverlay: {
-    flex: 1,
-    padding: 16,
-    justifyContent: 'space-between',
-  },
-  tripCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  tripCardTags: {
-    flexDirection: 'row',
-  },
-  tripCardTag: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 6,
-  },
-  tripCardTagText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  likeButton: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 20,
-    padding: 8,
-  },
-  tripCardFooter: {
-    alignSelf: 'flex-start',
-  },
-  tripCardEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  tripCardTitle: {
+  title: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 6,
+    fontWeight: 'bold',
+    marginBottom: 15,
   },
-  tripCardDestination: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500',
-    marginBottom: 8,
+  scrollContent: {
+    paddingRight: 15,
   },
-  tripCardMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  tripCardDays: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
-  },
-  tripCardPrice: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  tripCardStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tripCardLikes: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    marginLeft: 4,
-    marginRight: 8,
-  },
-  tripCardAuthor: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
-  },
-
-  emptyText: {
-    fontSize: 14,
-    color: '#A1A1AA',
-    textAlign: 'center',
-    marginTop: 10,
+  tripContainer: {
+    width: 300,
+    marginRight: 15,
   },
 });
+
+export default FeaturedTrips;

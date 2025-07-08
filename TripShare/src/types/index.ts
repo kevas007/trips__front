@@ -1,3 +1,15 @@
+export * from './api';
+export * from './user';
+export * from './trip';
+export * from './activity';
+export * from './location';
+export * from './budget';
+export * from './expense';
+export * from './recommendation';
+export * from './search';
+export * from './profile';
+export * from './device';
+
 export interface User {
   id: number;
   login: string;

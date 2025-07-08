@@ -2,21 +2,14 @@
 
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG, getFullApiUrl } from '../config/api';
+import { APIResponse, UserTravelPreferences, User, Trip, Activity, Location, TripBudget, Expense, AIRecommendation, SearchFilters, UserProfile, DeviceInfo } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authService } from './auth';
+import { APIService as BaseAPIService, APIError } from '../types/api';
+import { TripFilters } from '../types/trip';
 
 // ========== TYPES ==========
-export interface User {
-  id: string;
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  phone_number?: string;
-  avatar?: string | null;
-  verified: boolean;
-  created_at: string;
-}
-
 export interface AuthResponse {
   user: User;
   access_token: string;
@@ -38,14 +31,25 @@ export interface RegisterRequest {
 }
 
 // ========== FORMAT RÉPONSE BACKEND GO ==========
-interface BackendResponse<T = any> {
+interface BackendResponse {
   success: boolean;
-  data?: T;
   error?: string;
+  data?: any;
 }
 
-export class APIError extends Error {
-  constructor(message: string, public statusCode?: number, public data?: any) {
+const SECURE_STORE_OPTIONS = {
+  keychainService: 'TripShare',
+  keychainAccessible: SecureStore.WHEN_UNLOCKED,
+};
+
+export class APIErrorImpl extends Error implements APIError {
+  public code?: string;
+  
+  constructor(
+    message: string,
+    public status: number,
+    public data?: any
+  ) {
     super(message);
     this.name = 'APIError';
   }
@@ -79,297 +83,116 @@ const Storage = {
 };
 
 // ========== SERVICE API ==========
-class APIService {
+export class APIService {
+  private baseUrl: string;
+
   constructor() {
-    console.log(`🚀 APIService initialisé en mode ${API_CONFIG.ENV_NAME}:`, API_CONFIG.BASE_URL);
+    this.baseUrl = process.env.API_URL || 'http://localhost:3000/api';
+    console.log(`🚀 APIService initialisé en mode ${API_CONFIG.ENV_NAME}:`, this.baseUrl);
   }
 
   // -------- MÉTHODE FETCH PRINCIPALE --------
   private async apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
-
-    try {
-      // 1) Récupérer le token d'authentification (s'il existe)
-      const token = await Storage.getItem('auth_token').catch(() => null);
-
-      // 2) Construire la config de l'appel
-      const config: RequestInit = {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-          ...options.headers,
-        },
-      };
-
-      if (API_CONFIG.ENABLE_LOGGING) {
-        console.log(`🚀 ${config.method || 'GET'} ${url}`);
+    console.log('🔍 Endpoint reçu:', endpoint);
+    
+    // Ne pas vérifier le token pour les routes d'authentification
+    if (!endpoint.includes('/auth/')) {
+      // Vérifier la validité du token avant chaque requête
+      const isTokenValid = await authService.checkTokenValidity();
+      if (!isTokenValid) {
+        throw new APIErrorImpl('Session expirée', 401, null);
       }
-      
-      const response = await fetch(url, config);
-      
-      if (API_CONFIG.ENABLE_LOGGING) {
-        console.log(`📡 Réponse: ${response.status}`);
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData: BackendResponse;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { success: false, error: errorText || `HTTP ${response.status}` };
-        }
-        throw new APIError(
-          errorData.error || `Erreur HTTP ${response.status}`,
-          response.status,
-          errorData
-        );
-      }
-
-      const data: BackendResponse<T> = await response.json();
-      
-      // Vérifier le format de réponse du backend Go
-      if (!data.success) {
-        throw new APIError(data.error || 'Erreur serveur', response.status, data);
-      }
-      
-      if (API_CONFIG.ENABLE_LOGGING) {
-        console.log('✅ Succès:', data.data);
-      }
-      
-      return data.data as T;
-    } catch (error: any) {
-      console.error('❌ Erreur API:', error);
-      if (error instanceof APIError) {
-        throw error;
-      }
-      throw new APIError(`Erreur de connexion: ${error.message}`, 0);
     }
-  }
 
-  // -------- Méthodes pour le service Auth --------
-  setAuthToken(token: string) {
-    // Cette méthode sera appelée par authService
-    // Le token sera automatiquement inclus dans les prochains appels
-  }
+    const url = getFullApiUrl(endpoint);
+    console.log('🔍 URL construite:', {
+      endpoint,
+      url,
+      method: options.method || 'GET'
+    });
 
-  clearAuthToken() {
-    // Pour nettoyer le token lors de la déconnexion
-  }
-
-  // -------- AUTHENTIFICATION --------
-  async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
-      console.log('📝 Inscription:', userData.email);
+      // Utiliser le token du service d'authentification
+      const token = authService.getToken();
+      console.log('🔑 Token trouvé:', !!token);
 
-      // Format exact attendu par le backend Go
-             // Validation des champs obligatoires selon le backend Go
-       if (!userData.phone_number || userData.phone_number.trim().length === 0) {
-         throw new APIError('Le numéro de téléphone est obligatoire', 400);
-       }
-       if (userData.username.length < 3 || userData.username.length > 30) {
-         throw new APIError('Le nom d\'utilisateur doit contenir entre 3 et 30 caractères', 400);
-       }
-       if (userData.password.length < 8) {
-         throw new APIError('Le mot de passe doit contenir au moins 8 caractères', 400);
-       }
+      if (!token && !endpoint.includes('/auth/')) {
+        throw new APIErrorImpl('Non authentifié', 401, null);
+      }
 
-       const requestData = {
-         email: userData.email.toLowerCase().trim(),
-         username: userData.username.toLowerCase().trim(), // Backend force lowercase
-         first_name: userData.first_name.trim(),
-         last_name: userData.last_name.trim(),
-         phone_number: userData.phone_number.trim(),
-         password: userData.password,
-       };
+      // Créer le contrôleur d'abort avec timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.REQUEST_TIMEOUT);
 
-       console.log('📝 API - Données envoyées:', {
-         ...requestData,
-         password: '[HIDDEN]'
-       });
-
-       const response = await this.apiCall<{
-         token: string;
-         refresh_token: string;
-         user: any;
-       }>('/auth/register', {
-         method: 'POST',
-         body: JSON.stringify(requestData),
-       });
-
-      const { token, refresh_token, user } = response;
-
-      // 1) Stocker les tokens
-      await this.storeAuthData(token, refresh_token);
-      // 2) Stocker l'utilisateur renvoyé
-      await this.storeUserData(user);
-
-      console.log('✅ Inscription réussie:', user.email);
-      return {
-        user,
-        access_token: token,
-        refresh_token: refresh_token,
-      };
-    } catch (error) {
-      console.error('❌ Échec inscription:', error);
-      throw error;
-    }
-  }
-
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
-    try {
-      console.log('🔐 Connexion:', credentials.email);
-
-      // Format exact attendu par le backend Go
-      const response = await this.apiCall<{
-        token: string;
-        refresh_token: string;
-        user: any;
-      }>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: credentials.email.toLowerCase().trim(),
-          password: credentials.password,
-        }),
-      });
-
-      const { token, refresh_token, user } = response;
-
-      // 1) Stocker les tokens
-      await this.storeAuthData(token, refresh_token);
-      // 2) Stocker l'utilisateur renvoyé  
-      await this.storeUserData(user);
-
-      console.log('✅ Connexion réussie:', user.email);
-      return {
-        user,
-        access_token: token,
-        refresh_token: refresh_token,
-      };
-    } catch (error) {
-      console.error('❌ Échec connexion:', error);
-      throw error;
-    }
-  }
-
-  async logout(): Promise<void> {
-    try {
-      console.log('🔓 Déconnexion...');
-      
-      // Appel API optionnel pour invalider le token côté serveur
       try {
-        await this.apiCall('/auth/logout', { method: 'POST' });
+        // Faire l'appel avec le signal d'abort
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...options.headers,
+          },
+          signal: controller.signal,
+        });
+
+        // Vérifier la réponse
+        if (!response.ok) {
+          // Si on reçoit une erreur 401, essayer de rafraîchir le token
+          if (response.status === 401 && !endpoint.includes('/auth/')) {
+            try {
+              // Tenter de rafraîchir le token
+              await authService.refreshAccessToken();
+              
+              // Réessayer la requête avec le nouveau token
+              const newToken = authService.getToken();
+              const retryResponse = await fetch(url, {
+                ...options,
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(newToken ? { 'Authorization': `Bearer ${newToken}` } : {}),
+                  ...options.headers,
+                },
+              });
+
+              if (!retryResponse.ok) {
+                throw new APIErrorImpl(
+                  `${retryResponse.status} ${retryResponse.statusText}`,
+                  retryResponse.status,
+                  await retryResponse.json().catch(() => null)
+                );
+              }
+
+              return await retryResponse.json();
+            } catch (refreshError) {
+              // Si le rafraîchissement échoue, déconnecter l'utilisateur
+              await authService.logout();
+              throw new APIErrorImpl('Session expirée', 401, null);
+            }
+          }
+
+          throw new APIErrorImpl(
+            `${response.status} ${response.statusText}`,
+            response.status,
+            await response.json().catch(() => null)
+          );
+        }
+
+        // Parser et retourner la réponse
+        const data = await response.json();
+        return data;
+
       } catch (error) {
-        console.warn('⚠️ Erreur lors de la déconnexion côté serveur:', error);
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new APIErrorImpl('Timeout de la requête', 408, null);
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
 
-      // Nettoyer les données locales
-      await this.clearAuthData();
-      console.log('✅ Déconnexion réussie');
     } catch (error) {
-      console.error('❌ Erreur lors de la déconnexion:', error);
-      throw error;
-    }
-  }
-
-  async forgotPassword(email: string): Promise<void> {
-    try {
-      console.log('🔑 Récupération de mot de passe:', email);
-      
-      await this.apiCall('/auth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.toLowerCase().trim() }),
-      });
-      
-      console.log('✅ Email de récupération envoyé');
-    } catch (error) {
-      console.error('❌ Erreur récupération mot de passe:', error);
-      throw error;
-    }
-  }
-
-  // -------- STOCKAGE DES DONNÉES --------
-  private async storeAuthData(accessToken: string, refreshToken?: string): Promise<void> {
-    try {
-      await Storage.setItem('auth_token', accessToken);
-      if (refreshToken) {
-        await Storage.setItem('refresh_token', refreshToken);
-      }
-      console.log('💾 Tokens stockés');
-    } catch (error) {
-      console.error('❌ Erreur stockage tokens:', error);
-      throw new APIError('Impossible de stocker les tokens');
-    }
-  }
-
-  private async storeUserData(user: User): Promise<void> {
-    try {
-      await Storage.setItem('user_data', JSON.stringify(user));
-      console.log('💾 Données utilisateur stockées');
-    } catch (error) {
-      console.error('❌ Erreur stockage user:', error);
-      throw new APIError('Impossible de stocker les données utilisateur');
-    }
-  }
-
-  async getStoredUser(): Promise<User | null> {
-    try {
-      const userData = await Storage.getItem('user_data');
-      return userData ? JSON.parse(userData) : null;
-    } catch (error) {
-      console.error('❌ Erreur récupération user:', error);
-      return null;
-    }
-  }
-
-  async getStoredToken(): Promise<string | null> {
-    try {
-      return await Storage.getItem('auth_token');
-    } catch (error) {
-      console.error('❌ Erreur récupération token:', error);
-      return null;
-    }
-  }
-
-  private async clearAuthData(): Promise<void> {
-    try {
-      await Promise.all([
-        Storage.removeItem('auth_token'),
-        Storage.removeItem('refresh_token'),
-        Storage.removeItem('user_data'),
-      ]);
-      console.log('🗑️ Données d\'authentification supprimées');
-    } catch (error) {
-      console.error('❌ Erreur suppression données auth:', error);
-    }
-  }
-
-  // -------- TEST DE CONNEXION --------
-  async testConnection(): Promise<{ status: 'success' | 'error'; message: string }> {
-    try {
-      console.log('🔍 Test de connexion API...');
-      const response = await this.apiCall<{ message: string }>('/health');
-      return {
-        status: 'success',
-        message: response?.message || 'Connexion établie',
-      };
-    } catch (error: any) {
-      return {
-        status: 'error',
-        message: error.message || 'Impossible de se connecter au serveur',
-      };
-    }
-  }
-
-  // -------- RÉCUPÉRATION DE L'UTILISATEUR ACTUEL --------
-  async getCurrentUser(): Promise<User> {
-    try {
-      console.log('👤 Récupération utilisateur actuel...');
-      const userData = await this.apiCall<any>('/users/me');
-      return userData;
-    } catch (error) {
-      console.error('❌ Erreur récupération utilisateur actuel:', error);
+      console.error(`❌ Erreur API: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       throw error;
     }
   }
@@ -397,6 +220,87 @@ class APIService {
 
   async delete(endpoint: string, options: RequestInit = {}): Promise<any> {
     return this.apiCall(endpoint, { ...options, method: 'DELETE' });
+  }
+
+  // -------- PRÉFÉRENCES UTILISATEUR --------
+  async updatePreferences(preferences: Partial<UserTravelPreferences>): Promise<APIResponse<UserTravelPreferences>> {
+    try {
+      const response = await this.apiCall<APIResponse<UserTravelPreferences>>('/users/me/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(preferences),
+      });
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des préférences:', error);
+      throw error;
+    }
+  }
+
+  async getUserTravelPreferences(): Promise<APIResponse<UserTravelPreferences>> {
+    try {
+      const response = await this.apiCall<APIResponse<UserTravelPreferences>>('/users/me/travel-preferences');
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des préférences:', error);
+      throw error;
+    }
+  }
+
+  // -------- RECOMMANDATIONS --------
+  async getRecommendedTrips(page: number = 1, limit: number = 10): Promise<APIResponse<any[]>> {
+    try {
+      const response = await this.apiCall<APIResponse<any[]>>(`/recommendations/trips?page=${page}&limit=${limit}`);
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des recommandations:', error);
+      throw error;
+    }
+  }
+
+  async getTripsByCategory(category: string, page: number = 1, limit: number = 10): Promise<APIResponse<Trip[]>> {
+    try {
+      const response = await this.apiCall<APIResponse<Trip[]>>(`/recommendations/travel-category/${category}?page=${page}&limit=${limit}`);
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des voyages par catégorie:', error);
+      throw error;
+    }
+  }
+
+  // -------- VOYAGES --------
+  async getTrips(filters: TripFilters): Promise<APIResponse<Trip[]>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.difficulty) queryParams.append('difficulty', filters.difficulty);
+      if (filters.duration) queryParams.append('duration', filters.duration);
+      if (filters.budget) queryParams.append('budget', filters.budget);
+      if (filters.location) queryParams.append('location', filters.location);
+
+      const response = await this.apiCall<APIResponse<Trip[]>>(`/trips?${queryParams.toString()}`);
+      return response;
+    } catch (error) {
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Une erreur est survenue',
+      };
+    }
+  }
+
+  private handleError(error: unknown): APIError {
+    if (error instanceof Error) {
+      return {
+        message: error.message,
+        code: 'unknown_error',
+        status: 500,
+      };
+    }
+    return {
+      message: 'Une erreur inattendue s\'est produite',
+      code: 'unknown_error',
+      status: 500,
+    };
   }
 }
 
