@@ -1,4 +1,4 @@
-// === metro.config.js - CONFIGURATION OPTIMISÉE POUR PRODUCTION ===
+// === metro.config.js - CONFIGURATION SIMPLIFIÉE POUR JSC ===
 
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
@@ -41,42 +41,24 @@ config.resolver = {
 };
 
 // ═══════════════════════════════════════
-// Configuration du transformer OPTIMISÉE
+// Configuration du transformer simplifiée
 config.transformer = {
   ...config.transformer,
   
   // Configuration pour les assets
   assetPlugins: ['expo-asset/tools/hashAssetFiles'],
   
-  // Minification pour production
+  // Minification simplifiée pour JSC
   minifierConfig: {
-    // Optimisations JavaScript
     output: {
       ascii_only: true,
       comments: false,
-      inline_script: false,
     },
-    // Compression maximale
     compress: {
-      // Tree shaking agressif
       dead_code: true,
       drop_console: process.env.NODE_ENV === 'production',
       drop_debugger: true,
-      keep_infinity: false,
-      reduce_vars: true,
       unused: true,
-      // Optimisations supplémentaires
-      collapse_vars: true,
-      evaluate: true,
-      hoist_funs: true,
-      join_vars: true,
-      loops: true,
-      negate_iife: true,
-      properties: true,
-      sequences: true,
-      side_effects: true,
-      switches: true,
-      typeofs: true,
     },
     mangle: {
       toplevel: false,
@@ -106,16 +88,6 @@ config.resolver.blockList = [
   // Ignorer les sources maps en production
   ...(process.env.NODE_ENV === 'production' ? [/.*\.map$/] : []),
 ];
-
-// ═══════════════════════════════════════
-// Optimisations pour la taille du bundle
-if (process.env.NODE_ENV === 'production') {
-  // Désactiver les source maps pour réduire la taille
-  config.resolver.sourceExts = config.resolver.sourceExts.filter(ext => ext !== 'map');
-  
-  // Optimiser les assets
-  config.transformer.assetRegistryPath = 'react-native/Libraries/Image/AssetRegistry';
-}
 
 // Exporter la configuration
 module.exports = config;

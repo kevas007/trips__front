@@ -48,9 +48,9 @@ const CategoryTripsScreen: React.FC<CategoryTripsScreenProps> = ({ route, naviga
         const newTrips = response.data as Trip[];
         
         if (refresh) {
-          setTrips(newTrips);
+          setTrips(newTrips || []);
         } else {
-          setTrips(prev => [...prev, ...newTrips]);
+          setTrips(prev => [...(prev || []), ...(newTrips || [])]);
         }
 
         setHasMore(newTrips.length === 10);

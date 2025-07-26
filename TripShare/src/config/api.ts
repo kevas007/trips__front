@@ -15,20 +15,52 @@ const LOCAL_ENVIRONMENTS = {
   
   // Backend avec IP réseau (pour tests sur vrais devices) - PORT 8085
   network: {
-    baseUrl: 'http://192.168.0.220:8085', // IP locale détectée
-    name: 'Network IP + PostgreSQL'
+    baseUrl: 'http://192.168.0.220:8085', // IP locale pour appareils physiques
+    name: 'Physical Devices + PostgreSQL'
+  },
+  
+  // Configuration pour émulateur Android
+  emulator: {
+    baseUrl: 'http://10.0.2.2:8085', // IP spéciale pour émulateur Android
+    name: 'Android Emulator + PostgreSQL'
   }
 };
 
 // ========== CONFIGURATION ACTIVE ==========
 
-// Changez ici pour basculer entre Localhost et Network
-const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = 'network'; // 'localhost' | 'network'
+// Détection automatique de la plateforme
+const getCurrentEnvironment = (): keyof typeof LOCAL_ENVIRONMENTS => {
+  console.log('🔍 Plateforme détectée:', Platform.OS);
+  
+  if (Platform.OS === 'android') {
+    console.log('📱 Android détecté - Utilisation de 192.168.0.220:8085');
+    return 'network';
+  } else if (Platform.OS === 'ios') {
+    console.log('🍎 iOS détecté - Utilisation de 192.168.0.220:8085 (backend local)');
+    return 'network';
+  } else {
+    console.log('🌐 Web détecté - Utilisation de localhost:8085');
+    return 'localhost';
+  }
+};
+
+// Force la configuration pour Android et iOS
+const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = (Platform.OS === 'android' || Platform.OS === 'ios') ? 'network' : 'localhost';
 
 export const API_CONFIG = {
   // Configuration de base
   BASE_URL: process.env.EXPO_PUBLIC_API_URL || LOCAL_ENVIRONMENTS[CURRENT_ENV].baseUrl,
   API_PREFIX: '/api/v1',
+  
+  // Log de la configuration utilisée
+  get CONFIG_INFO() {
+    return {
+      platform: Platform.OS,
+      environment: CURRENT_ENV,
+      baseUrl: this.BASE_URL,
+      fullUrl: `${this.BASE_URL}${this.API_PREFIX}`
+    };
+  },
   
   // Timeouts et retry
   REQUEST_TIMEOUT: 10000, // 10 secondes (suffisant en local)
@@ -43,7 +75,7 @@ export const API_CONFIG = {
   ENABLE_LOGGING: true,
   
   // Helper pour l'IP locale
-  NETWORK_IP: '192.168.0.220', // IP locale détectée
+  NETWORK_IP: '192.168.0.220', // IP locale pour appareils physiques
 };
 
 export const getFullApiUrl = (endpoint: string): string => {

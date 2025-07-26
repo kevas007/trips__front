@@ -1,0 +1,112 @@
+version: "3.8"
+
+services:
+  # 1) Redis (cache, rate limiting)
+  redis:
+    image: redis:6-alpine  # Version Alpine pour une image plus légère
+    container_name: tripshare-redis
+    ports:
+      - "127.0.0.1:6379:6379"  # Restriction à localhost
+    volumes:
+      - redis_data:/data
+    command:
+      - "redis-server"
+      - "--requirepass"
+      - "${REDIS_PASSWORD:-defaultpassword}"  # Valeur par défaut si non définie
+      - "--appendonly"
+      - "yes"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - tripshare-network
+
+  # 2) PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine  # Version Alpine pour une image plus légère
+    container_name: tripshare-postgres
+    environment:
+      POSTGRES_DB: "${DB_NAME:-tripshare}"
+      POSTGRES_USER: "${DB_USER:-postgres}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-defaultpassword}"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "127.0.0.1:5432:5432"  # Restriction à localhost
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d/migrations:ro  # En lecture seule
+      - ./tripshare-backend/scripts/reset-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - tripshare-network
+
+  # 3) Backend Go
+  backend:
+    build:
+      context: ./tripshare-backend
+      dockerfile: Dockerfile
+      args:
+        - GO_VERSION=1.21  # Spécifier la version de Go
+    container_name: tripshare-backend
+    env_file:
+      - .env
+    environment:
+      - TZ=UTC
+      - GIN_MODE=release
+    ports:
+      - "127.0.0.1:8005:${SERVER_PORT:-8085}"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT:-8085}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - tripshare-network
+
+  # 4) MinIO (Object Storage)
+  minio:
+    image: minio/minio:latest
+    container_name: tripshare-minio
+    ports:
+      - "127.0.0.1:9000:9000"  # API
+      - "127.0.0.1:9001:9001"  # Console
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minioadmin}"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - tripshare-network
+
+volumes:
+  redis_data:
+    name: tripshare_redis_data
+  postgres_data:
+    name: tripshare_postgres_data
+  minio_data:
+    name: tripshare_minio_data
+
+networks:
+  tripshare-network:
+    name: tripshare-network
+    driver: bridge 

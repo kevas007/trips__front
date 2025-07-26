@@ -51,34 +51,44 @@ interface OnboardingScreenProps {
 
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
   const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
-  const { isNewUser } = useSimpleAuth();
+  const { isNewUser, completeOnboarding } = useSimpleAuth();
   const { theme, isDark } = useAppTheme();
   const scrollX = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Debug logs
+  console.log('🎯 OnboardingScreen - Rendu du composant');
+  console.log('🎯 OnboardingScreen - État:', { isNewUser, currentIndex });
+
   useEffect(() => {
+    console.log('🎯 OnboardingScreen - useEffect déclenché, isNewUser:', isNewUser);
+    
     if (!isNewUser) {
+      console.log('🎯 OnboardingScreen - Utilisateur pas nouveau, redirection vers AuthScreen');
       navigation.reset({
         index: 0,
         routes: [{ name: 'AuthScreen' }],
       });
+    } else {
+      console.log('🎯 OnboardingScreen - Nouvel utilisateur confirmé, affichage de l\'onboarding');
     }
-  }, [isNewUser]);
+  }, [isNewUser, navigation]);
 
   const handleContinue = () => {
+    console.log('🎯 OnboardingScreen - Bouton continuer pressé, index actuel:', currentIndex);
+    
     if (currentIndex < ONBOARDING_DATA.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      const newIndex = currentIndex + 1;
+      console.log('🎯 OnboardingScreen - Passage à l\'étape suivante:', newIndex);
+      setCurrentIndex(newIndex);
       scrollViewRef.current?.scrollTo({
-        x: width * (currentIndex + 1),
+        x: width * newIndex,
         animated: true
       });
-    } else if (onFinish) {
-      onFinish();
     } else {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'TravelPreferencesScreen' }],
-      });
+      console.log('🎯 OnboardingScreen - Fin de l\'onboarding, navigation vers TravelPreferencesScreen');
+      // Naviguer vers TravelPreferencesScreen
+      navigation.navigate('TravelPreferencesScreen');
     }
   };
 
@@ -117,6 +127,12 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
     );
   };
 
+  // Si pas un nouvel utilisateur, ne pas afficher l'onboarding
+  if (!isNewUser) {
+    console.log('🎯 OnboardingScreen - Pas un nouvel utilisateur, affichage conditionnel');
+    return null;
+  }
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background.primary }]}>
       <ScrollView
@@ -131,6 +147,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
         scrollEventThrottle={16}
         onMomentumScrollEnd={(e) => {
           const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+          console.log('🎯 OnboardingScreen - Scroll terminé, nouvel index:', newIndex);
           setCurrentIndex(newIndex);
         }}
       >

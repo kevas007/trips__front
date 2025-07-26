@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     borderRadius: Platform.OS === 'web' ? 16 : 12,
     paddingVertical: Platform.OS === 'web' ? 16 : 8,
     paddingHorizontal: Platform.OS === 'web' ? 12 : 8,
-    height: Platform.OS === 'web' ? 'auto' : getInputHeight() - 8,
+    height: getInputHeight(), // Même hauteur que AuthInput
     justifyContent: 'space-between',
   },
   flag: {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   loadingContainer: {
-    height: Platform.OS === 'web' ? 'auto' : getInputHeight() - 8,
+    height: getInputHeight(), // Même hauteur que AuthInput
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: Platform.OS === 'web' ? 16 : 12,

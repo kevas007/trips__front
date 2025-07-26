@@ -14,6 +14,7 @@ import { useAppTheme } from '../../hooks/useAppTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import { useNavigation } from '@react-navigation/native';
+import AppBackground from '../../components/ui/AppBackground';
 
 interface SectionProps {
   title: string;
@@ -64,7 +65,7 @@ const SettingsScreen = () => {
   const fontSizeOptions = ['Petit', 'Normal', 'Grand', 'Très grand'];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+    <AppBackground>
       {/* Apparence */}
       <Section title="Apparence">
         <Row icon="moon" label="Mode sombre">
@@ -125,7 +126,7 @@ const SettingsScreen = () => {
           </Text>
         </View>
       </Section>
-    </ScrollView>
+    </AppBackground>
   );
 };
 

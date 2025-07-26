@@ -84,18 +84,18 @@ const TripCard: React.FC<TripCardProps> = ({
       {/* En-tête */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Image source={{ uri: trip.user.avatar }} style={styles.avatar} />
+          <Image source={{ uri: trip.user?.avatar || 'https://via.placeholder.com/40' }} style={styles.avatar} />
           <View>
             <View style={styles.usernameContainer}>
               <Text style={[styles.username, { color: theme.colors.text.primary }]}>
-                {trip.user.username}
+                {trip.user?.username || 'Utilisateur inconnu'}
               </Text>
               <View style={[styles.levelBadge, { backgroundColor: theme.colors.primary[0] }]}>
-                <Text style={styles.levelText}>{trip.user.level}</Text>
+                <Text style={styles.levelText}>{trip.user?.level || 1}</Text>
               </View>
             </View>
             <Text style={[styles.tripCount, { color: theme.colors.text.secondary }]}>
-              {trip.user.trips} voyages
+              {trip.user?.trips || 0} voyages
             </Text>
             {showRecommendationScore && recommendationScore && (
               <View style={styles.recommendationContainer}>
@@ -124,7 +124,7 @@ const TripCard: React.FC<TripCardProps> = ({
       {/* Image principale */}
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: trip.images[0] }}
+          source={{ uri: trip.photos?.[0] || trip.images?.[0] || 'https://via.placeholder.com/300x200' }}
           style={styles.image}
           resizeMode="cover"
         />

@@ -1,7 +1,7 @@
 // ========== HOOK PERSONNALISÉ POUR L'API TRIPSHARE ==========
 // Hook qui encapsule les appels API avec gestion d'état et d'erreurs
 
-import { useState, useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { tripShareApi } from '../services';
 import type {
   LoginRequest,
@@ -12,6 +12,8 @@ import type {
   CreateActivityRequest,
   CreateExpenseRequest
 } from '../services';
+import { useAPI } from './useAPI';
+import { Trip } from '../types/trip';
 
 // ========== TYPES D'ÉTAT ==========
 interface ApiState<T> {
@@ -221,3 +223,109 @@ export const useBadges = () => {
     getBadge: { ...getBadgeState, execute: getBadge },
   };
 }; 
+
+export const usePublicProfile = (userId: string) => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const execute = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await tripShareApi.getUserProfile(userId);
+      setData(result);
+    } catch (err: any) {
+      setError(err?.message || 'Erreur inconnue');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  const reset = useCallback(() => {
+    setData(null);
+    setError(null);
+    setLoading(false);
+  }, []);
+
+  return { data, loading, error, execute, reset };
+}; 
+
+export const useUserPublicTrips = (userId: string) => {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const execute = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await tripShareApi.listPublicTripsByUser(userId);
+      setData(result);
+    } catch (err: any) {
+      setError(err?.message || 'Erreur inconnue');
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  const reset = useCallback(() => {
+    setData([]);
+    setError(null);
+    setLoading(false);
+  }, []);
+
+  return { data, loading, error, execute, reset };
+}; 
+
+export function useSavedTrips() {
+  const { get, post, delete: deleteRequest } = useAPI();
+  const [savedTrips, setSavedTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getSavedTrips = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const trips = await get<Trip[]>('/trips/saved');
+      setSavedTrips(trips);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du chargement des voyages enregistrés');
+      setSavedTrips([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [get]);
+
+  const saveTrip = useCallback(async (tripId: string) => {
+    try {
+      await post(`/trips/${tripId}/save`);
+      // Rafraîchir la liste
+      getSavedTrips();
+    } catch (err: any) {
+      throw new Error(err.message || 'Erreur lors de l\'enregistrement du voyage');
+    }
+  }, [post, getSavedTrips]);
+
+  const unsaveTrip = useCallback(async (tripId: string) => {
+    try {
+      await deleteRequest(`/trips/${tripId}/save`);
+      // Rafraîchir la liste
+      getSavedTrips();
+    } catch (err: any) {
+      throw new Error(err.message || 'Erreur lors de la suppression du voyage');
+    }
+  }, [deleteRequest, getSavedTrips]);
+
+  return {
+    savedTrips,
+    loading,
+    error,
+    getSavedTrips,
+    saveTrip,
+    unsaveTrip,
+  };
+} 

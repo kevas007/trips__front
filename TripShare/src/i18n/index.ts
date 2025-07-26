@@ -1,4 +1,4 @@
-// === src/i18n/index.ts - CONFIGURATION REACT-I18NEXT CORRIGÉE ===
+// === src/i18n/index.ts - CONFIGURATION REACT-I18NEXT COMPATIBLE HERMES ===
 
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -8,20 +8,31 @@ import { Platform, NativeModules } from 'react-native';
 import fr from './locales/fr';
 import en from './locales/en';
 
-// ========== DÉTECTION LANGUE DU DEVICE ==========
+// ========== DÉTECTION LANGUE DU DEVICE (COMPATIBLE HERMES) ==========
 
 const getDeviceLanguage = (): string => {
   let deviceLanguage = 'fr'; // Default to French
   
   try {
     if (Platform.OS === 'ios') {
-      deviceLanguage = NativeModules.SettingsManager?.settings?.AppleLocale ||
-                      NativeModules.SettingsManager?.settings?.AppleLanguages?.[0] ||
-                      'fr';
+      // Accès sécurisé aux NativeModules pour éviter l'erreur Hermes
+      const settingsManager = NativeModules.SettingsManager;
+      if (settingsManager && settingsManager.settings) {
+        deviceLanguage = settingsManager.settings.AppleLocale ||
+                        (settingsManager.settings.AppleLanguages && settingsManager.settings.AppleLanguages[0]) ||
+                        'fr';
+      }
     } else if (Platform.OS === 'android') {
-      deviceLanguage = NativeModules.I18nManager?.localeIdentifier || 'fr';
+      // Accès sécurisé pour Android
+      const i18nManager = NativeModules.I18nManager;
+      if (i18nManager && i18nManager.localeIdentifier) {
+        deviceLanguage = i18nManager.localeIdentifier;
+      }
     } else if (Platform.OS === 'web') {
-      deviceLanguage = navigator.language || 'fr';
+      // Accès sécurisé pour le web
+      if (typeof navigator !== 'undefined' && navigator.language) {
+        deviceLanguage = navigator.language;
+      }
     }
     
     // Extract language code (e.g., 'fr' from 'fr-FR')

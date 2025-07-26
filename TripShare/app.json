@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
+    "jsEngine": "jsc",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -18,11 +19,15 @@
       "buildNumber": "1.0.0",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
-        "UIStatusBarStyle": "UIStatusBarStyleDefault"
+        "UIStatusBarStyle": "UIStatusBarStyleDefault",
+        "NSLocationWhenInUseUsageDescription": "Cette application utilise votre localisation pour afficher votre position sur la carte et trouver des voyages à proximité.",
+        "NSLocationAlwaysUsageDescription": "Cette application utilise votre localisation pour afficher votre position sur la carte et trouver des voyages à proximité."
       },
       "config": {
-        "usesNonExemptEncryption": false
-      }
+        "usesNonExemptEncryption": false,
+        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
+      },
+      "jsEngine": "jsc"
     },
     "android": {
       "package": "trivenile.android",
@@ -37,8 +42,16 @@
         "translucent": false
       },
       "config": {
-        "enableDangerousExperimentalLeanBuilds": true
-      }
+        "enableDangerousExperimentalLeanBuilds": true,
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "jsEngine": "jsc"
     },
     "web": {
       "favicon": "./assets/favicon_3d_32x32.png",
@@ -46,7 +59,13 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Autoriser Trivenile à utiliser votre position pour afficher votre localisation sur la carte et trouver des voyages à proximité."
+        }
+      ]
     ],
     "fonts": [
       {

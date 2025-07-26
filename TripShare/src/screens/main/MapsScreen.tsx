@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import OpenStreetMap from '../../components/Home/OpenStreetMap';
+import SimpleMapView from '../../components/places/SimpleMapView';
 import { Ionicons } from '@expo/vector-icons';
 import { tripShareApi } from '../../services/tripShareApi';
+import AppBackground from '../../components/ui/AppBackground';
 
 const MOCK_ITINERARIES = [
   {
@@ -99,7 +100,7 @@ const MapsScreen = () => {
   const title = firstTrip?.title || 'Carte des voyages';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFAFA' }} edges={['top', 'bottom']}>
+    <AppBackground>
       {/* Filtres en haut */}
       <View style={styles.filtersBar}>
         {FILTERS.map(f => (
@@ -123,29 +124,14 @@ const MapsScreen = () => {
       )}
       
       {/* Carte OpenStreetMap occupe tout l'espace restant */}
-      <View style={{ flex: 1 }}>
-        {loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator size="large" color="#008080" />
-            <Text style={{ marginTop: 10, color: '#666' }}>Chargement de la carte...</Text>
-          </View>
-        ) : filteredTrips.length > 0 ? (
-          <OpenStreetMap
-            latitude={latitude}
-            longitude={longitude}
-            title={title}
-            zoom={5}
-            fullScreen
-          />
-        ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="map-outline" size={64} color="#ccc" />
-            <Text style={{ marginTop: 16, color: '#666', fontSize: 16 }}>Aucun itinéraire à afficher</Text>
-            <Text style={{ marginTop: 8, color: '#999', fontSize: 14 }}>Créez votre premier voyage !</Text>
-          </View>
-        )}
+      <View style={styles.mapContainer}>
+        <SimpleMapView
+          latitude={latitude}
+          longitude={longitude}
+          title={title}
+        />
       </View>
-    </SafeAreaView>
+    </AppBackground>
   );
 };
 
@@ -195,6 +181,12 @@ const styles = StyleSheet.create({
     color: '#E65100',
     fontSize: 12,
     fontWeight: '500',
+  },
+  mapContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0', // Fallback background for the map
   },
 });
 

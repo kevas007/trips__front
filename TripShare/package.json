@@ -14,7 +14,11 @@
     "test:watch": "jest --watch",
     "lint": "eslint . --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
-    "fix-deps": "expo doctor --fix-dependencies"
+    "fix-deps": "expo doctor --fix-dependencies",
+    "clean-all": "expo start --clear && npm run clear-cache",
+    "clear-cache": "rm -rf node_modules/.cache && rm -rf .expo && rm -rf dist",
+    "reset-project": "npm run clear-cache && npm install && expo start --clear",
+    "debug-hermes": "expo start --dev-client --clear"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
@@ -30,6 +34,7 @@
     "expo": "53.0.13",
     "expo-apple-authentication": "^7.2.4",
     "expo-auth-session": "^6.2.0",
+    "expo-clipboard": "~7.1.5",
     "expo-crypto": "^14.1.5",
     "expo-image-picker": "~16.1.4",
     "expo-linear-gradient": "~14.1.4",
@@ -44,14 +49,13 @@
     "react-native": "0.79.4",
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-gesture-handler": "~2.24.0",
-    "react-native-maps": "^1.24.3",
+    "react-native-maps": "^1.24.7",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
+    "react-native-webview": "^13.13.5",
     "yup": "^1.4.0",
-    "zustand": "^4.5.7",
-    "react-native-webview": "13.13.5",
-    "expo-clipboard": "~7.1.5"
+    "zustand": "^4.5.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -79,6 +83,7 @@
     "jest-expo": "~53.0.3",
     "metro": "^0.82.0",
     "metro-config": "^0.82.0",
+    "metro-react-native-babel-transformer": "^0.77.0",
     "metro-resolver": "^0.82.0",
     "metro-source-map": "^0.82.0",
     "typescript": "~5.8.3"

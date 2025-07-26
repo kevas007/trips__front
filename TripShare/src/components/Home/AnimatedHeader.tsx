@@ -12,6 +12,15 @@ export interface AnimatedHeaderProps {
 }
 
 const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({ user, theme }) => {
+  // Debug: Afficher les informations utilisateur
+  console.log('🔍 AnimatedHeader - User data:', {
+    user: !!user,
+    username: user?.username,
+    email: user?.email,
+    name: user?.name,
+    avatar: user?.avatar
+  });
+
   return (
     <View style={styles.welcomeSection}>
       <View style={styles.userInfo}>
@@ -21,7 +30,7 @@ const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({ user, theme }) => {
         />
         <View>
           <Text style={[styles.welcomeText, { color: theme.colors.text.primary }]}>
-            Bonjour, {user?.username || 'Voyageur'} 👋
+            Bonjour, {user?.username || user?.name || 'Voyageur'} 👋
           </Text>
           <Text style={[styles.userLevel, { color: theme.colors.text.secondary }]}>
             Niveau: Explorateur

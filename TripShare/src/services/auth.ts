@@ -142,6 +142,7 @@ class AuthService {
   private token: string | null = null;
   private refreshToken: string | null = null;
   private isInitialized: boolean = false;
+  private isRefreshing: boolean = false;
 
   constructor() {
     this.initTokens();
@@ -192,6 +193,7 @@ class AuthService {
 
     try {
       console.log('🔐 Connexion en cours...');
+      console.log('🌐 Configuration API:', API_CONFIG.CONFIG_INFO);
 
       // Format exact attendu par le backend Go
       const response = await apiClient.post<{
@@ -293,14 +295,23 @@ class AuthService {
     }
   }
 
-  // Actualisation du token
+  // Actualisation du token avec protection contre les appels simultanés
   async refreshAccessToken(): Promise<string> {
     if (!this.refreshToken) {
       throw new Error('Aucun refresh token disponible');
     }
 
+    // Éviter les appels simultanés de refresh
+    if (this.isRefreshing) {
+      throw new Error('Refresh déjà en cours');
+    }
+
+    this.isRefreshing = true;
+
     try {
       console.log('🔄 Tentative de rafraîchissement du token...');
+      console.log('⏰ Refresh token disponible:', !!this.refreshToken);
+      
       const response = await apiClient.post<{
         token: string;
         refresh_token: string;
@@ -316,15 +327,19 @@ class AuthService {
       apiClient.setAuthToken(token);
 
       console.log('✅ Token rafraîchi avec succès');
+      console.log('⏰ Nouveau token valide pour 24h');
       return token;
     } catch (error) {
       console.error('❌ Erreur lors du rafraîchissement du token:', error);
+      console.error('🔍 Détails de l\'erreur:', JSON.stringify(error, null, 2));
       await this.clearTokens();
       throw error;
+    } finally {
+      this.isRefreshing = false;
     }
   }
 
-  // Vérification du token
+  // Vérification du token avec protection contre les boucles infinies
   async verifyToken(): Promise<User> {
     await this.waitForInitialization();
 
@@ -333,6 +348,7 @@ class AuthService {
     }
 
     try {
+      console.log('🔍 VerifyToken - Token disponible, appel de /users/me...');
       // Utiliser un endpoint qui nécessite l'authentification
       const userData = await apiClient.get<any>('/users/me');
       console.log('🔍 Données brutes de /users/me:', userData);
@@ -340,8 +356,8 @@ class AuthService {
       // Gérer la structure { user: {...}, profile: {...} } retournée par le backend
       let userToNormalize = userData;
       if (userData && userData.user && userData.profile) {
-        // Fusionner user et profile comme dans le ProfileScreen
-        userToNormalize = { ...userData.user, ...userData.profile };
+        // Fusionner user et profile comme dans le ProfileScreen - compatible Hermes
+        userToNormalize = Object.assign({}, userData.user || {}, userData.profile || {});
         console.log('🔍 Données fusionnées user+profile:', userToNormalize);
       }
       
@@ -349,18 +365,25 @@ class AuthService {
       console.log('🔍 Utilisateur normalisé:', normalizedUser);
       return normalizedUser;
     } catch (error: any) {
-      // Si l'erreur est 401, tenter de rafraîchir le token
-      if (error?.response?.status === 401 && this.refreshToken) {
+      // Si l'erreur est 401, tenter de rafraîchir le token UNE SEULE FOIS
+      if (error?.response?.status === 401 && this.refreshToken && !this.isRefreshing) {
         try {
+          console.log('🔄 Token 401 détecté, tentative de refresh...');
           await this.refreshAccessToken();
           // Réessayer la requête avec le nouveau token
           const userData = await apiClient.get<any>('/users/me');
-          return this.normalizeUser(userData);
+          const normalizedUser = this.normalizeUser(userData);
+          console.log('✅ Retry après refresh réussi');
+          return normalizedUser;
         } catch (refreshError) {
+          console.error('❌ Refresh failed, clearing tokens');
           await this.clearTokens();
           throw refreshError;
         }
       }
+      
+      // Pour toute autre erreur ou si refresh impossible, nettoyer les tokens
+      console.error('❌ VerifyToken failed, clearing tokens');
       await this.clearTokens();
       throw error;
     }

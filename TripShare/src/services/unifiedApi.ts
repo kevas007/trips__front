@@ -14,7 +14,7 @@ class UnifiedApiService {
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     // Récupérer le token depuis authService
-    const token = authService.getToken();
+    let token = authService.getToken();
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -29,12 +29,35 @@ class UnifiedApiService {
     console.log(`🔍 UnifiedAPI - Token disponible:`, !!token);
     console.log(`🌐 UnifiedAPI - Base URL: ${this.baseURL}`);
 
-    const response = await fetch(fullUrl, {
+    let response = await fetch(fullUrl, {
       ...options,
       headers,
     });
 
     console.log(`📡 UnifiedAPI Réponse: ${response.status}`);
+
+    // Si 401, essayer de rafraîchir le token et réessayer
+    if (response.status === 401 && token) {
+      try {
+        console.log('🔄 UnifiedAPI - Token expiré, tentative de refresh...');
+        const newToken = await authService.refreshAccessToken();
+        console.log('✅ UnifiedAPI - Token rafraîchi, nouvelle tentative...');
+        
+        // Mettre à jour les headers avec le nouveau token
+        headers.Authorization = `Bearer ${newToken}`;
+        
+        response = await fetch(fullUrl, {
+          ...options,
+          headers,
+        });
+        
+        console.log(`📡 UnifiedAPI Réponse après refresh: ${response.status}`);
+      } catch (refreshError) {
+        console.error('❌ UnifiedAPI - Échec du refresh, déconnexion...');
+        await authService.logout();
+        throw new Error('Session expirée, veuillez vous reconnecter');
+      }
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -85,6 +108,16 @@ class UnifiedApiService {
 
   async delete<T>(endpoint: string): Promise<T> {
     return this.makeRequest<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async patch<T>(endpoint: string, data?: any): Promise<T> {
+    return this.makeRequest<T>(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 }
 

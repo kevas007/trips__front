@@ -50,9 +50,28 @@ export interface CreateTripRequest {
   description?: string;
   start_date: string;
   end_date: string;
-  destination: string;
+  location: {
+    city: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+  };
   budget?: number;
-  is_public?: boolean;
+  status: string; // 'planned', 'ongoing', 'completed'
+  visibility: string; // 'public', 'private'
+  photos: string[];
+  duration?: string;
+  difficulty?: string;
+  tags?: string[];
+  places_visited?: Array<{
+    name: string;
+    description?: string;
+    address?: string;
+    is_visited: boolean;
+    visit_date?: string;
+    photos: string[];
+    notes?: string;
+  }>;
 }
 
 export interface UpdateTripRequest extends Partial<CreateTripRequest> {}
@@ -221,6 +240,11 @@ export class TripShareApiService {
     return unifiedApi.get<User[]>(`/users/search?q=${encodeURIComponent(query)}`);
   }
 
+  // GET /api/v1/users/:id
+  async getUserProfile(userId: string): Promise<UserProfile> {
+    return unifiedApi.get<UserProfile>(`/users/${userId}`);
+  }
+
   // DELETE /api/v1/users/me
   async deleteAccount(): Promise<void> {
     return unifiedApi.delete<void>('/users/me');
@@ -260,6 +284,11 @@ export class TripShareApiService {
   // GET /api/v1/trips/public
   async listPublicTrips(limit: number = 20, offset: number = 0): Promise<Trip[]> {
     return unifiedApi.get<Trip[]>(`/trips/public?limit=${limit}&offset=${offset}`);
+  }
+
+  // GET /api/v1/trips/public?userId=...
+  async listPublicTripsByUser(userId: string): Promise<Trip[]> {
+    return unifiedApi.get<Trip[]>(`/trips/public?userId=${userId}`);
   }
 
   // GET /api/v1/trips/:id

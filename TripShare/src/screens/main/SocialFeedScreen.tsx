@@ -15,13 +15,16 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
 import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
 import FloatingActionButton from '../../components/ui/FloatingActionButton';
-import OpenStreetMap from '../../components/Home/OpenStreetMap';
+import SimpleMapView from '../../components/places/SimpleMapView';
 import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
+import { SocialStackParamList } from '../../types/navigation';
+import AppBackground from '../../components/ui/AppBackground';
 
 
 const { width, height } = Dimensions.get('window');
@@ -33,7 +36,7 @@ interface SocialPost {
     name: string;
     avatar: string;
     verified: boolean;
-  };
+  } | null; // Permettre null pour gérer les cas où user n'est pas défini
   location: string;
   content: {
     type: 'image' | 'video';
@@ -65,7 +68,7 @@ interface Step {
 }
 
 interface SocialFeedScreenProps {
-  navigation: any;
+  navigation: any; // On garde 'any' temporairement pour éviter les problèmes de navigation entre stacks
   posts?: SocialPost[];
   personalized?: boolean;
   filters?: string[];
@@ -78,6 +81,24 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
   const { user } = useSimpleAuth();
   
   const [feedPosts, setFeedPosts] = useState<SocialPost[]>(posts || [
+    // Post avec user null pour tester la gestion d'erreur
+    {
+      id: '0',
+      user: null,
+      location: 'Test Location',
+      content: {
+        type: 'image',
+        url: 'https://via.placeholder.com/400x300',
+      },
+      caption: 'Test post without user',
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      isLiked: false,
+      isSaved: false,
+      timestamp: '1h',
+      tags: ['test'],
+    },
     {
       id: '1',
       user: {
@@ -196,31 +217,31 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
   const handleLike = (postId: string) => {
     setFeedPosts(prevPosts =>
       prevPosts.map(post =>
-        post.id === postId
-          ? {
-              ...post,
+        post && post.id === postId
+          ? Object.assign({}, post, {
               isLiked: !post.isLiked,
               likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
+            })
           : post
-      )
+      ).filter(Boolean) // Filtrer les posts null
     );
   };
 
   const handleSave = (postId: string) => {
     setFeedPosts(prevPosts =>
       prevPosts.map(post =>
-        post.id === postId
-          ? { ...post, isSaved: !post.isSaved }
+        post && post.id === postId
+          ? Object.assign({}, post, { isSaved: !post.isSaved })
           : post
-      )
+      ).filter(Boolean) // Filtrer les posts null
     );
   };
 
   const handleShare = async (post: SocialPost) => {
     try {
+      const userName = post.user?.name || 'un voyageur';
       await Share.share({
-        message: `Découvre ce voyage incroyable à ${post.location} par ${post.user.name} sur TripShare !`,
+        message: `Découvre ce voyage incroyable à ${post.location} par ${userName} sur TripShare !`,
         url: `tripshare://post/${post.id}`,
       });
     } catch (error) {
@@ -229,7 +250,25 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
   };
 
   const handleComment = (postId: string) => {
-    navigation.navigate('Comments', { postId });
+    if (personalized) {
+      // Si on est dans le contexte personnalisé (HomeStack), naviguer vers l'onglet Social
+      navigation.navigate('Social', { screen: 'Comments', params: { postId } });
+    } else {
+      // Si on est déjà dans le SocialStack, navigation directe
+      navigation.navigate('Comments', { postId });
+    }
+  };
+
+  const handleUserProfilePress = (userId: string, userName: string) => {
+    if (!userId || !userName) {
+      console.warn('User ID or name is missing');
+      return;
+    }
+    // Feedback visuel temporaire
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(`Navigation vers le profil de ${userName}`, ToastAndroid.SHORT);
+    }
+    navigation.navigate('Profile', { screen: 'PublicProfile', params: { userId } });
   };
 
   const copyItinerary = (item: SocialPost) => {
@@ -250,29 +289,50 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
   };
 
   const renderPost = ({ item, index }: { item: SocialPost; index: number }) => {
+    // Vérification de sécurité pour éviter les erreurs si user est null
+    if (!item || !item.user) {
+      console.warn('Post without user data:', item?.id || 'unknown');
+      return (
+        <View style={[styles.postCard, { padding: 20, alignItems: 'center' }]}>
+          <Text style={{ color: theme.colors.text.secondary }}>
+            Post non disponible
+          </Text>
+        </View>
+      );
+    }
+
+    // À ce point, TypeScript sait que item.user n'est pas null
+    const user = item.user;
+
     return (
       <View style={styles.postCard}>
         {/* Header avec info utilisateur */}
         <View style={styles.postHeader}>
-          <View style={styles.userSection}>
-            <Image source={{ uri: item.user.avatar }} style={styles.userAvatar} />
+          <TouchableOpacity 
+            style={styles.userSection}
+            onPress={() => handleUserProfilePress(user.id, user.name)}
+          >
+            <Image 
+              source={{ uri: user.avatar || 'https://via.placeholder.com/40' }} 
+              style={styles.userAvatar} 
+            />
             <View style={styles.userInfo}>
               <View style={styles.userNameRow}>
                 <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
-                  {item.user.name}
+                  {user.name || 'Utilisateur inconnu'}
                 </Text>
-                {item.user.verified && (
+                {user.verified && (
                   <Ionicons name="checkmark-circle" size={16} color="#0097e6" />
                 )}
               </View>
               <View style={styles.locationRow}>
                 <Ionicons name="location" size={12} color={theme.colors.text.secondary} />
                 <Text style={[styles.location, { color: theme.colors.text.secondary }]}>
-                  {item.location}
+                  {item.location || 'Lieu non spécifié'}
                 </Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.moreButton}>
             <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.text.secondary} />
           </TouchableOpacity>
@@ -340,11 +400,14 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
           </Text>
         </View>
 
-        {/* Description */}
+                {/* Description */}
         <View style={styles.captionSection}>
           <Text style={[styles.caption, { color: theme.colors.text.primary }]} numberOfLines={3}>
-            <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
-              {item.user.name}
+            <Text 
+              style={[styles.clickableUserName, { color: theme.colors.text.primary }]}
+              onPress={() => handleUserProfilePress(user.id, user.name)}
+            >
+              {user.name || 'Utilisateur inconnu'}
             </Text> {item.caption}
           </Text>
         </View>
@@ -400,8 +463,8 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
             {/* Mini-carte si ouvert */}
             {openMapPostId === item.id && item.tripInfo && (
               <View style={{ marginTop: 10 }}>
-                {/* Si coordonnées disponibles, les passer à OpenStreetMap, sinon rien */}
-                <OpenStreetMap
+                {/* Si coordonnées disponibles, les passer à SimpleMapView, sinon rien */}
+                <SimpleMapView
                   latitude={item.tripInfo.latitude || 0}
                   longitude={item.tripInfo.longitude || 0}
                   title={item.tripInfo.destination}
@@ -450,7 +513,7 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
   const title = headerTitle || (personalized ? 'Mon Feed' : 'Découvertes');
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+    <AppBackground>
       {/* Header moderne */}
       <View style={[styles.header, { backgroundColor: theme.colors.background.primary }]}>
         <View style={styles.headerContent}>
@@ -472,7 +535,15 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.headerButton}
-              onPress={() => navigation.navigate('CreatePost')}
+              onPress={() => {
+                if (personalized) {
+                  // Si on est dans le contexte personnalisé (HomeStack), naviguer vers l'onglet Social
+                  navigation.navigate('Social', { screen: 'CreatePost' });
+                } else {
+                  // Si on est déjà dans le SocialStack, navigation directe
+                  navigation.navigate('CreatePost');
+                }
+              }}
             >
               <Ionicons name="add-circle" size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
@@ -499,9 +570,9 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
       {/* Feed avec cartes */}
       <FlatList
         ref={flatListRef}
-        data={feedPosts}
+        data={feedPosts.filter(post => post && post.user)} // Filtrer les posts invalides
         renderItem={renderPost}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item?.id || `post-${Math.random()}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={personalized ? { paddingLeft: 16, paddingRight: 16, paddingBottom: 16 } : styles.feedContainer}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -512,11 +583,19 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
 
       {/* Floating Action Button */}
       <FloatingActionButton
-        onPress={() => navigation.navigate('CreatePost')}
+        onPress={() => {
+          if (personalized) {
+            // Si on est dans le contexte personnalisé (HomeStack), naviguer vers l'onglet Social
+            navigation.navigate('Social', { screen: 'CreatePost' });
+          } else {
+            // Si on est déjà dans le SocialStack, navigation directe
+            navigation.navigate('CreatePost');
+          }
+        }}
         icon="camera"
         bottom={120}
       />
-    </View>
+    </AppBackground>
   );
 };
 
@@ -607,12 +686,16 @@ filtersContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   userAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   userInfo: {
     flex: 1,
@@ -626,6 +709,11 @@ filtersContent: {
   userName: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  clickableUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   locationRow: {
     flexDirection: 'row',

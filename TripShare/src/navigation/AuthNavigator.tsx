@@ -5,7 +5,6 @@ import TermsScreen from '@/screens/legal/TermsScreen';
 import OnboardingScreen from '@/screens/auth/OnboardingScreen';
 import TravelPreferencesScreen from '@/screens/TravelPreferencesScreen';
 import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
-import { useNavigation } from '@react-navigation/native';
 
 export type AuthStackParamList = {
   AuthScreen: undefined;
@@ -17,29 +16,36 @@ export type AuthStackParamList = {
 const Stack = createStackNavigator<AuthStackParamList>();
 
 const AuthNavigator: React.FC = () => {
-  const { isNewUser, isAuthenticated } = useSimpleAuth();
-  const navigation = useNavigation();
+  const { isNewUser, isAuthenticated, isLoading } = useSimpleAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // Si non authentifié, rediriger vers l'écran de connexion
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'AuthScreen' as never }],
-      });
-    } else if (isNewUser) {
-      // Si nouvel utilisateur authentifié, rediriger vers l'onboarding
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'OnboardingScreen' as never }],
-      });
+  // Debug logs
+  console.log('🔍 AuthNavigator - État:', { isNewUser, isAuthenticated, isLoading });
+
+  // Déterminer la route initiale basée sur l'état d'authentification
+  const getInitialRouteName = () => {
+    if (isLoading) {
+      console.log('🔍 AuthNavigator - Chargement en cours, route par défaut: AuthScreen');
+      return 'AuthScreen';
     }
-  }, [isNewUser, isAuthenticated]);
+    
+    if (!isAuthenticated) {
+      console.log('🔍 AuthNavigator - Non authentifié, route: AuthScreen');
+      return 'AuthScreen';
+    }
+    
+    if (isNewUser) {
+      console.log('🔍 AuthNavigator - Nouvel utilisateur, route: OnboardingScreen');
+      return 'OnboardingScreen';
+    }
+    
+    console.log('🔍 AuthNavigator - Utilisateur existant, route: AuthScreen');
+    return 'AuthScreen';
+  };
 
   return (
     <Stack.Navigator 
       screenOptions={{ headerShown: false }}
-      initialRouteName="AuthScreen"
+      initialRouteName={getInitialRouteName()}
     >
       <Stack.Screen name="AuthScreen" component={EnhancedAuthScreen} />
       <Stack.Screen name="TermsScreen" component={TermsScreen} />

@@ -721,7 +721,13 @@ const EnhancedAuthScreen = () => {
                   error={errors.phone}
                   isValid={form.phone.length > 0 && !errors.phone}
                   keyboardType="phone-pad"
-                  style={[styles.inputWrapper, { flex: screenDimensions.isSmallScreen ? undefined : 1 }]}
+                  style={[
+                    styles.inputWrapper, 
+                    { 
+                      flex: screenDimensions.isSmallScreen ? undefined : 1,
+                      marginBottom: 0, // Supprimer la marge pour aligner avec le sélecteur de pays
+                    }
+                  ]}
                   success={form.phone.length > 0 && !errors.phone}
                 />
               </View>
@@ -1118,12 +1124,15 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   },
   phoneContainer: {
     flexDirection: 'row',
+    alignItems: 'flex-start', // Aligner les éléments en haut
     gap: getSpacing(12),
     marginBottom: getSpacing(16),
   },
   countrySelectWrapper: {
     width: Platform.OS === 'web' ? 140 : 120,
     marginBottom: 0,
+    // Assurer la même hauteur que l'AuthInput
+    height: getInputHeight(),
   },
   checkboxGroup: {
     flexDirection: 'row',

@@ -11,17 +11,19 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  Social: undefined;
-  Search: undefined;
+  Voyage: undefined;
+  Découverte: undefined;
+  Chat: undefined;
   Profile: undefined;
 };
 
 export type HomeStackParamList = {
-  Home: undefined;
+  HomeMain: undefined;
   CategoryTrips: {
     category: string;
     categoryName: string;
   };
+  SimpleCreateTrip: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -29,6 +31,9 @@ export type ProfileStackParamList = {
   EditProfile: undefined;
   Settings: undefined;
   ChangePassword: undefined;
+  PublicProfile: {
+    userId: string;
+  };
 };
 
 export type SocialStackParamList = {
@@ -37,7 +42,6 @@ export type SocialStackParamList = {
     postId: string;
   };
   CreatePost: undefined;
-  SelectTrip: undefined;
 };
 
 export type RootStackParamList = {

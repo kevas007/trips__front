@@ -1,7 +1,6 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
-import { Trip } from '../../types/trip';
-import OpenStreetMap from './OpenStreetMap';
+import { View, StyleSheet } from 'react-native';
+import SimpleMapView from '../places/SimpleMapView';
 
 interface TripMapProps {
   trip: Trip;
@@ -23,12 +22,10 @@ const TripMap: React.FC<TripMapProps> = ({ trip, onLocationPress }) => {
 
   return (
     <TouchableOpacity onPress={handlePress}>
-      <OpenStreetMap
-        latitude={defaultCoords.latitude}
-        longitude={defaultCoords.longitude}
-        zoom={13}
-        title={trip.location}
-        description={trip.description}
+      <SimpleMapView
+        latitude={latitude}
+        longitude={longitude}
+        title={title}
       />
     </TouchableOpacity>
   );

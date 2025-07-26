@@ -9,8 +9,18 @@ import { useTheme } from '@/contexts/ThemeContext';
 const Stack = createStackNavigator();
 
 const AppNavigator: React.FC = () => {
-  const { user, isLoading } = useSimpleAuth();
+  const { user, isLoading, isAuthenticated, isNewUser } = useSimpleAuth();
   const { theme } = useTheme();
+
+  // Debug logs pour comprendre l'état
+  console.log('🔍 AppNavigator - État auth:', {
+    user: !!user,
+    isLoading,
+    isAuthenticated,
+    isNewUser,
+    userEmail: user?.email,
+    userPreferences: user?.preferences
+  });
 
   if (isLoading) {
     return (
@@ -25,9 +35,15 @@ const AppNavigator: React.FC = () => {
     );
   }
 
+  // Si nouvel utilisateur, toujours montrer Auth (qui contient l'onboarding)
+  // Si utilisateur existant et authentifié, montrer Main
+  const shouldShowAuth = !isAuthenticated || !user || isNewUser;
+  
+  console.log('🔍 AppNavigator - Navigation vers:', shouldShowAuth ? 'Auth' : 'Main');
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!user ? (
+      {shouldShowAuth ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
       ) : (
         <Stack.Screen name="Main" component={MainNavigator} />

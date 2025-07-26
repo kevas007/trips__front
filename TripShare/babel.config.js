@@ -1,4 +1,4 @@
-// === babel.config.js - CONFIGURATION OPTIMISÉE PRODUCTION ===
+// === babel.config.js - CONFIGURATION CORRIGÉE POUR JSX ===
 
 module.exports = function(api) {
   api.cache(true);
@@ -10,9 +10,9 @@ module.exports = function(api) {
       [
         'babel-preset-expo',
         {
-          // Optimisations pour la production
-          jsxImportSource: 'react',
+          // Configuration JSX moderne
           jsxRuntime: 'automatic',
+          jsxImportSource: 'react',
         }
       ]
     ],
@@ -38,26 +38,20 @@ module.exports = function(api) {
         }
       ],
       
-      // Optimisations conditionnelles pour la production
-      ...(isProduction ? [
-        // Supprimer les console.log en production
-        'transform-remove-console',
-        
-        // Optimiser les imports React
-        [
-          '@babel/plugin-transform-react-jsx',
-          {
-            runtime: 'automatic',
-            importSource: 'react'
-          }
-        ]
-      ] : []),
+      // Plugin pour React JSX automatique
+      [
+        '@babel/plugin-transform-react-jsx',
+        {
+          runtime: 'automatic',
+          importSource: 'react'
+        }
+      ],
       
-      // Optimisations pour toutes les plateformes
+      // Plugins essentiels pour JSC
       '@babel/plugin-proposal-optional-chaining',
       '@babel/plugin-proposal-nullish-coalescing-operator',
       
-      // Support des class properties
+      // Support des class properties avec loose mode pour JSC
       [
         '@babel/plugin-proposal-class-properties',
         { loose: true }
@@ -67,15 +61,23 @@ module.exports = function(api) {
       [
         '@babel/plugin-proposal-decorators',
         { legacy: true }
-      ]
+      ],
+      
+      // Plugin pour React Native
+      '@babel/plugin-transform-react-jsx-source',
+      
+      // Optimisations conditionnelles pour la production
+      ...(isProduction ? [
+        // Supprimer les console.log en production
+        'transform-remove-console',
+      ] : []),
     ],
     
-    // Optimisations par environnement
+    // Configuration spécifique pour JSC
     env: {
       production: {
         plugins: [
-          // Tree shaking optimisé
-          ['transform-remove-console', { exclude: ['error', 'warn'] }]
+          'transform-remove-console'
         ]
       }
     }

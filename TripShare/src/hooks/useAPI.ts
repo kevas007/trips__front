@@ -25,6 +25,7 @@ export interface UseAPIResult {
   post: <T>(endpoint: string, data?: any) => Promise<T>;
   put: <T>(endpoint: string, data?: any) => Promise<T>;
   delete: <T>(endpoint: string) => Promise<T>;
+  patch: <T>(endpoint: string, data?: any) => Promise<T>;
   
   // Méthodes utilitaires
   testConnection: () => Promise<{ status: 'success' | 'error'; message: string }>;
@@ -120,6 +121,13 @@ export const useAPI = (): UseAPIResult => {
     );
   };
 
+  const patch = async <T>(endpoint: string, data?: any): Promise<T> => {
+    return withLoadingAndError(
+      () => unifiedApi.patch<T>(endpoint, data),
+      `Erreur lors de la modification de ${endpoint}`
+    );
+  };
+
   const deleteEndpoint = async <T>(endpoint: string): Promise<T> => {
     return withLoadingAndError(
       () => unifiedApi.delete<T>(endpoint),
@@ -171,6 +179,7 @@ export const useAPI = (): UseAPIResult => {
     get,
     post,
     put,
+    patch,
     delete: deleteEndpoint,
     
     // Méthodes utilitaires
