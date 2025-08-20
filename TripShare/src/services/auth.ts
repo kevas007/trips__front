@@ -247,9 +247,7 @@ class AuthService {
       if (!data.last_name || typeof data.last_name !== 'string') {
         throw new Error('Le nom est obligatoire');
       }
-      if (!data.phone_number || typeof data.phone_number !== 'string' || data.phone_number.trim().length === 0) {
-        throw new Error('Le numéro de téléphone est obligatoire');
-      }
+      // Le numéro de téléphone est optionnel côté backend; ne pas bloquer si absent
       if (!data.password || typeof data.password !== 'string') {
         throw new Error('Le mot de passe est obligatoire');
       }
@@ -365,8 +363,9 @@ class AuthService {
       console.log('🔍 Utilisateur normalisé:', normalizedUser);
       return normalizedUser;
     } catch (error: any) {
+      const status = error?.response?.status;
       // Si l'erreur est 401, tenter de rafraîchir le token UNE SEULE FOIS
-      if (error?.response?.status === 401 && this.refreshToken && !this.isRefreshing) {
+      if (status === 401 && this.refreshToken && !this.isRefreshing) {
         try {
           console.log('🔄 Token 401 détecté, tentative de refresh...');
           await this.refreshAccessToken();
@@ -381,10 +380,14 @@ class AuthService {
           throw refreshError;
         }
       }
-      
-      // Pour toute autre erreur ou si refresh impossible, nettoyer les tokens
-      console.error('❌ VerifyToken failed, clearing tokens');
-      await this.clearTokens();
+      // Pour 403, considérer le token invalide et nettoyer
+      if (status === 403) {
+        console.error('❌ VerifyToken 403 - clearing tokens');
+        await this.clearTokens();
+        throw error;
+      }
+      // Pour les erreurs 5xx / réseau, NE PAS nettoyer les tokens
+      console.error('⚠️ VerifyToken non-auth error, conservation des tokens:', status);
       throw error;
     }
   }
@@ -402,9 +405,14 @@ class AuthService {
       await this.verifyToken();
       return true;
     } catch (error) {
-      console.error('❌ Token invalide - Déconnexion automatique:', error);
-      await this.logout();
-      return false;
+      const status = (error as any)?.response?.status;
+      if (status === 401 || status === 403) {
+        console.error('❌ Token invalide - Déconnexion automatique:', error);
+        await this.logout();
+        return false;
+      }
+      console.warn('⚠️ Erreur non-auth lors de la vérification du token: on conserve la session');
+      return true;
     }
   }
 
@@ -413,13 +421,18 @@ class AuthService {
     try {
       console.log('🔄 Déconnexion en cours...');
       
-      // Appeler l'endpoint de déconnexion si on a un token
-      if (this.token) {
+      // Appeler l'endpoint de déconnexion si on a un token et refreshToken
+      if (this.token && this.refreshToken) {
         try {
-          await apiClient.post('/auth/logout');
+          await apiClient.post('/auth/logout', {
+            refresh_token: this.refreshToken
+          });
+          console.log('✅ Déconnexion côté serveur réussie');
         } catch (error) {
           console.warn('⚠️ Erreur lors de la déconnexion côté serveur:', error);
         }
+      } else {
+        console.log('⚠️ Pas de refresh token pour la déconnexion côté serveur');
       }
 
       // Nettoyer les tokens locaux

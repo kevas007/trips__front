@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, StyleSheet, Platform, Animated, TouchableOpacity } from 'react-native';
+import { View, TextInput, StyleSheet, Platform, Animated, TouchableOpacity, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,9 @@ interface AuthInputProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   style?: any;
   showPasswordToggle?: boolean;
+  nextInputRef?: React.RefObject<any>;
+  onSubmitEditing?: () => void;
+  leftComponent?: React.ReactNode; // Nouveau: composant à gauche dans l'input
   [key: string]: any;
 }
 
@@ -32,8 +35,13 @@ const AuthInput: React.FC<AuthInputProps> = ({
   autoCapitalize = 'none',
   style,
   showPasswordToggle = false,
+  nextInputRef,
+  onSubmitEditing,
+  leftComponent,
   ...props
 }: AuthInputProps) => {
+  // Debug: Vérifier les props reçues
+  console.log('AuthInput props:', { placeholder, value, icon });
   const { t } = useTranslation();
   const { theme } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
@@ -41,6 +49,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
   const [focusAnimation] = useState(new Animated.Value(0));
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const containerRef = useRef<View>(null);
+  const inputRef = useRef<TextInput>(null);
 
   // Déterminer si c'est un champ mot de passe
   const isPasswordField = secureTextEntry || showPasswordToggle;
@@ -70,8 +79,8 @@ const AuthInput: React.FC<AuthInputProps> = ({
   let glowOpacity = 0;
   
   if (isFocused) {
-          borderColor = theme.colors.primary[0] || '#008080';
-      shadowColor = theme.colors.primary[0] || '#008080';
+    borderColor = theme.colors.primary[0] || '#008080';
+    shadowColor = theme.colors.primary[0] || '#008080';
     glowOpacity = 0.3;
   } else if (error && isTouched) {
     borderColor = theme.colors.semantic.error || '#ef4444';
@@ -90,6 +99,11 @@ const AuthInput: React.FC<AuthInputProps> = ({
       duration: 200,
       useNativeDriver: false,
     }).start();
+    
+    // Forcer l'affichage du clavier
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
 
   const handleBlur = () => {
@@ -100,6 +114,28 @@ const AuthInput: React.FC<AuthInputProps> = ({
       duration: 200,
       useNativeDriver: false,
     }).start();
+  };
+
+  const handlePress = () => {
+    inputRef.current?.focus();
+  };
+
+  // ========== NAVIGATION ENTRE CHAMPS ==========
+  
+  const handleSubmitEditing = () => {
+    // Appeler le callback personnalisé s'il existe
+    if (onSubmitEditing) {
+      onSubmitEditing();
+      return;
+    }
+    
+    // Navigation automatique vers le champ suivant
+    if (nextInputRef?.current) {
+      nextInputRef.current.focus();
+    } else {
+      // Si pas de champ suivant, masquer le clavier
+      Keyboard.dismiss();
+    }
   };
 
   const animatedScale = focusAnimation.interpolate({
@@ -126,109 +162,126 @@ const AuthInput: React.FC<AuthInputProps> = ({
   };
 
   return (
-    <Animated.View
-      ref={containerRef}
-      style={[
-        styles.inputWrapper,
-        { 
-          backgroundColor: theme.colors.glassmorphism.background || 'rgba(255,255,255,0.1)',
-        },
-        dynamicStyles,
-        style,
-      ]}
+    <TouchableOpacity
+      activeOpacity={1}
+      onPress={handlePress}
+      style={{ marginBottom: Platform.OS === 'android' ? getSpacing(12) : getSpacing(20) }}
     >
-      {icon && (
-        <Ionicons
-          name={icon}
-          size={Platform.OS === 'web' ? 20 : getFontSize(22)}
-          color={
-            isFocused 
-              ? (theme.colors.primary[0] || '#008080')
-              : (error && isTouched 
-                  ? theme.colors.semantic.error 
-                  : theme.colors.text.secondary)
-          }
-          style={[
-            styles.inputIcon, 
-            { 
-              opacity: isFocused ? 1 : 0.7,
-              ...(Platform.OS !== 'web' && isFocused && {
-                shadowColor: theme.colors.primary[0] || '#008080',
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.5,
-                shadowRadius: 4,
-                elevation: 4,
-              }),
-              ...(Platform.OS === 'web' && isFocused && {
-                filter: 'drop-shadow(0 0 4px currentColor)',
-                WebkitFilter: 'drop-shadow(0 0 4px currentColor)',
-              })
-            }
-          ]}
-        />
-      )}
-      <TextInput
+      <Animated.View
+        ref={containerRef}
         style={[
-          styles.input, 
+          styles.inputWrapper,
           { 
-            color: theme.colors.text.primary,
-            opacity: isFocused ? 1 : 0.8,
-          }
+            backgroundColor: theme.colors.glassmorphism.background || 'rgba(255,255,255,0.1)',
+          },
+          dynamicStyles,
+          style,
         ]}
-        placeholder={t(placeholder)}
-        placeholderTextColor={
-          isFocused 
-            ? (theme.colors.text.secondary + '99')
-            : (theme.colors.text.secondary + '80')
-        }
-        value={value}
-        onChangeText={(text: string) => {
-          onChangeText(text);
-          if (!isTouched) setIsTouched(true);
-        }}
-        secureTextEntry={isPasswordField && !isPasswordVisible}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        {...props}
-      />
-      
-      {/* Bouton pour voir/masquer le mot de passe */}
-      {isPasswordField && (
-        <TouchableOpacity
-          onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-          style={styles.passwordToggle}
-          activeOpacity={0.7}
-        >
+      >
+        {leftComponent && (
+          <View style={styles.leftComponentContainer}>
+            {leftComponent}
+          </View>
+        )}
+        
+        {icon && !leftComponent && (
           <Ionicons
-            name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+            name={icon}
             size={Platform.OS === 'web' ? 20 : getFontSize(22)}
             color={
               isFocused 
                 ? (theme.colors.primary[0] || '#008080')
-                : theme.colors.text.secondary
+                : (error && isTouched 
+                    ? theme.colors.semantic.error 
+                    : theme.colors.text.secondary)
             }
+            style={[
+              styles.inputIcon, 
+              { 
+                opacity: isFocused ? 1 : 0.7,
+                ...(Platform.OS !== 'web' && isFocused && {
+                  shadowColor: theme.colors.primary[0] || '#008080',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.5,
+                  shadowRadius: 4,
+                  elevation: 4,
+                }),
+                ...(Platform.OS === 'web' && isFocused && {
+                  filter: 'drop-shadow(0 0 4px currentColor)',
+                  WebkitFilter: 'drop-shadow(0 0 4px currentColor)',
+                })
+              }
+            ]}
           />
-        </TouchableOpacity>
-      )}
-      
-      {isValid && !isPasswordField && (
-        <Animated.View
-          style={{
-            opacity: focusAnimation,
-            transform: [{ scale: animatedScale }],
+        )}
+        
+        <TextInput
+          ref={inputRef}
+          style={[
+            styles.input, 
+            { 
+              color: theme.colors.text.primary || '#000000',
+              opacity: 1,
+              flex: 1, // S'assurer que le TextInput prend l'espace disponible
+              minWidth: 0, // Permettre au TextInput de se rétrécir
+            }
+          ]}
+          placeholder={placeholder}
+          placeholderTextColor="#666666"
+          value={value}
+          onChangeText={(text: string) => {
+            console.log('AuthInput onChangeText:', { placeholder, value, text });
+            onChangeText(text);
+            if (!isTouched) setIsTouched(true);
           }}
-        >
-          <Ionicons
-            name="checkmark-circle"
-            size={Platform.OS === 'web' ? 22 : getFontSize(24)}
-            color="#4ecdc4"
-            style={styles.checkIcon}
-          />
-        </Animated.View>
-      )}
-    </Animated.View>
+          secureTextEntry={isPasswordField && !isPasswordVisible}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          returnKeyType={nextInputRef?.current ? 'next' : 'done'}
+          blurOnSubmit={!nextInputRef?.current}
+          onSubmitEditing={handleSubmitEditing}
+          editable={true}
+          {...props}
+        />
+        
+        {/* Bouton pour voir/masquer le mot de passe */}
+        {isPasswordField && (
+          <TouchableOpacity
+            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+            style={styles.passwordToggle}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+              size={Platform.OS === 'web' ? 20 : getFontSize(22)}
+              color={
+                isFocused 
+                  ? (theme.colors.primary[0] || '#008080')
+                  : theme.colors.text.secondary
+              }
+            />
+          </TouchableOpacity>
+        )}
+        
+        {isValid && !isPasswordField && (
+          <Animated.View
+            style={{
+              opacity: focusAnimation,
+              transform: [{ scale: animatedScale }],
+            }}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={Platform.OS === 'web' ? 22 : getFontSize(24)}
+              color="#4ecdc4"
+              style={styles.checkIcon}
+            />
+          </Animated.View>
+        )}
+      </Animated.View>
+    </TouchableOpacity>
   );
 };
 
@@ -241,7 +294,6 @@ const styles = StyleSheet.create({
     paddingLeft: getSpacing(14),
     paddingRight: getSpacing(14),
     height: getInputHeight(),
-    marginBottom: getSpacing(20), // Augmenté pour accommoder l'ombre
     // Styles pour web avec effet de glow CSS
     ...(Platform.OS === 'web' && {
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -260,92 +312,33 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: getFontSize(16),
     paddingVertical: Platform.OS === 'android' ? getSpacing(2) : 0,
+    paddingLeft: 0, // Pas de padding left car géré par le leftComponent
+    zIndex: 1, // S'assurer que le TextInput est au-dessus des autres éléments
+    minWidth: 0, // Permettre au TextInput de se rétrécir
     ...(Platform.OS === 'web' && {
       outline: 'none',
-      transition: 'all 0.2s ease',
+      border: 'none',
       background: 'transparent',
     }),
   },
-  checkIcon: {
-    marginLeft: getSpacing(8),
-  },
   passwordToggle: {
+    marginLeft: getSpacing(10),
     padding: getSpacing(4),
-    marginLeft: getSpacing(8),
     ...(Platform.OS === 'web' && {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
     }),
   },
+  checkIcon: {
+    marginLeft: getSpacing(10),
+  },
+  leftComponentContainer: {
+    marginRight: getSpacing(6),
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: Platform.OS === 'android' ? 70 : 80, // Largeur plus compacte
+    maxWidth: Platform.OS === 'android' ? 80 : 90, // Largeur maximale
+  },
 });
 
-// Ajout des styles CSS dynamiques pour le web
-if (Platform.OS === 'web') {
-  const injectFocusStyles = () => {
-    const style = document.createElement('style');
-    style.textContent = `
-      .auth-input-focused {
-        box-shadow: 
-          0 0 0 3px rgba(118, 75, 162, 0.15),
-          0 8px 25px rgba(118, 75, 162, 0.12),
-          0 4px 12px rgba(0, 0, 0, 0.08) !important;
-        transform: translateY(-1px) scale(1.01) !important;
-      }
-      
-      .auth-input-error {
-        box-shadow: 
-          0 0 0 3px rgba(239, 68, 68, 0.15),
-          0 8px 25px rgba(239, 68, 68, 0.12),
-          0 4px 12px rgba(0, 0, 0, 0.08) !important;
-      }
-      
-      .auth-input-valid {
-        box-shadow: 
-          0 0 0 3px rgba(78, 205, 196, 0.15),
-          0 8px 25px rgba(78, 205, 196, 0.12),
-          0 4px 12px rgba(0, 0, 0, 0.08) !important;
-      }
-      
-      .auth-input-icon-glow {
-        filter: drop-shadow(0 0 4px currentColor);
-      }
-    `;
-    document.head.appendChild(style);
-  };
-  
-  // Injecter les styles une seule fois
-  if (typeof window !== 'undefined' && !document.querySelector('#auth-input-styles')) {
-    const style = document.createElement('style');
-    style.id = 'auth-input-styles';
-    style.textContent = `
-      .auth-input-focused {
-        box-shadow: 
-          0 0 0 3px rgba(118, 75, 162, 0.15),
-          0 8px 25px rgba(118, 75, 162, 0.12),
-          0 4px 12px rgba(0, 0, 0, 0.08) !important;
-        transform: translateY(-1px) scale(1.01) !important;
-      }
-      
-      .auth-input-error {
-        box-shadow: 
-          0 0 0 3px rgba(239, 68, 68, 0.15),
-          0 8px 25px rgba(239, 68, 68, 0.12),
-          0 4px 12px rgba(0, 0, 0, 0.08) !important;
-      }
-      
-      .auth-input-valid {
-        box-shadow: 
-          0 0 0 3px rgba(78, 205, 196, 0.15),
-          0 8px 25px rgba(78, 205, 196, 0.12),
-          0 4px 12px rgba(0, 0, 0, 0.08) !important;
-      }
-      
-      .auth-input-icon-glow {
-        filter: drop-shadow(0 0 4px currentColor);
-      }
-    `;
-    document.head.appendChild(style);
-  }
-}
-
-export default AuthInput; 
+export default AuthInput;

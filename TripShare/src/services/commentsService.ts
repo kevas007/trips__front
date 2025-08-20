@@ -136,13 +136,12 @@ class CommentsService {
   private transformComment(apiComment: any): Comment {
     console.log('🔄 Transformation du commentaire:', JSON.stringify(apiComment, null, 2));
     
-    // Compose le nom complet
+    // Utiliser le username au lieu du nom complet
     let userName = apiComment.user_name || apiComment.UserName
-      || (apiComment.user?.FirstName && apiComment.user?.LastName
-        ? `${apiComment.user.FirstName} ${apiComment.user.LastName}`
-        : apiComment.user?.Username
-          || apiComment.user?.name
-          || 'Utilisateur');
+      || apiComment.user?.Username
+      || apiComment.user?.username
+      || apiComment.user?.name
+      || 'Utilisateur';
 
     const transformed = {
       id: apiComment.id,

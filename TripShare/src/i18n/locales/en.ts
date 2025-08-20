@@ -120,29 +120,14 @@ export default {
       username: 'Username must be between 3 and 20 characters',
       terms: 'You must accept the terms of use'
     },
-
   },
-  
+
   register: {
-    title: 'Create an account',
-    subtitle: 'Join the TripShare community',
-    steps: {
-      personalInfo: 'Personal information',
-      security: 'Security',
-      preferences: 'Preferences',
-      verification: 'Verification',
-    },
-    firstName: 'First name',
-    lastName: 'Last name',
-    email: 'Email',
-    phone: 'Phone',
-    phoneHint: '💡 Ex: 6 12 34 56 78 (without leading 0)',
     username: 'Username',
-    password: 'Password',
-    confirmPassword: 'Confirm password',
-    passwordRequirements: 'Password requirements',
-    passwordLengthRequirement: 'At least 8 characters',
-    passwordComplexityRequirement: 'Uppercase, lowercase and numbers',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    phone: 'Phone',
+    phoneHint: 'Format: +1 234 567 890',
   },
 
   home: {
@@ -156,6 +141,7 @@ export default {
     noRecentTrips: 'No recent trips',
     noDestinations: 'No popular destinations',
   },
+
   common: {
     seeAll: 'See all',
     loading: 'Loading...',
@@ -189,6 +175,7 @@ export default {
     serverError: 'Temporary server error. Please try again.',
     unknownError: 'An unexpected error occurred',
   },
+
   preferences: {
     notifications: 'Notifications',
     emailNotifications: 'Email notifications',
@@ -203,39 +190,25 @@ export default {
     locationSharing: 'Location sharing',
     locationSharingDesc: 'Allow sharing your location',
   },
+
   privacy: {
     public: 'Public',
     private: 'Private',
     friends: 'Friends',
   },
+
   verification: {
     title: 'Verify your email',
     subtitle: 'We sent a verification code to your email',
     resend: 'Resend code',
     verify: 'Verify',
   },
+
   nav: {
     home: 'Home',
     search: 'Search', 
     profile: 'Profile',
   },
+
   country: 'Country',
-  
-  // Clés exactes utilisées par les composants (compatibilité)
-  '📧 Email address': '📧 Email address',
-  '🔒 Password': '🔒 Password',
-  '🔑 Confirm password': '🔑 Confirm password',
-  '👤 Username': '👤 Username',
-  '👤 First name': '👤 First name',
-  '👤 Last name': '👤 Last name',
-  '📱 Phone (optional)': '📱 Phone (optional)',
-  'Téléphone': '📱 Phone',
-  '📧 Adresse email': '📧 Email address',
-  '🔒 Mot de passe': '🔒 Password',
-  '🔑 Confirmer le mot de passe': '🔑 Confirm password',
-  'Nom d\'utilisateur': '👤 Username',
-  'Prénom': '👤 First name',
-  'Nom': '�� Last name',
-
-
 }; 

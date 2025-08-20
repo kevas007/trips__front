@@ -33,10 +33,12 @@ class CountryService {
   async getCountries(): Promise<CountryOption[]> {
     // Vérifier le cache
     if (this.cache && Date.now() - this.cacheTimestamp < this.CACHE_DURATION) {
+      console.log('🌍 CountryService - Utilisation du cache:', this.cache.length, 'pays');
       return this.cache;
     }
 
     try {
+      console.log('🌍 CountryService - Récupération des pays depuis l\'API...');
       const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2,idd,flag,flags');
       
       if (!response.ok) {
@@ -44,6 +46,7 @@ class CountryService {
       }
 
       const countries: Country[] = await response.json();
+      console.log('🌍 CountryService - Réponse API reçue:', countries.length, 'pays bruts');
       
       // Filtrer et transformer les données
       const countryOptions: CountryOption[] = countries
@@ -66,21 +69,28 @@ class CountryService {
         )
         .sort((a, b) => a.label.localeCompare(b.label));
 
+      console.log('🌍 CountryService - Pays transformés:', countryOptions.length, 'pays');
+      console.log('🌍 CountryService - Premier pays:', countryOptions[0]);
+      console.log('🌍 CountryService - Belgique trouvée:', countryOptions.find(c => c.code === 'BE'));
+
       // Mettre en cache
       this.cache = countryOptions;
       this.cacheTimestamp = Date.now();
 
       return countryOptions;
     } catch (error) {
-      console.error('Erreur lors de la récupération des pays:', error);
+      console.error('🌍 CountryService - Erreur lors de la récupération des pays:', error);
       
       // Retourner des pays par défaut en cas d'erreur
-      return this.getDefaultCountries();
+      const defaultCountries = this.getDefaultCountries();
+      console.log('🌍 CountryService - Utilisation des pays par défaut:', defaultCountries.length, 'pays');
+      return defaultCountries;
     }
   }
 
   private getDefaultCountries(): CountryOption[] {
     return [
+      { label: '🇧🇪 Belgique (+32)', value: '+32', flag: '🇧🇪', flagUrl: 'https://flagcdn.com/w40/be.png', code: 'BE', name: 'Belgique' },
       { label: '🇫🇷 France (+33)', value: '+33', flag: '🇫🇷', flagUrl: 'https://flagcdn.com/w40/fr.png', code: 'FR', name: 'France' },
       { label: '🇺🇸 États-Unis (+1)', value: '+1', flag: '🇺🇸', flagUrl: 'https://flagcdn.com/w40/us.png', code: 'US', name: 'États-Unis' },
       { label: '🇬🇧 Royaume-Uni (+44)', value: '+44', flag: '🇬🇧', flagUrl: 'https://flagcdn.com/w40/gb.png', code: 'GB', name: 'Royaume-Uni' },

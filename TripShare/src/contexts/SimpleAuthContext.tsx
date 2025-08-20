@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { authService, User, AuthError, LoginCredentials, RegisterData } from '../services/auth';
-import { resetToAuth } from '../navigation/RootNavigation';
 
 // ========== TYPES ==========
 
@@ -188,12 +187,8 @@ export const SimpleAuthProvider: React.FC<SimpleAuthProviderProps> = ({ children
       setIsNewUser(false);
       console.log('✅ Déconnexion réussie');
 
-      // Forcer la navigation vers l'écran d'auth après déconnexion
-      try {
-        resetToAuth();
-      } catch (navError) {
-        console.warn('⚠️ Erreur navigation après logout:', navError);
-      }
+      // La navigation sera gérée automatiquement par AppNavigator basée sur l'état
+      console.log('🔄 Navigation automatique vers Auth via AppNavigator...');
 
     } catch (error) {
       handleError(error, 'Erreur de déconnexion');

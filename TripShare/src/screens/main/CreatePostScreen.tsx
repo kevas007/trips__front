@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import { useTrips } from '../../hooks/useTripShareApi';
 import { Trip } from '../../types/api';
 
@@ -32,7 +32,7 @@ interface CreatePostScreenProps {
 const CreatePostScreen: React.FC<CreatePostScreenProps> = ({ navigation }) => {
   const { theme, isDark } = useAppTheme();
   const { t } = useTranslation();
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   const { listTrips } = useTrips();
   
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -334,8 +334,9 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: theme.colors.background }, { backgroundColor: 'transparent' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      contentContainerStyle={{ flex: 1, backgroundColor: 'transparent' }}
     >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
@@ -380,7 +381,7 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({ navigation }) => {
         {/* User info */}
         <View style={styles.userInfo}>
           <Image
-            source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100' }}
+            source={{ uri: user?.avatar || 'http://localhost:8085/storage/defaults/default-avatar.jpg' }}
             style={styles.userAvatar}
           />
           <View style={styles.userDetails}>

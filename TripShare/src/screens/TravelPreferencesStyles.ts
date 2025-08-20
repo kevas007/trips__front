@@ -42,7 +42,7 @@ export const screenStyles = StyleSheet.create({
     fontWeight: '500',
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent', // Supprimer le fond blanc
     borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
     marginBottom: SPACING.lg,

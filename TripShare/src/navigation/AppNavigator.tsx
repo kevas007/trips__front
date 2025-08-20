@@ -1,16 +1,15 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuthStore, useThemeStore } from '@/store';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { ActivityIndicator, View } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
 
 const Stack = createStackNavigator();
 
 const AppNavigator: React.FC = () => {
-  const { user, isLoading, isAuthenticated, isNewUser } = useSimpleAuth();
-  const { theme } = useTheme();
+  const { user, isLoading, isAuthenticated, isNewUser } = useAuthStore();
+  const theme = useThemeStore(state => state.getTheme());
 
   // Debug logs pour comprendre l'état
   console.log('🔍 AppNavigator - État auth:', {

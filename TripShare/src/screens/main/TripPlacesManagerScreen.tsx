@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import PlacesVisitedManager, { PlaceVisited } from '../../components/PlacesVisitedManager';
 import { tripShareApi } from '../../services/tripShareApi';
 
@@ -27,7 +27,7 @@ interface TripPlacesManagerScreenProps {
 
 const TripPlacesManagerScreen: React.FC<TripPlacesManagerScreenProps> = ({ navigation, route }) => {
   const { theme } = useAppTheme();
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   const { tripId, tripTitle } = route.params;
   
   const [places, setPlaces] = useState<PlaceVisited[]>([]);

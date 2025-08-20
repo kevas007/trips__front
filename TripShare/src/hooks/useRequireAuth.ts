@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { authService } from '../services/auth';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useAuthStore } from '../store';
 
 export function useRequireAuth() {
   const hasCheckedRef = useRef(false);
-  const { logout, isAuthenticated, user } = useSimpleAuth();
+  const { logout, isAuthenticated, user } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {

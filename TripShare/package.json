@@ -43,6 +43,7 @@
     "expo-secure-store": "~14.2.3",
     "expo-status-bar": "~2.2.3",
     "i18next": "^25.2.1",
+    "immer": "^10.1.1",
     "react": "19.0.0",
     "react-hook-form": "^7.51.3",
     "react-i18next": "^15.5.2",

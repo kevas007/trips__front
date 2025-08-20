@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useAuthStore } from '../store';
 import { authService } from '../services/auth';
 import { resetToAuth } from '../navigation/RootNavigation';
 
 const AuthDebugger: React.FC = () => {
-  const { user, isLoading, isAuthenticated, error, logout } = useSimpleAuth();
+  const { user, isLoading, isAuthenticated, error, logout } = useAuthStore();
 
   useEffect(() => {
     // Vérification automatique au montage
@@ -45,13 +45,19 @@ const AuthDebugger: React.FC = () => {
     await logout();
   };
 
-  const forceAuthRedirect = () => {
+  const forceAuthRedirect = async () => {
     console.log('🔧 AuthDebugger - Forcer la redirection vers auth...');
     try {
-      resetToAuth();
+      // Préférer l'utilisation du logout qui gère correctement l'état
+      await logout();
     } catch (error) {
-      console.warn('⚠️ Erreur resetToAuth, utilisation du logout à la place');
-      logout();
+      console.warn('⚠️ Erreur lors du logout forcé:', error);
+      // En dernier recours, essayer resetToAuth
+      try {
+        resetToAuth();
+      } catch (navError) {
+        console.warn('⚠️ Erreur resetToAuth aussi:', navError);
+      }
     }
   };
 

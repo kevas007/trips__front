@@ -31,7 +31,7 @@ export interface ForgotPasswordRequest {
 
 export interface ResetPasswordRequest {
   token: string;
-  password: string;
+  new_password: string;
 }
 
 export interface ChangePasswordRequest {
@@ -283,12 +283,12 @@ export class TripShareApiService {
 
   // GET /api/v1/trips/public
   async listPublicTrips(limit: number = 20, offset: number = 0): Promise<Trip[]> {
-    return unifiedApi.get<Trip[]>(`/trips/public?limit=${limit}&offset=${offset}`);
+    return unifiedApi.get<Trip[]>(`/trips/public?limit=${limit}&offset=${offset}`, { skipApiPrefix: true });
   }
 
   // GET /api/v1/trips/public?userId=...
   async listPublicTripsByUser(userId: string): Promise<Trip[]> {
-    return unifiedApi.get<Trip[]>(`/trips/public?userId=${userId}`);
+    return unifiedApi.get<Trip[]>(`/trips/public?userId=${userId}`, { skipApiPrefix: true });
   }
 
   // GET /api/v1/trips/:id
@@ -353,7 +353,7 @@ export class TripShareApiService {
 
   // POST /api/v1/trips/:id/photos
   async uploadTripPhoto(tripId: string, formData: FormData): Promise<TripPhoto> {
-    return unifiedApi.put<TripPhoto>(`/trips/${tripId}/photos`, formData);
+    return unifiedApi.post<TripPhoto>(`/trips/${tripId}/photos`, formData);
   }
 
   // PUT /api/v1/trips/photos/:photo_id

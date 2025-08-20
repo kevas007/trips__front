@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../design-system';
 import Button from '../../components/ui/Button';
 import { ProfileScreenStyles as styles } from './ProfileScreenStyles';
+import { getAvatarUrl } from '../../utils/avatarUtils';
 
 interface ProfileViewProps {
   user: any;
@@ -51,11 +52,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   onMessage,
   onNavigateToTrips,
 }) => {
+  const [avatarError, setAvatarError] = useState(false);
+  
   console.log('🎯 ProfileView - User reçu:', user);
   console.log('🎯 ProfileView - User profile:', user?.profile);
   console.log('🎯 ProfileView - User avatar_url:', user?.avatar_url);
   console.log('🎯 ProfileView - User avatar:', user?.avatar);
   console.log('🎯 ProfileView - Profile avatar_url:', user?.profile?.avatar_url);
+  console.log('🎯 ProfileView - getAvatarUrl result:', getAvatarUrl(user));
   // Logs pour déboguer
   console.log('🎯 ProfileView - Props reçues:');
   console.log('  - User:', user);
@@ -128,17 +132,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({
           {/* Avatar et infos utilisateur */}
           <View style={styles.instagramProfileHeader}>
             <View style={styles.instagramAvatarSection}>
-              {user?.profile?.avatar_url || user?.avatar_url || user?.avatar ? (
-                <Image 
-                  source={{ uri: user.profile?.avatar_url || user.avatar_url || user.avatar }} 
-                  style={styles.instagramAvatar}
-                  defaultSource={require('../../assets/logo.svg')}
-                />
-              ) : (
-                <View style={[styles.instagramAvatarPlaceholder, { backgroundColor: '#f0f0f0' }]}>
-                  <Ionicons name="person" size={40} color="#666" />
-                </View>
-              )}
+              <Image 
+                source={{ 
+                  uri: avatarError 
+                    ? `http://localhost:8085/storage/defaults/default-avatar.jpg&h=100&fit=crop&crop=face`
+                    : getAvatarUrl(user)
+                }} 
+                style={styles.instagramAvatar}
+                onError={(error) => {
+                  console.warn('⚠️ Erreur chargement avatar ProfileView:', error?.nativeEvent?.error);
+                  console.warn('⚠️ URL getAvatarUrl qui a échoué:', getAvatarUrl(user));
+                  console.warn('⚠️ User data:', JSON.stringify(user, null, 2));
+                  setAvatarError(true);
+                }}
+              />
             </View>
             
             <View style={styles.instagramUserInfoSection}>
@@ -221,43 +228,86 @@ const ProfileView: React.FC<ProfileViewProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Préférences de voyage</Text>
               <View style={styles.preferencesContainer}>
-                {user.profile.travel_preferences.travel_style && (
+                {/* Activités */}
+                {user.profile.travel_preferences.activities && user.profile.travel_preferences.activities.length > 0 && (
                   <View style={styles.preferenceGroup}>
-                    <Text style={styles.preferenceGroupTitle}>Style de voyage:</Text>
+                    <Text style={styles.preferenceGroupTitle}>Activités:</Text>
                     <View style={styles.preferenceTags}>
-                      <View style={styles.preferenceTag}>
-                        <Text style={styles.preferenceText}>{user.profile.travel_preferences.travel_style}</Text>
-                      </View>
+                      {user.profile.travel_preferences.activities.map((activity: string, index: number) => (
+                        <View key={index} style={styles.preferenceTag}>
+                          <Text style={styles.preferenceText}>{activity}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 )}
-                {user.profile.travel_preferences.budget_range && (
+                
+                {/* Hébergement */}
+                {user.profile.travel_preferences.accommodation && user.profile.travel_preferences.accommodation.length > 0 && (
+                  <View style={styles.preferenceGroup}>
+                    <Text style={styles.preferenceGroupTitle}>Hébergement:</Text>
+                    <View style={styles.preferenceTags}>
+                      {user.profile.travel_preferences.accommodation.map((acc: string, index: number) => (
+                        <View key={index} style={styles.preferenceTag}>
+                          <Text style={styles.preferenceText}>{acc}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+                
+                {/* Transport */}
+                {user.profile.travel_preferences.transportation && user.profile.travel_preferences.transportation.length > 0 && (
+                  <View style={styles.preferenceGroup}>
+                    <Text style={styles.preferenceGroupTitle}>Transport:</Text>
+                    <View style={styles.preferenceTags}>
+                      {user.profile.travel_preferences.transportation.map((transport: string, index: number) => (
+                        <View key={index} style={styles.preferenceTag}>
+                          <Text style={styles.preferenceText}>{transport}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+                
+                {/* Budget */}
+                {user.profile.travel_preferences.budget && user.profile.travel_preferences.budget.length > 0 && (
                   <View style={styles.preferenceGroup}>
                     <Text style={styles.preferenceGroupTitle}>Budget:</Text>
                     <View style={styles.preferenceTags}>
-                      <View style={styles.preferenceTag}>
-                        <Text style={styles.preferenceText}>{user.profile.travel_preferences.budget_range}</Text>
-                      </View>
+                      {user.profile.travel_preferences.budget.map((budget: string, index: number) => (
+                        <View key={index} style={styles.preferenceTag}>
+                          <Text style={styles.preferenceText}>{budget}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 )}
-                {user.profile.travel_preferences.group_size && (
+                
+                {/* Climat */}
+                {user.profile.travel_preferences.climate && user.profile.travel_preferences.climate.length > 0 && (
                   <View style={styles.preferenceGroup}>
-                    <Text style={styles.preferenceGroupTitle}>Taille du groupe:</Text>
+                    <Text style={styles.preferenceGroupTitle}>Climat:</Text>
                     <View style={styles.preferenceTags}>
-                      <View style={styles.preferenceTag}>
-                        <Text style={styles.preferenceText}>{user.profile.travel_preferences.group_size}</Text>
-                      </View>
+                      {user.profile.travel_preferences.climate.map((climate: string, index: number) => (
+                        <View key={index} style={styles.preferenceTag}>
+                          <Text style={styles.preferenceText}>{climate}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 )}
-                {user.profile.travel_preferences.trip_duration && (
+                
+                {/* Nourriture */}
+                {user.profile.travel_preferences.food && user.profile.travel_preferences.food.length > 0 && (
                   <View style={styles.preferenceGroup}>
-                    <Text style={styles.preferenceGroupTitle}>Durée du voyage:</Text>
+                    <Text style={styles.preferenceGroupTitle}>Préférences alimentaires:</Text>
                     <View style={styles.preferenceTags}>
-                      <View style={styles.preferenceTag}>
-                        <Text style={styles.preferenceText}>{user.profile.travel_preferences.trip_duration}</Text>
-                      </View>
+                      {user.profile.travel_preferences.food.map((food: string, index: number) => (
+                        <View key={index} style={styles.preferenceTag}>
+                          <Text style={styles.preferenceText}>{food}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 )}

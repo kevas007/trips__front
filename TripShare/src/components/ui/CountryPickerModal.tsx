@@ -34,9 +34,24 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
   const [filteredCountries, setFilteredCountries] = useState<CountryOption[]>(countries);
 
+  // Debug: Log des données reçues
+  useEffect(() => {
+    console.log('🌍 CountryPickerModal - Données reçues:', {
+      countriesCount: countries.length,
+      selectedValue,
+      loading,
+      firstCountry: countries[0]
+    });
+  }, [countries, selectedValue, loading]);
+
   useEffect(() => {
     if (countries.length > 0) {
       const found = countries.find(c => c.value === selectedValue);
+      console.log('🔍 Recherche du pays sélectionné:', {
+        selectedValue,
+        found: found ? `${found.flag} ${found.name} (${found.value})` : 'Non trouvé',
+        totalCountries: countries.length
+      });
       setSelectedCountry(found || null);
     }
   }, [countries, selectedValue]);
@@ -49,6 +64,12 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
   }, [searchText, countries]);
 
   const handleSelect = (country: CountryOption) => {
+    console.log('✅ Pays sélectionné:', {
+      flag: country.flag,
+      name: country.name,
+      code: country.code,
+      value: country.value
+    });
     onValueChange(country.value);
     setSelectedCountry(country);
     setIsVisible(false);
@@ -85,6 +106,12 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
     );
   }
 
+  // Debug: Log de l'affichage
+  console.log('📱 Affichage du sélecteur:', {
+    selectedCountry: selectedCountry ? `${selectedCountry.flag} ${selectedCountry.code} ${selectedCountry.value}` : 'Aucun',
+    displayText: selectedCountry ? `${selectedCountry.code} ${selectedCountry.value}` : 'BE +32'
+  });
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -95,9 +122,9 @@ const CountryPickerModal: React.FC<CountryPickerModalProps> = ({
         onPress={() => setIsVisible(true)}
         activeOpacity={0.8}
       >
-        <Text style={styles.flag}>{selectedCountry?.flag || '🌍'}</Text>
+        <Text style={styles.flag}>{selectedCountry?.flag || '🇧🇪'}</Text>
         <Text style={[styles.selectedText, { color: isDark ? '#E6E1E5' : '#1C1B1F' }]} numberOfLines={1}>
-          {selectedCountry?.code || 'BE'} {selectedCountry?.value || '+32'}
+          {selectedCountry ? `${selectedCountry.code} ${selectedCountry.value}` : 'BE +32'}
         </Text>
         <Ionicons name="chevron-down" size={16} color={isDark ? 'rgba(255,255,255,0.8)' : 'rgba(28,27,31,0.8)'} />
       </TouchableOpacity>

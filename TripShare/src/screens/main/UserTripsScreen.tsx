@@ -72,7 +72,7 @@ const UserTripsScreen: React.FC<UserTripsScreenProps> = ({
           icon: 'play-circle', 
           color: '#4CAF50', 
           bgColor: '#E8F5E8',
-          placeholderImage: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=400&fit=crop'
+          placeholderImage: 'http://localhost:8085/storage/defaults/default-trip-image.jpg'
         };
       case 'completed':
       case 'finished':
@@ -88,7 +88,7 @@ const UserTripsScreen: React.FC<UserTripsScreenProps> = ({
           icon: 'bookmark', 
           color: '#9C27B0', 
           bgColor: '#F3E5F5',
-          placeholderImage: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=400&fit=crop'
+          placeholderImage: 'http://localhost:8085/storage/defaults/default-trip-image.jpg'
         };
       default:
         return { 

@@ -29,9 +29,6 @@ export default {
     emailPlaceholder: '📧 Adresse email',
     passwordPlaceholder: '🔒 Mot de passe',
     confirmPasswordPlaceholder: '🔑 Confirmer le mot de passe',
-    usernamePlaceholder: '👤 Nom d\'utilisateur',
-    firstNamePlaceholder: '👤 Prénom',
-    lastNamePlaceholder: '👤 Nom',
     phoneNumberPlaceholder: '📱 Téléphone (optionnel)',
     namePlaceholder: '👤 Votre nom complet',
 
@@ -48,6 +45,35 @@ export default {
     alreadyMember: '🌍 Déjà membre ? Se connecter',
     backToLogin: '← Retour à la connexion',
     alreadyHaveAccount: 'Déjà un compte ? Se connecter',
+    noAccount: 'Pas encore de compte ?',
+    forgotPassword: 'Mot de passe oublié ?',
+    
+    // Nouvelles traductions pour les pages modernes
+    welcomeBack: 'Bon retour !',
+    loginSubtitle: 'Connectez-vous pour continuer votre aventure',
+    registerSubtitle: 'Rejoignez notre communauté de voyageurs',
+    joinAdventure: 'Rejoignez l\'aventure',
+    tagline: 'Voyagez, Partagez, Connectez',
+    
+    // Placeholders supplémentaires
+    usernamePlaceholder: '👤 Nom d\'utilisateur',
+    firstNamePlaceholder: '👤 Prénom',
+    lastNamePlaceholder: '👤 Nom',
+    phonePlaceholder: '📱 Numéro de téléphone',
+    
+    // Messages de validation
+    emailRequired: 'L\'email est requis',
+    emailInvalid: 'Veuillez saisir une adresse email valide',
+    passwordRequired: 'Le mot de passe est requis',
+    passwordMinLength: 'Le mot de passe doit contenir au moins 6 caractères',
+    usernameRequired: 'Le nom d\'utilisateur est requis',
+    usernameMinLength: 'Le nom d\'utilisateur doit contenir au moins 3 caractères',
+    firstNameRequired: 'Le prénom est requis',
+    lastNameRequired: 'Le nom est requis',
+    phoneRequired: 'Le numéro de téléphone est requis',
+    confirmPasswordRequired: 'Veuillez confirmer votre mot de passe',
+    termsRequired: 'Veuillez accepter les conditions d\'utilisation',
+    or: 'OU',
 
     // Stats
     stats: {
@@ -120,27 +146,13 @@ export default {
       terms: 'Vous devez accepter les conditions d\'utilisation'
     },
   },
-  
+
   register: {
-    title: 'Créer un compte',
-    subtitle: 'Rejoignez la communauté TripShare',
-    steps: {
-      personalInfo: 'Informations personnelles',
-      security: 'Sécurité',
-      preferences: 'Préférences',
-      verification: 'Vérification',
-    },
+    username: 'Nom d\'utilisateur',
     firstName: 'Prénom',
     lastName: 'Nom',
-    email: 'Email',
     phone: 'Téléphone',
-    phoneHint: '💡 Ex: 6 12 34 56 78 (sans le 0 initial)',
-    username: 'Nom d\'utilisateur',
-    password: 'Mot de passe',
-    confirmPassword: 'Confirmer le mot de passe',
-    passwordRequirements: 'Exigences du mot de passe',
-    passwordLengthRequirement: 'Au moins 8 caractères',
-    passwordComplexityRequirement: 'Lettres majuscules, minuscules et chiffres',
+    phoneHint: 'Format: +32 123 456 789',
   },
 
   home: {
@@ -224,22 +236,4 @@ export default {
   },
 
   country: 'Pays',
-  
-  // Clés exactes utilisées par les composants (compatibilité)
-  '📧 Email address': '📧 Adresse email',
-  '🔒 Password': '🔒 Mot de passe',
-  '🔑 Confirm password': '🔑 Confirmer le mot de passe',
-  '👤 Username': '👤 Nom d\'utilisateur',
-  '👤 First name': '👤 Prénom',
-  '👤 Last name': '👤 Nom',
-  '📱 Phone (optional)': '📱 Téléphone (optionnel)',
-  'Téléphone': '📱 Téléphone',
-  '📧 Adresse email': '📧 Adresse email',
-  '🔒 Mot de passe': '🔒 Mot de passe',
-  '🔑 Confirmer le mot de passe': '🔑 Confirmer le mot de passe',
-  'Nom d\'utilisateur': '👤 Nom d\'utilisateur',
-  'Prénom': '👤 Prénom',
-  'Nom': '👤 Nom',
-
-
 }; 

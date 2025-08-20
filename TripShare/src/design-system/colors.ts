@@ -57,6 +57,16 @@ export const COLORS = {
     infoLight: '#E3F2FD',
   },
 
+  // ========== COULEURS D'ACCENT ==========
+  accent: {
+    yellow: '#FFC107',     // Jaune accent
+    orange: '#FF9800',     // Orange accent
+    green: '#4CAF50',      // Vert accent
+    blue: '#2196F3',       // Bleu accent
+    red: '#F44336',        // Rouge accent
+    pink: '#E91E63',       // Rose accent
+  },
+
   // ========== COULEURS NEUTRES ==========
   neutral: {
     0: '#FFFFFF',     // Blanc pur

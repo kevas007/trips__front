@@ -17,8 +17,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
-import { commentsService, Comment, CreateCommentRequest } from '../../services/commentsService';
+import { useAuthStore, useComments } from '../../store';
+import { Comment } from '../../services/commentsService';
 
 const { width } = Dimensions.get('window');
 
@@ -37,17 +37,25 @@ interface CommentsScreenProps {
 
 const CommentsScreen: React.FC<CommentsScreenProps> = ({ route, navigation }) => {
   const { theme } = useAppTheme();
-  const { user } = useSimpleAuth();
-  const [comments, setComments] = useState<Comment[]>([]);
+  const { user } = useAuthStore();
+  const { 
+    loadComments, 
+    createComment, 
+    likeComment, 
+    getCommentsForPost, 
+    loading,
+    error 
+  } = useComments();
+  
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyToUser, setReplyToUser] = useState<string>('');
   const inputRef = useRef<TextInput>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [commentsLoaded, setCommentsLoaded] = useState(false);
-  const [isLoadingComments, setIsLoadingComments] = useState(false);
-  const loadingRef = useRef(false);
   const mountedRef = useRef(false);
+  
+  // Récupérer les commentaires depuis le store
+  const comments = getCommentsForPost(route.params.postId);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(1)).current; // Commencer visible
@@ -83,44 +91,13 @@ const CommentsScreen: React.FC<CommentsScreenProps> = ({ route, navigation }) =>
     };
   }, []); // Dépendances vides = exécution unique au montage
 
-  const loadComments = async (forceReload = false) => {
-    // Protection contre les appels multiples
-    if ((commentsLoaded && !forceReload) || loadingRef.current) {
-      console.log('⚠️ Commentaires déjà chargés ou chargement en cours, skip');
-      return;
-    }
-
-    loadingRef.current = true;
+  const loadCommentsData = async (forceReload = false) => {
     try {
       console.log('🔄 Chargement des commentaires pour le post:', route.params.postId);
-      
-      // Essayer de charger depuis l'API
-      const apiComments = await commentsService.getComments(route.params.postId);
-      
-      console.log('📡 Commentaires reçus de l\'API:', apiComments);
-      
-      // Toujours utiliser les commentaires de l'API, même s'ils sont vides
-      setComments(apiComments);
-      setCommentsLoaded(true); // Marquer comme chargé
-      
-      if (apiComments.length > 0) {
-        console.log('✅ Commentaires chargés depuis l\'API:', apiComments.length);
-        console.log('🔍 État des commentaires après chargement:');
-        apiComments.forEach((comment, index) => {
-          console.log(`   Commentaire ${index + 1}:`, {
-            id: comment.id,
-            isLiked: comment.isLiked,
-            likes: comment.likes,
-            text: comment.text
-          });
-        });
-      } else {
-        console.log('ℹ️ Aucun commentaire trouvé pour ce post');
-      }
+      await loadComments(route.params.postId, forceReload);
+      console.log('✅ Commentaires chargés depuis le store');
     } catch (error) {
       console.log('❌ Erreur lors du chargement des commentaires:', error);
-    } finally {
-      loadingRef.current = false;
     }
   };
 
@@ -607,7 +584,8 @@ const CommentsScreen: React.FC<CommentsScreenProps> = ({ route, navigation }) =>
       {/* Input en bas */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.inputContainer, { backgroundColor: theme.colors.background.card }]}
+        style={[styles.inputContainer, { backgroundColor: theme.colors.background.card }, { backgroundColor: 'transparent' }]}
+        contentContainerStyle={{ flex: 1, backgroundColor: 'transparent' }}
       >
         {replyingTo && (
           <View style={[styles.replyIndicator, { backgroundColor: theme.colors.background.primary }]}>

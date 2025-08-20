@@ -19,14 +19,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore, useTrips } from '../../store';
 import { useRequireAuth } from '../../hooks/useRequireAuth';
 import SimpleMapView from '../../components/places/SimpleMapView';
 import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
 import { tripShareApi } from '../../services/tripShareApi';
 import { Trip } from '../../types';
+import { getAvatarUrl } from '../../utils/avatarUtils';
 import { useFocusEffect } from '@react-navigation/native';
 import { API_CONFIG } from '../../config/api';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -106,7 +108,8 @@ interface PostFilters {
 
 const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const { theme } = useAppTheme();
-  const { user, logout } = useSimpleAuth();
+  const { user, logout } = useAuthStore();
+  const { loadPublicTrips, loading: tripsLoading } = useTrips();
   
   // Vérification de l'authentification
   useRequireAuth();
@@ -159,6 +162,36 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
+  // Fonction pour gérer les URLs d'images
+  const getImageUrl = (imageUrl: string, postId?: string, imageIndex?: number): string => {
+    console.log('🔍 getImageUrl appelé avec:', { imageUrl, postId, imageIndex });
+    
+    // Si c'est une URL locale (file://), utiliser une image par défaut MinIO
+    if (imageUrl.startsWith('file://')) {
+      console.log('📱 Image locale détectée, utilisation du fallback MinIO');
+      return 'http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg';
+    }
+    
+    // Si c'est une URL HTTP/HTTPS, l'utiliser directement
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      console.log('🌐 URL distante valide:', imageUrl);
+      return imageUrl;
+    }
+    
+    // Si c'est une URL relative du backend, la compléter
+    if (imageUrl.startsWith('/storage/') || imageUrl.startsWith('storage/')) {
+      const fullUrl = `http://localhost:8085${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+      console.log('🔗 URL backend complétée:', fullUrl);
+      return fullUrl;
+    }
+    
+    // Fallback par défaut - image MinIO
+    console.log('⚠️ URL non reconnue, utilisation du fallback MinIO');
+    return 'http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg';
+  };
+
+
+
   // Animations d'entrée 2025
   useEffect(() => {
     Animated.parallel([
@@ -202,10 +235,24 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const loadPosts = async () => {
     setLoadingFeed(true);
     try {
-      console.log('🔄 Chargement des voyages depuis l\'API...');
+      console.log('🔄 Chargement des voyages depuis le store...');
       
-      // Récupérer les voyages publics depuis l'API
-      const trips: any[] = await tripShareApi.listPublicTrips(20, 0);
+      // Vérifier si l'utilisateur est connecté
+      if (!user || !user.id) {
+        throw new Error('Utilisateur non connecté');
+      }
+
+      // Récupérer les voyages publics depuis le store Zustand avec gestion d'erreur
+      const trips: any[] = await loadPublicTrips(20, 0).catch(error => {
+        console.error('❌ Erreur lors du chargement des voyages:', error);
+        throw error;
+      });
+
+      if (!Array.isArray(trips)) {
+        console.error('❌ Format de données invalide:', trips);
+        throw new Error('Format de données invalide');
+      }
+
       console.log('✅ Voyages récupérés:', trips.length);
       
       // Debug: Afficher le premier voyage pour voir sa structure
@@ -226,11 +273,8 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         
         // Utiliser les vraies informations utilisateur
         const userName = trip.username || trip.first_name || 'Voyageur';
-        const userDisplayName = trip.first_name && trip.last_name ? 
-          `${trip.first_name} ${trip.last_name}` : 
-          userName;
         
-        console.log(`✅ Nom affiché pour voyage ${index + 1}:`, userDisplayName);
+        console.log(`✅ Username affiché pour voyage ${index + 1}:`, userName);
         
         // Générer un avatar de fallback sécurisé
         const generateFallbackAvatar = (name: string) => {
@@ -240,8 +284,14 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         
         const user = {
           id: trip.created_by || trip.id || 'unknown',
-          name: userDisplayName,
-          avatar: trip.avatar_url || generateFallbackAvatar(userDisplayName),
+          name: trip.username || trip.email?.split('@')[0] || 'Voyageur', // Utiliser le username comme nom d'affichage
+          username: trip.username || trip.email?.split('@')[0] || 'user',
+          email: trip.email,
+          avatar: trip.avatar_url || trip.avatar || trip.user?.avatar_url || trip.user?.avatar,
+          avatar_url: trip.avatar_url || trip.avatar || trip.user?.avatar_url || trip.user?.avatar,
+          profile: {
+            avatar_url: trip.user?.profile?.avatar_url || trip.avatar_url || trip.avatar
+          },
           verified: false,
           level: 'Intermédiaire',
           trips: 1,
@@ -265,16 +315,34 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 
         // Debug: Afficher les informations des photos
         console.log(`🔍 Voyage ${index + 1} - Photos:`, trip.photos);
+        console.log(`🔍 Voyage ${index + 1} - Type de photos:`, typeof trip.photos);
+        if (trip.photos && trip.photos.length > 0) {
+          console.log(`🔍 Voyage ${index + 1} - Premier photo:`, trip.photos[0]);
+          console.log(`🔍 Voyage ${index + 1} - Type premier photo:`, typeof trip.photos[0]);
+        }
         
         // Extraire toutes les URLs des photos pour le carrousel Instagram
         let tripImages: string[] = [];
         if (trip.photos && trip.photos.length > 0) {
-          tripImages = trip.photos.map((photo: any) => 
-            typeof photo === 'string' ? photo : photo.url
-          );
-        } else {
-          // Image par défaut si aucune photo
-          tripImages = ['https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800'];
+          tripImages = trip.photos.map((photo: any) => {
+            // Le backend retourne des objets TripPhoto avec un champ url (minuscule)
+            if (typeof photo === 'object' && photo.url) {
+              return photo.url;
+            }
+            // Fallback pour les autres formats
+            if (typeof photo === 'string') {
+              return photo;
+            }
+            if (typeof photo === 'object' && photo.URL) {
+              return photo.URL;
+            }
+            return null;
+          }).filter((url: string | null) => url !== null);
+        }
+        
+        // Si aucune photo valide, utiliser une image par défaut MinIO
+        if (tripImages.length === 0) {
+          tripImages = ['http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg'];
         }
         
         const tripImage = tripImages[0]; // Première image pour compatibilité
@@ -396,9 +464,39 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   };
 
   const handleRefreshFeed = async () => {
-    setRefreshingFeed(true);
-    await loadPosts();
-    setRefreshingFeed(false);
+    try {
+      setRefreshingFeed(true);
+      
+      // Vérifier la connexion utilisateur
+      if (!user?.id) {
+        navigation.navigate('Auth' as never);
+        return;
+      }
+
+      await loadPosts();
+      
+      // Message de succès silencieux (pas d'alerte)
+      console.log('✅ Rafraîchissement réussi');
+      
+    } catch (error: any) {
+      console.error('❌ Erreur lors du rafraîchissement:', error);
+      
+      // Gérer les erreurs d'authentification
+      if (error.message?.includes('non connecté')) {
+        navigation.navigate('Auth' as never);
+        return;
+      }
+      
+      // Pour les autres erreurs, afficher une notification discrète
+      Alert.alert(
+        'Erreur de connexion',
+        'Vérifiez votre connexion internet et réessayez',
+        [{ text: 'OK', style: 'default' }],
+        { cancelable: true }
+      );
+    } finally {
+      setRefreshingFeed(false);
+    }
   };
 
   const handleLike = async (postId: string) => {
@@ -555,7 +653,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       onPress={() => markNotificationAsRead(item.id)}
     >
       {item.user && (
-        <Image source={{ uri: item.user.avatar }} style={styles.notificationAvatar2025} />
+        <Image source={{ uri: getAvatarUrl(item.user) }} style={styles.notificationAvatar2025} />
       )}
       <View style={styles.notificationContent}>
         <Text style={[styles.notificationTitle, { color: theme.colors.text.primary }]}>
@@ -654,11 +752,18 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             <View style={styles.avatarContainer2025}>
               <Image 
                 source={{ 
-                  uri: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(post.user.name || 'user')}&backgroundColor=b6e3f4,c0aede,d1d4f9&size=100`
+                  uri: getAvatarUrl(post.user)
                 }} 
                 style={styles.userAvatar2025}
-                onError={() => {
-                  console.log('❌ Erreur chargement avatar pour:', post.user.name);
+                onError={(error) => {
+                  console.log('❌ Erreur chargement avatar pour:', {
+                    userName: post.user.name,
+                    userId: post.user.id,
+                    error: error.nativeEvent
+                  });
+                }}
+                onLoad={() => {
+                  console.log('✅ Avatar chargé avec succès pour:', post.user.name);
                 }}
                 defaultSource={{ uri: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default&backgroundColor=b6e3f4,c0aede,d1d4f9&size=100' }}
               />
@@ -705,19 +810,26 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
                   <View key={imageIndex} style={styles.carouselImageContainer2025}>
                     <Image 
                       source={{ 
-                        uri: imageUrl.startsWith('file://') 
-                          ? 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800'
-                          : imageUrl 
+                        uri: getImageUrl(imageUrl, post.id, imageIndex)
                       }} 
                       style={styles.carouselImage2025} 
                       resizeMode="cover" 
-                      onError={() => {
-                        console.log('❌ Erreur chargement image carrousel:', imageUrl);
-                        if (imageUrl.startsWith('file://')) {
-                          console.log('📱 Image locale non accessible sur cette plateforme');
-                        }
+                      onError={(error) => {
+                        console.log('❌ Erreur chargement image carrousel:', {
+                          imageUrl,
+                          postId: post.id,
+                          imageIndex,
+                          error: error.nativeEvent
+                        });
                       }}
-                      defaultSource={{ uri: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800' }}
+                      onLoad={() => {
+                        console.log('✅ Image chargée avec succès:', {
+                          imageUrl,
+                          postId: post.id,
+                          imageIndex
+                        });
+                      }}
+                                             defaultSource={{ uri: 'http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg' }}
                     />
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.3)']}
@@ -730,12 +842,23 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
               <View style={styles.singleImageContainer2025}>
                 <Image 
                   source={{ 
-                    uri: post.content.url.startsWith('file://') 
-                      ? 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800'
-                      : post.content.url 
+                    uri: getImageUrl(post.content?.url || '', post.id, 0)
                   }} 
                   style={styles.postImage2025} 
                   resizeMode="cover" 
+                  onError={(error) => {
+                    console.log('❌ Erreur chargement image unique:', {
+                      imageUrl: post.content?.url || '',
+                      postId: post.id,
+                      error: error.nativeEvent
+                    });
+                  }}
+                  onLoad={() => {
+                    console.log('✅ Image unique chargée avec succès:', {
+                      imageUrl: post.content?.url || '',
+                      postId: post.id
+                    });
+                  }}
                 />
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.3)']}
@@ -976,6 +1099,23 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
           </View>
           
           <View style={styles.headerActions2025}>
+            {/* Avatar de profil */}
+            <TouchableOpacity 
+              style={styles.profileAvatarButton2025}
+              onPress={() => navigation.navigate('Profile' as never)}
+              activeOpacity={0.7}
+            >
+              <Image 
+                source={{ uri: getAvatarUrl(user) }} 
+                style={styles.profileAvatar2025}
+                onError={(error) => {
+                  console.warn('⚠️ Erreur chargement avatar profil:', error);
+                }}
+                defaultSource={{ uri: 'https://api.dicebear.com/7.x/avataaars/png?seed=default&backgroundColor=b6e3f4&size=100' }}
+              />
+            </TouchableOpacity>
+            
+            {/* Bouton notifications */}
             <TouchableOpacity 
               style={[styles.iconButton2025, { backgroundColor: theme.colors.background.primary }]}
               onPress={() => setShowNotifications(!showNotifications)}
@@ -1052,7 +1192,17 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             renderItem={renderModernTripCard}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.modernFeedContainer2025}
-            refreshControl={<RefreshControl refreshing={refreshingFeed} onRefresh={handleRefreshFeed} />}
+            refreshControl={
+    <RefreshControl 
+      refreshing={refreshingFeed} 
+      onRefresh={handleRefreshFeed}
+      colors={[theme.colors.primary[0]]}
+      tintColor={theme.colors.primary[0]}
+      title="Mise à jour..."
+      titleColor={theme.colors.text.secondary}
+      progressViewOffset={20}
+    />
+  }
             showsVerticalScrollIndicator={false}
           />
         </Animated.View>
@@ -1156,6 +1306,16 @@ const styles = StyleSheet.create({
     color: 'white', 
     fontSize: 10, 
     fontWeight: 'bold' 
+  },
+  profileAvatarButton2025: {
+    marginRight: 8,
+  },
+  profileAvatar2025: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   
   // Notifications

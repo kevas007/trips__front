@@ -101,7 +101,8 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({ onNext, initialData
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
+      contentContainerStyle={{ flex: 1, backgroundColor: 'transparent' }}
     >
       <View style={styles.content}>
         <InputField

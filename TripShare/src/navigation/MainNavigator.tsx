@@ -9,7 +9,7 @@ import EditProfileScreen from '../screens/main/EditProfileScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
 import PublicProfileScreen from '../screens/main/PublicProfileScreen';
 import CategoryTripsScreen from '../screens/main/CategoryTripsScreen';
-import CreateItineraryScreen from '../screens/itineraries/CreateItineraryScreen';
+import EnhancedTripCreationScreen from '../screens/itineraries/EnhancedTripCreationScreen';
 import SimpleCreateTripScreen from '../screens/itineraries/SimpleCreateTripScreen';
 import SocialFeedScreen from '../screens/main/SocialFeedScreen';
 import CommentsScreen from '../screens/main/CommentsScreen';
@@ -137,7 +137,7 @@ const HomeStackNavigator = () => {
     <HomeStack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.colors.background.primary }, headerTintColor: theme.colors.text.primary }}>
       <HomeStack.Screen name="HomeMain" component={UnifiedHomeScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="CategoryTrips" component={CategoryTripsScreen} />
-      <HomeStack.Screen name="SimpleCreateTrip" component={CreateItineraryScreen} options={{ headerShown: false }} />
+      <HomeStack.Screen name="SimpleCreateTrip" component={EnhancedTripCreationScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="TripPlacesManager" component={TripPlacesManagerScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="Comments" component={CommentsScreen} options={{ headerShown: false }} />
     </HomeStack.Navigator>

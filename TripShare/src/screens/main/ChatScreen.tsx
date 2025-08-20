@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,13 @@ import {
   ScrollView,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../design-system';
+import { chatService, Conversation } from '../../services/chatService';
+import { useAuthStore } from '../../store';
 
 interface ChatMessage {
   id: string;
@@ -127,9 +131,14 @@ const mockCommunities: ChatCommunity[] = [
 type ChatTabType = 'pv' | 'groupes' | 'communautes';
 
 const ChatScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ChatTabType>('pv');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const tabs = [
     { key: 'pv' as ChatTabType, label: 'PV', icon: 'person' },
@@ -137,29 +146,93 @@ const ChatScreen: React.FC = () => {
     { key: 'communautes' as ChatTabType, label: 'Communautés', icon: 'globe' },
   ];
 
-  const renderPrivateChat = ({ item }: { item: ChatContact }) => (
-    <TouchableOpacity style={styles.chatItem}>
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={24} color={COLORS.neutral[400]} />
-        </View>
-        {item.unreadCount && item.unreadCount > 0 && (
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadText}>{item.unreadCount}</Text>
+  // Charger les conversations
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      setLoading(true);
+      const data = await chatService.getUserConversations();
+      setConversations(data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadConversations();
+    setRefreshing(false);
+  };
+
+  const renderConversation = ({ item }: { item: Conversation }) => {
+    const getConversationName = () => {
+      if (item.type === 'private' && item.members) {
+        const otherMember = item.members.find(member => member.user_id !== user?.id);
+        return otherMember?.user?.username || 'Utilisateur';
+      }
+      return item.name || 'Conversation';
+    };
+
+    const getLastMessage = () => {
+      if (item.messages && item.messages.length > 0) {
+        return item.messages[0].content;
+      }
+      return 'Aucun message';
+    };
+
+    const getLastMessageTime = () => {
+      if (item.messages && item.messages.length > 0) {
+        return chatService.formatMessageTime(item.messages[0].created_at);
+      }
+      return '';
+    };
+
+    const unreadCount = chatService.getUnreadCount(item, user?.id || '');
+
+    return (
+      <TouchableOpacity 
+        style={styles.chatItem}
+        onPress={() => {
+          // Navigation vers l'écran de conversation
+          console.log('Navigation vers la conversation:', item.id);
+        }}
+      >
+        <View style={styles.avatarContainer}>
+          <View style={[styles.avatar, item.type === 'group' ? styles.groupAvatar : item.type === 'community' ? styles.communityAvatar : null]}>
+            <Ionicons 
+              name={item.type === 'private' ? 'person' : item.type === 'group' ? 'people' : 'globe'} 
+              size={24} 
+              color={COLORS.neutral[400]} 
+            />
           </View>
-        )}
-      </View>
-      <View style={styles.chatInfo}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.chatName}>{item.name}</Text>
-          <Text style={styles.chatTime}>{item.timestamp}</Text>
+          {unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>{unreadCount}</Text>
+            </View>
+          )}
         </View>
-        <Text style={styles.chatMessage} numberOfLines={1}>
-          {item.lastMessage}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={styles.chatInfo}>
+          <View style={styles.chatHeader}>
+            <Text style={styles.chatName}>{getConversationName()}</Text>
+            <Text style={styles.chatTime}>{getLastMessageTime()}</Text>
+          </View>
+          <View style={styles.chatDetails}>
+            <Text style={styles.chatMessage} numberOfLines={1}>
+              {getLastMessage()}
+            </Text>
+            {item.type !== 'private' && item.members && (
+              <Text style={styles.memberCount}>{item.members.length} membres</Text>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderGroup = ({ item }: { item: ChatGroup }) => (
     <TouchableOpacity style={styles.chatItem}>
@@ -355,17 +428,37 @@ const ChatScreen: React.FC = () => {
   };
 
   const renderContent = () => {
-    const filteredData = getFilteredData();
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#008080" />
+          <Text style={styles.loadingText}>Chargement des conversations...</Text>
+        </View>
+      );
+    }
+
+    const filteredConversations = conversations.filter(conv => {
+      if (!searchQuery.trim()) return true;
+      
+      const searchLower = searchQuery.toLowerCase();
+      const conversationName = conv.type === 'private' && conv.members 
+        ? conv.members.find(member => member.user_id !== user?.id)?.user?.username || ''
+        : conv.name || '';
+      
+      return conversationName.toLowerCase().includes(searchLower);
+    });
     
     switch (activeTab) {
       case 'pv':
         return (
           <FlatList
-            data={filteredData}
-            renderItem={renderPrivateChat}
+            data={filteredConversations.filter(conv => conv.type === 'private')}
+            renderItem={renderConversation}
             keyExtractor={(item) => item.id}
             style={styles.chatList}
             contentContainerStyle={styles.chatListContent}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
             ListEmptyComponent={
               searchQuery ? (
                 <View style={styles.emptySearchContainer}>
@@ -375,49 +468,57 @@ const ChatScreen: React.FC = () => {
                     Aucune conversation ne correspond à "{searchQuery}"
                   </Text>
                 </View>
-              ) : null
+              ) : (
+                <View style={styles.emptySearchContainer}>
+                  <Ionicons name="chatbubbles-outline" size={64} color={COLORS.neutral[400]} />
+                  <Text style={styles.emptySearchTitle}>Aucune conversation</Text>
+                  <Text style={styles.emptySearchSubtitle}>
+                    Commencez une nouvelle conversation !
+                  </Text>
+                </View>
+              )
             }
           />
         );
       case 'groupes':
         return (
           <FlatList
-            data={filteredData}
-            renderItem={renderGroup}
+            data={filteredConversations.filter(conv => conv.type === 'group')}
+            renderItem={renderConversation}
             keyExtractor={(item) => item.id}
             style={styles.chatList}
             contentContainerStyle={styles.chatListContent}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
             ListEmptyComponent={
-              searchQuery ? (
-                <View style={styles.emptySearchContainer}>
-                  <Ionicons name="search-outline" size={64} color={COLORS.neutral[400]} />
-                  <Text style={styles.emptySearchTitle}>Aucun résultat trouvé</Text>
-                  <Text style={styles.emptySearchSubtitle}>
-                    Aucun groupe ne correspond à "{searchQuery}"
-                  </Text>
-                </View>
-              ) : null
+              <View style={styles.emptySearchContainer}>
+                <Ionicons name="people-outline" size={64} color={COLORS.neutral[400]} />
+                <Text style={styles.emptySearchTitle}>Aucun groupe</Text>
+                <Text style={styles.emptySearchSubtitle}>
+                  Créez votre premier groupe !
+                </Text>
+              </View>
             }
           />
         );
       case 'communautes':
         return (
           <FlatList
-            data={filteredData}
-            renderItem={renderCommunity}
+            data={filteredConversations.filter(conv => conv.type === 'community')}
+            renderItem={renderConversation}
             keyExtractor={(item) => item.id}
             style={styles.chatList}
             contentContainerStyle={styles.chatListContent}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
             ListEmptyComponent={
-              searchQuery ? (
-                <View style={styles.emptySearchContainer}>
-                  <Ionicons name="search-outline" size={64} color={COLORS.neutral[400]} />
-                  <Text style={styles.emptySearchTitle}>Aucun résultat trouvé</Text>
-                  <Text style={styles.emptySearchSubtitle}>
-                    Aucune communauté ne correspond à "{searchQuery}"
-                  </Text>
-                </View>
-              ) : null
+              <View style={styles.emptySearchContainer}>
+                <Ionicons name="globe-outline" size={64} color={COLORS.neutral[400]} />
+                <Text style={styles.emptySearchTitle}>Aucune communauté</Text>
+                <Text style={styles.emptySearchSubtitle}>
+                  Rejoignez une communauté !
+                </Text>
+              </View>
             }
           />
         );
@@ -479,11 +580,21 @@ const ChatScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: 'transparent', // Supprimer le fond blanc
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: COLORS.neutral[500],
+    },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

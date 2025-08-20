@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { Ionicons } from '@expo/vector-icons';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import { useNavigation } from '@react-navigation/native';
 import AppBackground from '../../components/ui/AppBackground';
 
@@ -54,7 +54,7 @@ const Row: React.FC<RowProps> = ({ icon, label, children, onPress, danger }) => 
 
 const SettingsScreen = () => {
   const { theme, toggleTheme, isDark, fontSize, setFontSize } = useAppTheme();
-  const { logout } = useSimpleAuth();
+  const { logout } = useAuthStore();
   const navigation = useNavigation();
   const [pushNotif, setPushNotif] = useState(true);
   const [emailNotif, setEmailNotif] = useState(false);

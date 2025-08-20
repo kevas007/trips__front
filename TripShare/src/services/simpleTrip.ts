@@ -28,7 +28,7 @@ class SimpleTripService {
     try {
       console.log('📝 Création du voyage:', tripData.title);
       
-      // 1. Créer le voyage de base
+      // 1. Créer le voyage de base SANS photos
       const tripPayload = {
         title: tripData.title,
         description: tripData.description,
@@ -39,6 +39,7 @@ class SimpleTripService {
         tags: tripData.tags,
         start_date: new Date().toISOString(),
         end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // +7 jours par défaut
+        photos: [], // Pas de photos dans la création initiale
       };
 
       const tripResponse = await unifiedApi.post<any>('/trips', tripPayload);
@@ -49,7 +50,7 @@ class SimpleTripService {
 
       console.log('✅ Voyage créé avec ID:', tripResponse.id);
 
-      // 2. Uploader les photos si présentes
+      // 2. Uploader les photos une par une via l'endpoint dédié
       let photosUploaded = 0;
       if (tripData.photos && tripData.photos.length > 0) {
         console.log('📸 Upload de', tripData.photos.length, 'photos...');

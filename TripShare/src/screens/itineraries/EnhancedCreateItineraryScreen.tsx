@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import LocationSearchInput from '../../components/places/LocationSearchInput';
 // import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -43,7 +43,7 @@ interface CreateItineraryScreenProps {
 const EnhancedCreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigation, route }) => {
   const { theme, isDark } = useAppTheme();
   const { t } = useTranslation();
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
 
   // Form state
   const [title, setTitle] = useState('');
@@ -610,8 +610,9 @@ const EnhancedCreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ n
 
   return (
     <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
+      style={[styles.container, { backgroundColor: theme.colors.background.primary }, { backgroundColor: 'transparent' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      contentContainerStyle={{ flex: 1, backgroundColor: 'transparent' }}
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border.primary }]}>

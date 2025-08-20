@@ -12,18 +12,18 @@ interface BackendResponse<T = any> {
 class UnifiedApiService {
   private baseURL = API_CONFIG.BASE_URL;
 
-  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options: RequestInit & { skipApiPrefix?: boolean } = {}): Promise<T> {
     // Récupérer le token depuis authService
     let token = authService.getToken();
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(!options.skipApiPrefix && token && { Authorization: `Bearer ${token}` }),
       ...options.headers as Record<string, string>,
     };
 
-    // Utiliser getFullApiUrl pour construire l'URL complète avec le préfixe /api/v1/
-    const fullUrl = getFullApiUrl(endpoint);
+    // Construire l'URL complète
+    const fullUrl = getFullApiUrl(endpoint, options.skipApiPrefix);
 
     console.log(`🚀 UnifiedAPI ${options.method || 'GET'} ${fullUrl}`);
     console.log(`🔍 UnifiedAPI - Token disponible:`, !!token);
@@ -83,8 +83,8 @@ class UnifiedApiService {
     return data.data as T;
   }
 
-  async get<T>(endpoint: string): Promise<T> {
-    return this.makeRequest<T>(endpoint, { method: 'GET' });
+  async get<T>(endpoint: string, options: { skipApiPrefix?: boolean } = {}): Promise<T> {
+    return this.makeRequest<T>(endpoint, { method: 'GET', ...options });
   }
 
   async post<T>(endpoint: string, data?: any): Promise<T> {

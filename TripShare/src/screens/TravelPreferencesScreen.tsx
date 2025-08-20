@@ -14,11 +14,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../hooks/useAppTheme';
-import { api as apiService } from '../services/api';
 import { authService } from '../services/auth';
 import { UserTravelPreferences } from '../types/user';
 import { useNavigation } from '@react-navigation/native';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useAuthStore } from '../store';
 import { screenStyles } from './TravelPreferencesStyles';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
@@ -111,7 +110,7 @@ const ACCESSIBILITY_NEEDS = [
 export default function TravelPreferencesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme, isDark } = useAppTheme();
-  const { logout, completeOnboarding } = useSimpleAuth();
+  const { logout, setNewUser, updatePreferences } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState<LocalUserPreferences>({
     budget: '',
@@ -183,19 +182,18 @@ export default function TravelPreferencesScreen() {
       console.log('🎯 TravelPreferencesScreen - Début de la sauvegarde');
       setLoading(true);
 
-      const backendPreferences: UserTravelPreferences = {
+      const backendPreferences = {
         activities: preferences.interests || [],
         accommodation: preferences.accommodationTypes || [],
-        transport: preferences.transportModes || [],
+        transportation: preferences.transportModes || [],
         food: preferences.dietaryRestrictions || [],
         budget: preferences.budget ? [preferences.budget] : [],
-        climate: preferences.climatePreference ? [preferences.climatePreference] : [],
-        culture: []
+        climate: preferences.climatePreference ? [preferences.climatePreference] : []
       };
 
       console.log('🎯 TravelPreferencesScreen - Préférences à sauvegarder:', backendPreferences);
 
-      const response = await apiService.updatePreferences(backendPreferences);
+      const response = await updatePreferences(backendPreferences);
       
       if (response.success) {
         console.log('🎯 TravelPreferencesScreen - Sauvegarde réussie');
@@ -213,7 +211,7 @@ export default function TravelPreferencesScreen() {
                   if (user) {
                     console.log('🎯 TravelPreferencesScreen - Token vérifié, fin de l\'onboarding');
                     // Marquer l'onboarding comme terminé
-                    completeOnboarding();
+                    setNewUser(false);
                     // L'AppNavigator basculera automatiquement vers Main car isNewUser sera false
                   }
                 } catch (error) {
@@ -244,7 +242,7 @@ export default function TravelPreferencesScreen() {
   const handleSkip = () => {
     console.log('🎯 TravelPreferencesScreen - Onboarding ignoré');
     // Marquer l'onboarding comme terminé sans sauvegarder les préférences
-    completeOnboarding();
+    setNewUser(false);
     // L'AppNavigator basculera automatiquement vers Main car isNewUser sera false
   };
 

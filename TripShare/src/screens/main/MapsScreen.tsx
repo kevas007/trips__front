@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SimpleMapView from '../../components/places/SimpleMapView';
 import { Ionicons } from '@expo/vector-icons';
-import { tripShareApi } from '../../services/tripShareApi';
+import { useTripStore } from '../../store';
 import AppBackground from '../../components/ui/AppBackground';
 
 const MOCK_ITINERARIES = [
@@ -53,22 +53,18 @@ const FILTERS: { key: string; label: string; icon: FilterIcon }[] = [
 
 const MapsScreen = () => {
   const [selectedFilter, setSelectedFilter] = useState('tous');
-  const [trips, setTrips] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { trips, loading, loadTrips } = useTripStore();
   const [useMockData, setUseMockData] = useState(false);
 
   useEffect(() => {
     const fetchTrips = async () => {
-      setLoading(true);
       try {
         console.log('🗺️ Tentative de récupération des voyages publics depuis l\'API...');
-        const data = await tripShareApi.listPublicTrips(20, 0);
-        console.log('✅ Voyages publics récupérés:', data.length);
-        setTrips(data);
+        await loadTrips(true);
+        console.log('✅ Voyages publics récupérés:', trips.length);
         setUseMockData(false);
       } catch (error) {
         console.log('❌ Erreur API, utilisation des données mockées:', error);
-        setTrips(MOCK_ITINERARIES);
         setUseMockData(true);
         
         // Afficher un message informatif
@@ -81,8 +77,6 @@ const MapsScreen = () => {
             );
           }
         }
-      } finally {
-        setLoading(false);
       }
     };
     fetchTrips();
@@ -186,7 +180,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0', // Fallback background for the map
+    backgroundColor: 'transparent', // Supprimer le fond blanc
   },
 });
 

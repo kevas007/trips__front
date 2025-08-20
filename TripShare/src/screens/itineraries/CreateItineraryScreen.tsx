@@ -21,11 +21,19 @@ import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import { useTrips } from '../../hooks/useTripShareApi';
 import { authService } from '../../services/auth';
+import { analyzeModerationError, showModerationAlert, createUploadSummary, ModerationError } from '../../utils/moderationUtils';
+import CustomTagInput from '../../components/tags/CustomTagInput';
+import PopularTags from '../../components/tags/PopularTags';
 import LocationSearchInput, { LocationSuggestion } from '../../components/places/LocationSearchInput';
 import PopularPlacesSuggestions from '../../components/places/PopularPlacesSuggestions';
+import EnhancedLocationSearch from '../../components/places/EnhancedLocationSearch';
+import SmartDestinationSuggestions from '../../components/places/SmartDestinationSuggestions';
+import AutoItinerarySuggestions from '../../components/itinerary/AutoItinerarySuggestions';
+import { PopularDestination } from '../../services/enhancedLocationService';
+import { ItineraryStep } from '../../services/itinerarySuggestionsService';
 import { API_CONFIG } from '../../config/api';
 import { tripShareApi } from '../../services/tripShareApi';
 import { TripCalculationService } from '../../services/tripCalculationService';
@@ -198,7 +206,7 @@ const CongratulationsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
 
 const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigation }) => {
   const { theme } = useAppTheme();
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   
   const [isCreating, setIsCreating] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -208,31 +216,11 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   
-  // Animations
+  // Animation simple pour les transitions
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
   
-  // États pour les encouragements
-  const [encouragement, setEncouragement] = useState('');
+  // États pour les confirmations
   const [showConfetti, setShowConfetti] = useState(false);
-  const [stepCompletion, setStepCompletion] = useState<boolean[]>(new Array(4).fill(false));
-  
-  // Messages d'encouragement par étape
-  const encouragements = [
-    "🎯 Parfait ! Donnons un nom à votre aventure",
-    "⚡ Excellent ! Définissons les détails de votre voyage",
-    "🗺️ Génial ! Créons votre itinéraire étape par étape",
-    "📸 Fantastique ! Ajoutons les touches finales"
-  ];
-  
-  const completionMessages = [
-    "🎉 Étape terminée ! Vous avancez bien !",
-    "🚀 Super progression ! Continuez comme ça !",
-    "🌟 Excellent travail ! Presque fini !",
-    "🏆 Bravo ! Votre itinéraire est prêt !"
-  ];
   
   const [itineraryData, setItineraryData] = useState<ItineraryData>({
     title: '',
@@ -249,6 +237,9 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
     tags: [],
     steps: [],
   });
+
+  // État pour les tags d'objets
+  const [selectedTagObjects, setSelectedTagObjects] = useState<any[]>([]);
 
   const steps = [
     {
@@ -298,33 +289,19 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
 
   // Effets d'animation
   useEffect(() => {
-    // Animation d'entrée pour chaque étape
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Animation d'entrée simple
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
 
-    // Mettre à jour l'encouragement
-    setEncouragement(encouragements[currentStep]);
-    
-    // Animation de la barre de progression
-    Animated.timing(progressAnim, {
-      toValue: ((currentStep + 1) / steps.length) * 100,
-      duration: 800,
-      useNativeDriver: false,
+    // Animation simple au changement d'étape
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
     }).start();
   }, [currentStep]);
 
@@ -332,27 +309,12 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
   const celebrateStepCompletion = () => {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 2000);
-    
-    // Mettre à jour le statut de completion
-    const newCompletion = [...stepCompletion];
-    newCompletion[currentStep] = true;
-    setStepCompletion(newCompletion);
   };
 
-  // Fonction pour animer les boutons
+  // Fonction simplifiée pour les boutons
   const animateButton = (callback: () => void) => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start(callback);
+    // Animation simple sans scaleAnim
+    setTimeout(callback, 100);
   };
 
   const validateCurrentStep = () => {
@@ -819,38 +781,91 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
       const token = authService.getToken();
       if (!token) return;
 
+      const uploadResults = {
+        success: 0,
+        failed: 0,
+        errors: [] as ModerationError[]
+      };
+
       for (let i = 0; i < photoUris.length; i++) {
         const photoUri = photoUris[i];
         
         // Ignorer les URLs qui ne sont pas des fichiers locaux
         if (!photoUri.startsWith('file://')) continue;
 
-        // Créer le FormData
-        const formData = new FormData();
-        formData.append('photo', {
-          uri: photoUri,
-          type: 'image/jpeg',
-          name: `photo_${i + 1}.jpg`
-        } as any);
-        
-        formData.append('description', `Photo ${i + 1} du voyage`);
+        try {
+          // Créer le FormData
+          const formData = new FormData();
+          formData.append('photo', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: `photo_${i + 1}.jpg`
+          } as any);
+          
+          formData.append('description', `Photo ${i + 1} du voyage`);
 
-        // Upload vers le backend
-        const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/trips/${tripId}/photos`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-          body: formData
-        });
+          // Upload vers le backend
+          const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/trips/${tripId}/photos`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+            body: formData
+          });
 
-        if (!response.ok) {
-          console.error(`Erreur upload photo ${i + 1}:`, response.status);
+          if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = '';
+            
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.error || errorData.message || errorText;
+            } catch {
+              errorMessage = errorText;
+            }
+
+            console.error(`❌ Erreur upload photo ${i + 1}:`, response.status, errorMessage);
+            
+            // Analyser l'erreur avec notre utilitaire
+            const moderationError = analyzeModerationError(errorMessage, response.status);
+            uploadResults.errors.push(moderationError);
+            uploadResults.failed++;
+            
+          } else {
+            console.log(`✅ Photo ${i + 1} uploadée avec succès`);
+            uploadResults.success++;
+          }
+        } catch (photoError) {
+          console.error(`❌ Erreur photo ${i + 1}:`, photoError);
+          uploadResults.errors.push({
+            isModerated: false,
+            isInvalidFormat: false,
+            isTechnical: true,
+            message: `Erreur d'upload photo ${i + 1}`,
+            originalError: String(photoError)
+          });
+          uploadResults.failed++;
         }
       }
+
+      // Afficher un résumé intelligent
+      const summary = createUploadSummary(uploadResults.success, uploadResults.failed, uploadResults.errors);
+      console.log(summary);
+
+      if (uploadResults.failed > 0) {
+        showModerationAlert(uploadResults.errors, uploadResults.success, photoUris.length);
+      } else if (uploadResults.success > 0) {
+        console.log(`🎉 Toutes les ${uploadResults.success} photos ont été uploadées !`);
+      }
+
     } catch (error) {
       console.error('Erreur upload photos:', error);
+      Alert.alert(
+        '❌ Erreur technique',
+        'Impossible d\'uploader les photos. Vérifiez votre connexion internet.',
+        [{ text: 'OK', style: 'default' }]
+      );
     }
   };
 
@@ -942,59 +957,14 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
     }
   };
 
-  const renderProgressBar = () => (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressHeader}>
-        <Text style={[styles.progressTitle, { color: theme.colors.text.primary }]}>
-          {steps[currentStep].title}
-        </Text>
-        <Text style={[styles.progressSubtitle, { color: theme.colors.text.secondary }]}>
-          {steps[currentStep].subtitle}
-        </Text>
-      </View>
-      
-      <View style={styles.progressBarContainer}>
-        <View style={[styles.progressBar, { backgroundColor: theme.colors.background.card }]}>
-          <Animated.View 
-            style={[
-              styles.progressFill, 
-              { 
-                width: progressAnim.interpolate({
-                  inputRange: [0, 100],
-                  outputRange: ['0%', '100%'],
-                }),
-                backgroundColor: theme.colors.primary[0]
-              }
-            ]} 
-          />
-        </View>
-        <View style={styles.progressSteps}>
-          {steps.map((step, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.progressStep,
-                index <= currentStep && { backgroundColor: theme.colors.primary[0] }
-              ]}
-            >
-              <Ionicons 
-                name={step.icon as any} 
-                size={16} 
-                color={index <= currentStep ? 'white' : theme.colors.text.secondary} 
-              />
-            </View>
-          ))}
-        </View>
-      </View>
-      
-      <View style={styles.progressInfo}>
-        <Text style={[styles.progressText, { color: theme.colors.text.secondary }]}>
-          Étape {currentStep + 1} sur {steps.length}
-        </Text>
-        <Text style={[styles.progressPercentage, { color: theme.colors.primary[0] }]}>
-          {Math.round(((currentStep + 1) / steps.length) * 100)}%
-        </Text>
-      </View>
+  const renderSimpleHeader = () => (
+    <View style={styles.simpleHeaderContainer}>
+      <Text style={[styles.simpleHeaderTitle, { color: theme.colors.text.primary }]}>
+        {steps[currentStep].title}
+      </Text>
+      <Text style={[styles.simpleHeaderSubtitle, { color: theme.colors.text.secondary }]}>
+        Étape {currentStep + 1} sur {steps.length}
+      </Text>
     </View>
   );
 
@@ -1520,30 +1490,37 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={[styles.inputLabel, { color: theme.colors.text.primary }]}>Tags</Text>
-        <View style={styles.tagsContainer}>
-          {suggestedTags.map((tag) => (
-            <TouchableOpacity
-              key={tag}
-              style={[
-                styles.tagButton,
-                { borderColor: theme.colors.border.primary },
-                itineraryData.tags.includes(tag) && { 
-                  backgroundColor: theme.colors.primary[0],
-                  borderColor: theme.colors.primary[0]
-                }
-              ]}
-              onPress={() => toggleTag(tag)}
-            >
-              <Text style={[
-                styles.tagText,
-                { color: itineraryData.tags.includes(tag) ? 'white' : theme.colors.text.secondary }
-              ]}>
-                {tag}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={[styles.inputLabel, { color: theme.colors.text.primary }]}>Tags personnalisés</Text>
+        <CustomTagInput
+          selectedTags={selectedTagObjects}
+          onTagsChange={(tags) => {
+            setSelectedTagObjects(tags);
+            // Mettre à jour aussi l'ancien format pour compatibilité
+            setItineraryData(prev => ({ 
+              ...prev, 
+              tags: tags.map(tag => tag.name) 
+            }));
+          }}
+          placeholder="Ajoutez vos propres tags..."
+          maxTags={10}
+          allowCustomTags={true}
+        />
+        
+        {/* Tags populaires comme suggestions */}
+        <PopularTags
+          onTagPress={(tag) => {
+            if (!selectedTagObjects.some(selected => selected.id === tag.id)) {
+              const updatedTags = [...selectedTagObjects, tag];
+              setSelectedTagObjects(updatedTags);
+              setItineraryData(prev => ({ 
+                ...prev, 
+                tags: updatedTags.map(t => t.name) 
+              }));
+            }
+          }}
+          selectedTagIds={selectedTagObjects.map(tag => tag.id)}
+          limit={12}
+        />
       </View>
 
       <View style={styles.inputGroup}>
@@ -1662,11 +1639,12 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
         <View style={{ width: 24 }} />
       </View>
 
-      {renderProgressBar()}
+      {renderSimpleHeader()}
 
       <KeyboardAvoidingView 
-        style={styles.content}
+        style={[styles.content, { backgroundColor: theme.colors.background.primary }, { backgroundColor: 'transparent' }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        contentContainerStyle={{ flex: 1, backgroundColor: 'transparent' }}
       >
         <FlatList
           data={[{ id: 'content' }]}
@@ -1727,11 +1705,13 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
       <Confetti visible={showConfetti} />
       {showCongrats && <CongratulationsScreen onClose={() => {
         setShowCongrats(false);
-        // Retourner à l'écran principal du HomeStack
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'HomeMain' }],
-        });
+        // Retourner à l'écran précédent ou fermer le modal
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          // Si pas d'historique, essayer de naviguer vers Home
+          navigation.navigate('Home' as never);
+        }
       }} />}
 
       {/* Date Pickers */}
@@ -1787,20 +1767,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
   },
-  progressContainer: {
+  simpleHeaderContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  progressHeader: {
-    marginBottom: 16,
+    paddingVertical: 12,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
-  progressTitle: {
+  simpleHeaderTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
   },
-  progressSubtitle: {
+  simpleHeaderSubtitle: {
     fontSize: 14,
     fontWeight: '400',
   },

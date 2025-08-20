@@ -8,7 +8,7 @@ export const UserTripsScreenStyles = StyleSheet.create({
   // Container principal avec gradient
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'transparent', // Supprimer le fond blanc
   },
 
   // Header avec gradient

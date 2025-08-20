@@ -3,12 +3,12 @@ import { useNavigation } from '@react-navigation/native';
 import ProfileView from './ProfileView';
 import { useProfileData } from '../../hooks/useProfileData';
 import { useRequireAuth } from '../../hooks/useRequireAuth';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 
 const ProfileScreen = () => {
   useRequireAuth();
   const navigation = useNavigation();
-  const { logout } = useSimpleAuth();
+  const { logout } = useAuthStore();
   const {
     user,
     stats,

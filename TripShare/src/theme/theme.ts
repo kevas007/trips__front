@@ -6,10 +6,10 @@ export const lightTheme: Theme = {
     accent: ['#FF9500', '#FF3B30', '#34C759'],
     secondary: ['#4FB3B3', '#D1F0EF', '#00B8A9'],
     background: {
-      primary: '#FAFAFA',
-      card: '#FFFFFF',
+      primary: 'transparent', // Supprimer le fond blanc
+      card: 'transparent', // Supprimer le fond blanc
       overlay: 'rgba(28, 27, 31, 0.5)',
-      gradient: ['#FAFAFA', '#FFFFFF'],
+      gradient: ['transparent', 'transparent'], // Supprimer le gradient blanc
     },
     text: {
       primary: '#1C1B1F',
@@ -104,10 +104,10 @@ export const darkTheme: Theme = {
     accent: ['#FF9F0A', '#FF453A', '#32D74B'],
     secondary: ['#70D6C9', '#004F4C', '#4EA3A3'],
     background: {
-      primary: '#1C1B1F',
-      card: '#1C1B1F',
+      primary: 'transparent', // Supprimer le fond sombre
+      card: 'transparent', // Supprimer le fond sombre
       overlay: 'rgba(230, 225, 229, 0.7)',
-      gradient: ['#1C1B1F', '#1C1B1F'],
+      gradient: ['transparent', 'transparent'], // Supprimer le gradient sombre
     },
     text: {
       primary: '#E6E1E5',

@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import { tripShareApi } from '../../services/tripShareApi';
 import LocationSearchInput, { LocationSuggestion } from '../../components/places/LocationSearchInput';
 
@@ -62,7 +62,7 @@ interface Place {
 
 const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigation }) => {
   const { theme, isDark } = useAppTheme();
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   
   // État de l'assistant
   const [currentStep, setCurrentStep] = useState(0);
@@ -451,7 +451,7 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
         notes: place.notes || '',
       }));
 
-      // Préparer les données pour l'API
+      // Préparer les données pour l'API (SANS photos)
       const tripRequest = {
         title: tripData.title,
         description: tripData.description,
@@ -466,7 +466,7 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
         budget: tripData.budget ? parseFloat(tripData.budget) : undefined,
         status: tripData.status, // ✅ Utiliser le statut sélectionné par l'utilisateur
         visibility: tripData.isPublic ? 'public' : 'private', // ✅ Visibilité correcte
-        photos: tripData.photos,
+        photos: [], // Pas de photos dans la création initiale
         duration: tripData.duration,
         difficulty: tripData.difficulty,
         tags: tripData.tags,
@@ -476,8 +476,33 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
       console.log('🚀 Création du voyage avec les données:', JSON.stringify(tripRequest, null, 2));
       console.log('📊 Statut sélectionné par l\'utilisateur:', tripData.status);
       
-      // Créer le voyage via l'API
+      // 1. Créer le voyage via l'API
       const result = await tripShareApi.createTrip(tripRequest);
+      
+      console.log('✅ Voyage créé avec ID:', result.id);
+      
+      // 2. Uploader les photos une par une
+      if (tripData.photos && tripData.photos.length > 0) {
+        console.log('📸 Upload de', tripData.photos.length, 'photos...');
+        
+        for (let i = 0; i < tripData.photos.length; i++) {
+          try {
+            const formData = new FormData();
+            formData.append('photo', {
+              uri: tripData.photos[i],
+              type: 'image/jpeg',
+              name: `photo_${i + 1}.jpg`
+            } as any);
+            
+            formData.append('description', `Photo ${i + 1} du voyage`);
+            
+            await tripShareApi.uploadTripPhoto(result.id, formData);
+            console.log(`✅ Photo ${i + 1}/${tripData.photos.length} uploadée`);
+          } catch (error) {
+            console.warn(`⚠️ Erreur upload photo ${i + 1}:`, error);
+          }
+        }
+      }
       
       console.log('✅ Voyage créé avec succès:', result);
       
@@ -1141,9 +1166,10 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
       </View>
 
       {/* Step Content */}
-      <KeyboardAvoidingView 
-        style={styles.content}
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: 'transparent' }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        contentContainerStyle={{ flex: 1, backgroundColor: 'transparent' }}
       >
         <Animated.View 
           style={[

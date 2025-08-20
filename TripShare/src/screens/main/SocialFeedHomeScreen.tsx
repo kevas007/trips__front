@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 
 const { width } = Dimensions.get('window');
 
@@ -68,7 +68,7 @@ interface SocialFeedHomeScreenProps {
 
 const SocialFeedHomeScreen: React.FC<SocialFeedHomeScreenProps> = ({ navigation }) => {
   const { theme } = useAppTheme();
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,13 +81,13 @@ const SocialFeedHomeScreen: React.FC<SocialFeedHomeScreenProps> = ({ navigation 
       user: {
         id: '1',
         name: 'Sarah Aventurière',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100',
+        avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
         verified: true,
       },
       location: 'Bali, Indonésie',
       content: {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800',
+        url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
       },
       caption: '🌴 Incroyable voyage à Bali ! Voici mon itinéraire complet de 2 semaines pour découvrir cette île paradisiaque.',
       likes: 1247,
@@ -112,13 +112,13 @@ const SocialFeedHomeScreen: React.FC<SocialFeedHomeScreenProps> = ({ navigation 
       user: {
         id: '2',
         name: 'Alex Nomade',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+        avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
         verified: false,
       },
       location: 'Tokyo, Japon',
       content: {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800',
+        url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
       },
       caption: '🗼 Tokyo est une ville incroyable ! Entre tradition et modernité, voici mon itinéraire de 10 jours.',
       likes: 892,

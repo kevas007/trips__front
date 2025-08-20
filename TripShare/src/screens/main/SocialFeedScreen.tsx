@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import FloatingActionButton from '../../components/ui/FloatingActionButton';
 import SimpleMapView from '../../components/places/SimpleMapView';
 import * as Linking from 'expo-linking';
@@ -78,7 +78,7 @@ interface SocialFeedScreenProps {
 const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, personalized, filters, headerTitle }) => {
   const { theme, isDark } = useAppTheme();
   const { t } = useTranslation();
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   
   const [feedPosts, setFeedPosts] = useState<SocialPost[]>(posts || [
     // Post avec user null pour tester la gestion d'erreur
@@ -104,13 +104,13 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
       user: {
         id: '1',
         name: 'Sarah Voyage',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100',
+        avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
         verified: true,
       },
       location: 'Bali, Indonésie',
       content: {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800',
+        url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
       },
       caption: '🌴 Premier jour à Bali ! Les rizières en terrasse de Tegalalang sont absolument magnifiques. La culture balinaise est si riche et authentique. #Bali #Indonésie #Voyage #Culture',
       likes: 1247,
@@ -131,13 +131,13 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
       user: {
         id: '2',
         name: 'Alex Explorer',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+        avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
         verified: false,
       },
       location: 'Santorini, Grèce',
       content: {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=800',
+        url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
       },
       caption: '☀️ Coucher de soleil magique à Oia ! Les maisons blanches et les dômes bleus créent un paysage de carte postale. Le vin local est exceptionnel aussi ! #Santorini #Grèce #CoucherDeSoleil',
       likes: 892,
@@ -158,13 +158,13 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
       user: {
         id: '3',
         name: 'Marie Aventurière',
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
+        avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
         verified: true,
       },
       location: 'Tokyo, Japon',
       content: {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800',
+        url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
       },
       caption: '🗼 Tokyo by night ! Les néons de Shibuya sont hypnotisants. J\'ai découvert des ramens incroyables dans un petit restaurant caché. La culture japonaise est fascinante ! #Tokyo #Japon #Néon #Culture',
       likes: 2156,
@@ -185,13 +185,13 @@ const SocialFeedScreen: React.FC<SocialFeedScreenProps> = ({ navigation, posts, 
       user: {
         id: '4',
         name: 'Thomas Nomade',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100',
+        avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
         verified: false,
       },
       location: 'Marrakech, Maroc',
       content: {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=800',
+        url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
       },
       caption: '🏺 Les souks de Marrakech sont un labyrinthe de couleurs et d\'odeurs ! Le thé à la menthe et les épices parfument l\'air. Une expérience sensorielle unique ! #Marrakech #Maroc #Souks #Culture',
       likes: 678,

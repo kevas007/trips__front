@@ -44,8 +44,8 @@ const getCurrentEnvironment = (): keyof typeof LOCAL_ENVIRONMENTS => {
   }
 };
 
-// Force la configuration pour Android et iOS
-const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = (Platform.OS === 'android' || Platform.OS === 'ios') ? 'network' : 'localhost';
+// Force la configuration pour Android et iOS - UTILISER NETWORK POUR LES DEVICES PHYSIQUES
+const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = 'network';
 
 export const API_CONFIG = {
   // Configuration de base
@@ -78,23 +78,25 @@ export const API_CONFIG = {
   NETWORK_IP: '192.168.0.220', // IP locale pour appareils physiques
 };
 
-export const getFullApiUrl = (endpoint: string): string => {
+export const getFullApiUrl = (endpoint: string, skipApiPrefix?: boolean): string => {
   // Nettoyer l'URL de base
   const cleanBaseUrl = API_CONFIG.BASE_URL.replace(/\/+$/g, '');
-  
-  // Nettoyer le préfixe API
-  const cleanPrefix = API_CONFIG.API_PREFIX.replace(/^\/+|\/+$/g, '');
   
   // Nettoyer l'endpoint
   const cleanEndpoint = endpoint.replace(/^\/+|\/+$/g, '');
   
+  // Nettoyer le préfixe API
+  const cleanPrefix = API_CONFIG.API_PREFIX.replace(/^\/+|\/+$/g, '');
+  
   // Construire l'URL complète
-  const url = `${cleanBaseUrl}/${cleanPrefix}/${cleanEndpoint}`;
+  const url = skipApiPrefix
+    ? `${cleanBaseUrl}/${cleanEndpoint}`
+    : `${cleanBaseUrl}/${cleanPrefix}/${cleanEndpoint}`;
   
   // Log pour debug
   console.log('🔍 Construction URL:', {
     base: cleanBaseUrl,
-    prefix: cleanPrefix,
+    prefix: skipApiPrefix ? '(public)' : cleanPrefix,
     endpoint: cleanEndpoint,
     url: url
   });

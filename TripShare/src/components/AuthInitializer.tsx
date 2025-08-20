@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
-import { useSimpleAuth } from '../contexts/SimpleAuthContext';
+import { useAuthStore } from '../store';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,7 +9,7 @@ interface AuthInitializerProps {
 }
 
 export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) => {
-  const { isLoading } = useSimpleAuth();
+  const { isLoading } = useAuthStore();
   const { theme, isDark } = useAppTheme();
 
   if (isLoading) {

@@ -13,6 +13,8 @@ import {
   TextInputProps,
   ViewStyle,
   TextStyle,
+  Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, getColorWithOpacity } from '../../design-system/colors';
@@ -43,7 +45,21 @@ export type InputState =
   | 'success'           // Succès
   | 'disabled';         // Désactivé
 
-export interface InputProps extends Omit<TextInputProps, 'style'> {
+// Types de clavier intelligents
+export type SmartKeyboardType = 
+  | 'default'
+  | 'email-address'
+  | 'numeric'
+  | 'phone-pad'
+  | 'number-pad'
+  | 'decimal-pad'
+  | 'url'
+  | 'web-search'
+  | 'twitter'
+  | 'facebook'
+  | 'auto'; // Détection automatique
+
+export interface InputProps extends Omit<TextInputProps, 'style' | 'keyboardType'> {
   // Contenu
   label?: string;
   placeholder?: string;
@@ -94,6 +110,24 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
   accessibilityLabel?: string;
   accessibilityHint?: string;
   testID?: string;
+  
+  // Clavier intelligent
+  smartKeyboard?: boolean; // Détection automatique du type de clavier
+  autoFocus?: boolean;
+  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
+  blurOnSubmit?: boolean;
+  
+  // Gestion du clavier
+  enableKeyboardAvoiding?: boolean;
+  keyboardAvoidingBehavior?: 'height' | 'position' | 'padding';
+  
+  // Navigation entre champs
+  nextInputRef?: React.RefObject<InputRef | null>;
+  onSubmitEditing?: () => void;
+  
+  // Props TextInput supplémentaires
+  keyboardType?: SmartKeyboardType;
+  disabled?: boolean;
 }
 
 export interface InputRef {
@@ -167,6 +201,20 @@ export const Input = forwardRef<InputRef, InputProps>(({
   accessibilityHint,
   testID,
   
+  // Clavier intelligent
+  smartKeyboard = false,
+  autoFocus = false,
+  returnKeyType,
+  blurOnSubmit,
+  
+  // Gestion du clavier
+  enableKeyboardAvoiding = false,
+  keyboardAvoidingBehavior = 'padding',
+  
+  // Navigation entre champs
+  nextInputRef,
+  onSubmitEditing,
+  
   ...textInputProps
 }, ref) => {
   // ========== ÉTAT LOCAL ==========
@@ -176,10 +224,59 @@ export const Input = forwardRef<InputRef, InputProps>(({
   const [internalValue, setInternalValue] = useState(value || '');
   const [validationMessage, setValidationMessage] = useState<string>('');
   const [isValid, setIsValid] = useState(true);
+  const [detectedKeyboardType, setDetectedKeyboardType] = useState(keyboardType);
   
   // Refs
   const inputRef = useRef<TextInput>(null);
   const focusAnimation = useRef(new Animated.Value(0)).current;
+  
+  // ========== DÉTECTION AUTOMATIQUE DU CLAVIER ==========
+  
+  const detectKeyboardType = (text: string, placeholder?: string): SmartKeyboardType => {
+    if (!smartKeyboard) return keyboardType || 'default';
+    
+    // Détection basée sur le placeholder
+    const lowerPlaceholder = placeholder?.toLowerCase() || '';
+    const lowerText = text.toLowerCase();
+    
+    // Email
+    if (lowerPlaceholder.includes('email') || lowerPlaceholder.includes('mail') || 
+        lowerText.includes('@') || lowerText.includes('.com')) {
+      return 'email-address';
+    }
+    
+    // Téléphone
+    if (lowerPlaceholder.includes('phone') || lowerPlaceholder.includes('téléphone') || 
+        lowerPlaceholder.includes('tel') || /^[\d\s\-\+\(\)]+$/.test(text)) {
+      return 'phone-pad';
+    }
+    
+    // URL
+    if (lowerPlaceholder.includes('url') || lowerPlaceholder.includes('site') || 
+        lowerText.includes('http') || lowerText.includes('www')) {
+      return 'url';
+    }
+    
+    // Nombre
+    if (lowerPlaceholder.includes('number') || lowerPlaceholder.includes('numéro') || 
+        lowerPlaceholder.includes('amount') || lowerPlaceholder.includes('montant') ||
+        /^\d+$/.test(text)) {
+      return 'numeric';
+    }
+    
+    // Décimal
+    if (lowerPlaceholder.includes('price') || lowerPlaceholder.includes('prix') || 
+        lowerPlaceholder.includes('decimal') || /^\d+\.\d+$/.test(text)) {
+      return 'decimal-pad';
+    }
+    
+    // Recherche
+    if (lowerPlaceholder.includes('search') || lowerPlaceholder.includes('recherche')) {
+      return 'web-search';
+    }
+    
+    return 'default';
+  };
   
   // ========== LOGIQUE DE VALIDATION ==========
   
@@ -227,6 +324,25 @@ export const Input = forwardRef<InputRef, InputProps>(({
     setValidationMessage(validation.message);
     onValidation?.(validation.isValid, validation.message);
   }, [internalValue, validationRules, required]);
+  
+  // Détection automatique du clavier
+  useEffect(() => {
+    if (smartKeyboard) {
+      const newKeyboardType = detectKeyboardType(internalValue, placeholder);
+      setDetectedKeyboardType(newKeyboardType);
+    }
+  }, [internalValue, placeholder, smartKeyboard]);
+  
+  // Auto-focus
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      // Délai pour s'assurer que le composant est monté
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
   
   // ========== LOGIQUE DES COULEURS ==========
   
@@ -431,6 +547,61 @@ export const Input = forwardRef<InputRef, InputProps>(({
     setIsPasswordVisible(!isPasswordVisible);
   };
   
+  // ========== NAVIGATION ENTRE CHAMPS ==========
+  
+  const handleSubmitEditing = () => {
+    // Appeler le callback personnalisé s'il existe
+    if (onSubmitEditing) {
+      onSubmitEditing();
+      return;
+    }
+    
+    // Navigation automatique vers le champ suivant
+    if (nextInputRef?.current) {
+      nextInputRef.current.focus();
+    } else {
+      // Si pas de champ suivant, masquer le clavier
+      Keyboard.dismiss();
+    }
+  };
+  
+  // ========== DÉTECTION AUTOMATIQUE DU RETURN KEY ==========
+  
+  const getReturnKeyType = (): 'done' | 'go' | 'next' | 'search' | 'send' => {
+    // Si un returnKeyType est spécifié, l'utiliser
+    if (returnKeyType) {
+      return returnKeyType;
+    }
+    
+    // Détection automatique basée sur le type de clavier
+    if (detectedKeyboardType === 'email-address') {
+      return 'next';
+    }
+    
+    if (detectedKeyboardType === 'web-search') {
+      return 'search';
+    }
+    
+    if (detectedKeyboardType === 'url') {
+      return 'go';
+    }
+    
+    // Par défaut, "next" s'il y a un champ suivant, sinon "done"
+    return nextInputRef?.current ? 'next' : 'done';
+  };
+  
+  // ========== DÉTECTION AUTOMATIQUE DU BLUR ON SUBMIT ==========
+  
+  const getBlurOnSubmit = (): boolean => {
+    // Si blurOnSubmit est spécifié, l'utiliser
+    if (blurOnSubmit !== undefined) {
+      return blurOnSubmit;
+    }
+    
+    // Par défaut, ne pas blurrer s'il y a un champ suivant
+    return !nextInputRef?.current;
+  };
+  
   // ========== IMPERATIVE HANDLE ==========
   
   useImperativeHandle(ref, () => ({
@@ -629,7 +800,7 @@ export const Input = forwardRef<InputRef, InputProps>(({
           placeholderTextColor={colors.placeholder}
           secureTextEntry={showPasswordToggle ? !isPasswordVisible : secureTextEntry}
           editable={!disabled}
-          keyboardType={keyboardType}
+          keyboardType={detectedKeyboardType as any}
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
           autoCorrect={autoCorrect}
@@ -639,6 +810,9 @@ export const Input = forwardRef<InputRef, InputProps>(({
           accessibilityLabel={accessibilityLabel || label}
           accessibilityHint={accessibilityHint}
           testID={testID}
+          onSubmitEditing={handleSubmitEditing}
+          returnKeyType={getReturnKeyType()}
+          blurOnSubmit={getBlurOnSubmit()}
           {...textInputProps}
         />
         

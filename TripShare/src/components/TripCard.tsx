@@ -42,7 +42,7 @@ const TripCard: React.FC<TripCardProps> = ({
     >
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: trip.images?.[0] || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400' }}
+          source={{ uri: trip.images?.[0] || 'http://localhost:8085/storage/defaults/default-trip-image.jpg' }}
           style={styles.image}
           resizeMode="cover"
         />

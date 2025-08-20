@@ -16,7 +16,7 @@ import { useAppTheme } from '../../hooks/useAppTheme';
 import { api } from '../../services/api';
 import { Trip, UserTravelPreferences } from '../../types';
 import TripCard from './TripCard';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 
 const { width } = Dimensions.get('window');
 
@@ -41,7 +41,7 @@ interface TripRecommendation {
 }
 
 const PersonalizedFeed: React.FC<PersonalizedFeedProps> = ({ theme, navigation }) => {
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

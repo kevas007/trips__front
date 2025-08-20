@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import SocialFeedScreen from './SocialFeedScreen';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import { Ionicons } from '@expo/vector-icons';
 
 interface SocialPost {
@@ -40,13 +40,13 @@ const ALL_POSTS: SocialPost[] = [
     user: {
       id: '1',
       name: 'Sarah Voyage',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100',
+      avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
       verified: true,
     },
     location: 'Bali, Indonésie',
     content: {
       type: 'image',
-      url: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800',
+      url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
     },
     caption: '🌴 Premier jour à Bali ! Les rizières en terrasse de Tegalalang sont absolument magnifiques. La culture balinaise est si riche et authentique. #Bali #Indonésie #Voyage #Culture',
     likes: 1247,
@@ -67,13 +67,13 @@ const ALL_POSTS: SocialPost[] = [
     user: {
       id: '2',
       name: 'Alex Explorer',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+      avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
       verified: false,
     },
     location: 'Santorini, Grèce',
     content: {
       type: 'image',
-      url: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=800',
+      url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
     },
     caption: '☀️ Coucher de soleil magique à Oia ! Les maisons blanches et les dômes bleus créent un paysage de carte postale. Le vin local est exceptionnel aussi ! #Santorini #Grèce #CoucherDeSoleil',
     likes: 892,
@@ -94,13 +94,13 @@ const ALL_POSTS: SocialPost[] = [
     user: {
       id: '3',
       name: 'Marie Aventurière',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
+      avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
       verified: true,
     },
     location: 'Tokyo, Japon',
     content: {
       type: 'image',
-      url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800',
+      url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
     },
     caption: '🗼 Tokyo by night ! Les néons de Shibuya sont hypnotisants. J\'ai découvert des ramens incroyables dans un petit restaurant caché. La culture japonaise est fascinante ! #Tokyo #Japon #Néon #Culture',
     likes: 2156,
@@ -121,13 +121,13 @@ const ALL_POSTS: SocialPost[] = [
     user: {
       id: '4',
       name: 'Thomas Nomade',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100',
+      avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
       verified: false,
     },
     location: 'Marrakech, Maroc',
     content: {
       type: 'image',
-      url: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=800',
+      url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
     },
     caption: '🏺 Les souks de Marrakech sont un labyrinthe de couleurs et d\'odeurs ! Le thé à la menthe et les épices parfument l\'air. Une expérience sensorielle unique ! #Marrakech #Maroc #Souks #Culture',
     likes: 678,
@@ -148,13 +148,13 @@ const ALL_POSTS: SocialPost[] = [
     user: {
       id: '5',
       name: 'Emma Aventurière',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100',
+      avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
       verified: true,
     },
     location: 'Chamonix, France',
     content: {
       type: 'image',
-      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
+      url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
     },
     caption: '🏔️ Randonnée épique dans les Alpes ! Le Mont-Blanc nous offre des vues à couper le souffle. L\'air pur et les paysages montagneux sont revitalisants. #Chamonix #MontBlanc #Randonnée #Montagne',
     likes: 945,
@@ -175,13 +175,13 @@ const ALL_POSTS: SocialPost[] = [
     user: {
       id: '6',
       name: 'Lucas Explorer',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
+      avatar: 'http://localhost:8085/storage/defaults/default-avatar.jpg',
       verified: false,
     },
     location: 'Maldives',
     content: {
       type: 'image',
-      url: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800',
+      url: 'http://localhost:8085/storage/defaults/default-trip-image.jpg',
     },
     caption: '🏝️ Paradis sur terre aux Maldives ! Les eaux turquoise et le sable blanc créent un décor de rêve. Le snorkeling avec les tortues était magique. #Maldives #Plage #Farniente #Soleil',
     likes: 1876,
@@ -207,7 +207,7 @@ function shuffleArray(array: SocialPost[]) {
 }
 
 const PersonalizedFeedScreen = ({ navigation }: { navigation: any }) => {
-  const { user } = useSimpleAuth();
+  const { user } = useAuthStore();
   const preferences = user?.preferences?.activities || [];
 
   // Filtrage des posts selon les préférences

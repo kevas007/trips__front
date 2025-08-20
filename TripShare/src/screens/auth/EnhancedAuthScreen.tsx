@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, TouchableOpacity, Dimensions, Animated, ActivityIndicator, ImageBackground, Alert, Easing } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, TouchableOpacity, Dimensions, Animated, ActivityIndicator, ImageBackground, Alert, Easing, KeyboardAvoidingView } from 'react-native';
+import { SmartFormWrapper } from '../../components/ui/IntelligentKeyboardSystem';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthInput from '../../components/auth/AuthInput';
 import Button from '../../components/ui/Button';
@@ -9,18 +10,21 @@ import { COLORS, BORDER_RADIUS } from '../../design-system';
 import AppLogo from '../../components/ui/AppLogo';
 import { LOCAL_ASSETS } from '../../constants/assets';
 import { useTranslation } from 'react-i18next';
+import { changeLanguage } from '../../i18n';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { getFontSize, getSpacing, getBorderRadius, getInputHeight, screenDimensions } from '../../utils/responsive';
 import { countryService, CountryOption } from '../../services/countryService';
 import CountryPickerModal from '../../components/ui/CountryPickerModal';
 import { Theme } from '../../types/theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import { ErrorHandler } from '../../components/ui/ErrorHandler';
 import SocialAuthButtons from '../../components/auth/SocialAuthButtons';
 import { SocialAuthResult, SocialAuthError } from '../../services/socialAuth';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { tripShareApi } from '../../services';
+
 
 type AuthStackParamList = {
   AuthScreen: undefined;
@@ -34,9 +38,9 @@ type AuthNavigationProp = StackNavigationProp<AuthStackParamList>;
 const { width } = Dimensions.get('window');
 
 const MODES = [
-  { key: 'login', label: '👋 Connexion' },
-  { key: 'register', label: '🚀 Inscription' },
-  { key: 'forgot', label: '🔐 Récupération' },
+  { key: 'login', label: 'Connexion' },
+  { key: 'register', label: 'Inscription' },
+  { key: 'forgot', label: 'Récupération' },
 ];
 
 const EnhancedAuthScreen = () => {
@@ -53,7 +57,7 @@ const EnhancedAuthScreen = () => {
     isLoading, 
     error, 
     clearError 
-  } = useSimpleAuth();
+  } = useAuthStore();
 
   // Injecter des styles CSS globaux pour la liste déroulante sur web
   React.useEffect(() => {
@@ -85,7 +89,7 @@ const EnhancedAuthScreen = () => {
     username: '',
     firstName: '',
     lastName: '',
-    countryCode: '+32',
+    countryCode: '',
     phone: '',
     email: '',
     password: '',
@@ -93,7 +97,14 @@ const EnhancedAuthScreen = () => {
     acceptTerms: false,
     rememberMe: false,
   });
+
+  // Debug désactivé en production
+  // console.log('Form values:', form);
+
+
   const [errors, setErrors] = useState<any>({});
+
+
   const [formAnim] = React.useState(new Animated.Value(0));
   const [headerAnim] = React.useState(new Animated.Value(0));
   const [themeTransition] = React.useState(new Animated.Value(isDark ? 1 : 0));
@@ -215,6 +226,7 @@ const EnhancedAuthScreen = () => {
     if (field === 'phone') {
       value = formatPhoneNumber(value);
     }
+
     setForm((prev: typeof form) => ({ ...prev, [field]: value }));
   };
 
@@ -277,16 +289,29 @@ const EnhancedAuthScreen = () => {
         await register({
           email: form.email,
           username: form.username,
-          first_name: form.firstName,
-          last_name: form.lastName,
-          phone_number: `${form.countryCode}${form.phone}`,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: `${form.countryCode}${form.phone}`,
           password: form.password,
         });
-        // La navigation sera gérée par AuthNavigator
+        // L'onboarding sera affiché automatiquement grâce à isNewUser dans AuthNavigator
         return;
       } else if (mode === 'forgot') {
-        // Fonctionnalité de mot de passe oublié à implémenter
-        console.log('Mot de passe oublié pour:', form.email);
+        try {
+          await tripShareApi.forgotPassword({ email: form.email });
+          Alert.alert(t('auth.forgotTitle'), t('auth.forgotButton') + ' ✓');
+          // Rediriger vers l'écran de réinitialisation UNIQUEMENT si l'email existe
+          // @ts-ignore - route ajoutée dans AuthNavigator
+          navigation.navigate('ResetPasswordScreen');
+        } catch (e: any) {
+          const msg = e?.message || '';
+          if (msg.toLowerCase().includes("n'existe pas") || msg.toLowerCase().includes('introuvable')) {
+            Alert.alert('Email introuvable', 'Cet email n\'existe pas. Vérifiez et réessayez.');
+          } else {
+            Alert.alert('Erreur', 'Impossible d\'envoyer le lien pour le moment. Réessayez plus tard.');
+          }
+          return;
+        }
       }
       
       // Succès - afficher l'animation
@@ -302,7 +327,7 @@ const EnhancedAuthScreen = () => {
   const toggleLanguage = () => {
     const currentLang = i18n.language;
     const newLang = currentLang === 'fr' ? 'en' : 'fr';
-    i18n.changeLanguage(newLang);
+    changeLanguage(newLang);
   };
 
   // Fonction pour obtenir le code de langue actuel
@@ -343,635 +368,827 @@ const EnhancedAuthScreen = () => {
   const isLogin = mode === 'login';
   const isForgot = mode === 'forgot';
 
+  // Détection des valeurs de démonstration pour bloquer la soumission
+  const demoEmail = 'john.doe@example.com';
+  const demoUsername = 'john_doe';
+  const demoPassword = 'password123';
+
+  const emailIsDemo = (form.email || '').trim().toLowerCase() === demoEmail;
+  const usernameIsDemo = (form.username || '').trim().toLowerCase() === demoUsername;
+  const passwordIsDemo = (form.password || '') === demoPassword;
+
+  const isSubmitDisabled = (
+    isLoading ||
+    (isLogin && (!form.email || !form.password || emailIsDemo || passwordIsDemo)) ||
+    (isRegister && (
+      !form.email || !form.username || !form.firstName || !form.lastName || !form.phone || !form.password ||
+      form.password !== form.confirmPassword || !form.acceptTerms ||
+      emailIsDemo || usernameIsDemo || passwordIsDemo
+    )) ||
+    (isForgot && (!form.email || emailIsDemo))
+  );
+
   // Création des styles avec le thème actuel
-  const styles = createStyles(isDark);
+  const styles = StyleSheet.create({
+    // Styles pour l'input téléphone unifié
+    embeddedCountrySelector: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingRight: getSpacing(8),
+    },
+    embeddedCountryPicker: {
+      minWidth: Platform.OS === 'android' ? 60 : 70,
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+      padding: 0,
+    },
+    separatorLine: {
+      width: 1,
+      height: '70%',
+      backgroundColor: Platform.OS === 'android' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.3)',
+      marginLeft: getSpacing(4),
+    },
+    loadingCountryIndicator: {
+      width: Platform.OS === 'android' ? 60 : 70,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: getSpacing(4),
+    },
+    phoneFormatContainer: {
+      alignItems: 'center',
+      marginBottom: Platform.OS === 'android' ? getSpacing(8) : getSpacing(12),
+    },
+    phoneFormatExample: {
+      fontSize: getFontSize(12),
+      color: Platform.OS === 'android' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)',
+      fontFamily: Platform.OS === 'web' ? 'Inter, sans-serif' : undefined,
+      fontWeight: '500',
+      textAlign: 'center',
+      backgroundColor: Platform.OS === 'android' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)',
+      paddingHorizontal: getSpacing(8),
+      paddingVertical: getSpacing(4),
+      borderRadius: getBorderRadius(6),
+      borderWidth: 1,
+      borderColor: Platform.OS === 'android' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)',
+    },
+    safeArea: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    modeToggle: {
+      flexDirection: 'row',
+      backgroundColor: Platform.OS === 'ios'
+        ? (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.22)')
+        : (isDark ? '#2A2A2A' : '#FFFFFF'),
+      borderRadius: 14,
+      padding: 4,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: Platform.OS === 'ios'
+        ? (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.32)')
+        : (isDark ? '#404040' : '#E0E0E0'),
+      gap: 6,
+      width: '100%',
+      maxWidth: 400,
+      shadowColor: isDark ? '#000' : '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: Platform.OS === 'ios' ? 0.20 : 0,
+      shadowRadius: 20,
+      elevation: Platform.OS === 'android' ? 0 : undefined,
+    },
+    modeBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modeBtnActive: {
+      backgroundColor: Platform.OS === 'ios'
+        ? (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.32)')
+        : (isDark ? '#404040' : '#F5F5F5'),
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: Platform.OS === 'ios' ? (isDark ? 0.25 : 0.20) : 0,
+      shadowRadius: 16,
+      elevation: Platform.OS === 'android' ? 0 : undefined,
+    },
+    modeBtnText: {
+      color: isDark ? 'rgba(255,255,255,0.75)' : '#49454F',
+      fontWeight: '600',
+      fontSize: getFontSize(14),
+      letterSpacing: 0.1,
+    },
+    modeBtnTextActive: {
+      color: isDark ? '#fff' : '#1C1B1F',
+    },
+    appContainer: {
+      flex: 1,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    formContainer: {
+      width: '100%',
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: getSpacing(Platform.OS === 'android' ? 8 : (screenDimensions.isSmallScreen ? 12 : 20)),
+      maxWidth: 450,
+    },
+    scrollContent: {
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+      // Supprimer flexGrow qui force l'expansion
+      // flexGrow: 1,
+    },
+    background: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: -1,
+    },
+    floatingShape: {
+      position: 'absolute',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+      borderRadius: 999,
+    },
+    shape1: { width: 80, height: 80, top: '20%', left: '10%' },
+    shape2: { width: 120, height: 120, top: '60%', right: '15%' },
+    shape3: { width: 60, height: 60, bottom: '30%', left: '20%' },
+    settingsPanel: {
+      position: 'absolute',
+      top: 20,
+      right: 20,
+      flexDirection: 'row',
+      gap: 12,
+      zIndex: 100,
+    },
+    settingBtn: {
+      width: 48,
+      height: 48,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+      ...(Platform.OS === 'web' && {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+      }),
+    },
+    logoContainer: {
+      alignItems: 'center',
+      marginBottom: Platform.OS === 'android' ? 24 : 32,
+      zIndex: 10,
+    },
+    appName: {
+      fontSize: getFontSize(36),
+      fontWeight: '800',
+      color: isDark ? '#fff' : '#1C1B1F', // Material Design 3 - blanc en dark, noir en light
+      marginBottom: getSpacing(8),
+      textShadowColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)',
+      textShadowOffset: { width: 0, height: 4 },
+      textShadowRadius: 20,
+    },
+    tagline: {
+      fontSize: getFontSize(13),
+      color: isDark ? 'rgba(255,255,255,0.8)' : '#49454F', // Material Design 3 - texte secondaire
+      fontWeight: '500',
+      textAlign: 'center',
+      paddingHorizontal: getSpacing(12),
+    },
+    formTitle: {
+      fontSize: getFontSize(28),
+      fontWeight: '700',
+      color: isDark ? '#fff' : '#1C1B1F',
+      textAlign: 'center',
+      marginBottom: getSpacing(Platform.OS === 'android' ? 20 : 24),
+      textShadowColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.5)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 8,
+      paddingHorizontal: getSpacing(8),
+      width: '100%',
+    },
+    inputRow: {
+      flexDirection: 'row',
+      gap: getSpacing(Platform.OS === 'android' ? 4 : 8),
+      marginBottom: getSpacing(Platform.OS === 'android' ? 16 : 20),
+      justifyContent: 'space-between',
+      width: '100%',
+      flexWrap: screenDimensions.isSmallScreen ? 'wrap' : 'nowrap',
+    },
+    phoneContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start', // Aligner les éléments en haut
+      gap: 0,
+      marginBottom: getSpacing(Platform.OS === 'android' ? 16 : 20),
+      justifyContent: 'space-between',
+      flexWrap: screenDimensions.isSmallScreen ? 'wrap' : 'nowrap',
+    },
+    countrySelectWrapper: {
+      width: screenDimensions.isSmallScreen ? 70 : (Platform.OS === 'web' ? 120 : 100),
+      marginBottom: 0,
+      height: getInputHeight(),
+      borderRadius: 16,
+      backgroundColor: Platform.OS === 'ios'
+        ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.20)')
+        : (isDark ? '#2A2A2A' : '#FFFFFF'),
+      borderWidth: 1,
+      borderColor: Platform.OS === 'ios'
+        ? (isDark ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.30)')
+        : (isDark ? '#404040' : '#E0E0E0'),
+      shadowColor: isDark ? '#000' : '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: Platform.OS === 'ios' ? (isDark ? 0.10 : 0.06) : 0,
+      shadowRadius: 4,
+      elevation: Platform.OS === 'android' ? 0 : undefined,
+    },
+    checkboxGroup: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginVertical: getSpacing(16),
+      gap: getSpacing(8),
+      width: '100%',
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderWidth: 2,
+      borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#79747E',
+      borderRadius: 4,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: "#008080",
+      borderColor: "#008080",
+    },
+    checkboxLabel: {
+      color: isDark ? 'rgba(255,255,255,0.88)' : '#49454F',
+      fontSize: getFontSize(14),
+      fontWeight: '500',
+      marginLeft: getSpacing(8),
+      flex: 1,
+      flexWrap: 'wrap',
+    },
+    termsLink: {
+      color: isDark ? COLORS.accent.yellow : '#008080',
+      fontWeight: '600',
+    },
+    formNavigation: {
+      marginTop: getSpacing(16),
+      alignItems: 'center',
+      gap: getSpacing(12),
+      width: '100%',
+    },
+    inputWrapper: {
+      borderRadius: 16,
+      overflow: 'hidden',
+      marginBottom: getSpacing(Platform.OS === 'android' ? 12 : 16),
+      backgroundColor: Platform.OS === 'ios' 
+        ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.20)')
+        : (isDark ? '#2A2A2A' : '#FFFFFF'),
+      borderWidth: 1,
+      borderColor: Platform.OS === 'ios'
+        ? (isDark ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.30)')
+        : (isDark ? '#404040' : '#E0E0E0'),
+      height: 56,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: getSpacing(16),
+      width: '100%',
+      shadowColor: isDark ? '#000' : '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: Platform.OS === 'ios' ? (isDark ? 0.10 : 0.06) : 0,
+      shadowRadius: 4,
+      elevation: Platform.OS === 'android' ? 0 : undefined,
+    },
+    inputWrapperFilled: {
+      borderColor: '#008080',
+      borderWidth: 2,
+      backgroundColor: isDark ? 'rgba(0,128,128,0.06)' : 'rgba(0,128,128,0.03)',
+    },
+    button: {
+      backgroundColor: '#008080',
+      borderRadius: getBorderRadius(16),
+      height: 56,
+      marginBottom: getSpacing(18),
+      marginTop: getSpacing(8),
+      shadowColor: '#008080',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      paddingHorizontal: getSpacing(20),
+      borderWidth: 0,
+      width: '100%',
+    },
+    buttonText: {
+      fontSize: getFontSize(16),
+      fontWeight: '600',
+      color: '#fff',
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+    link: {
+      color: isDark ? COLORS.accent.yellow : '#008080',
+      fontWeight: '600',
+      fontSize: getFontSize(14),
+      marginTop: getSpacing(4),
+      marginBottom: getSpacing(4),
+      textAlign: 'center',
+    },
+    formContainerWeb: {},
+    loadingSpinner: {
+      width: 20,
+      height: 20,
+      borderWidth: 2,
+      borderColor: 'rgba(255,255,255,0.3)',
+      borderTopColor: '#fff',
+      borderRadius: 10,
+      marginRight: 8,
+    },
+    buttonWeb: {
+      ...(Platform.OS === 'web' && {
+        transition: 'all 0.3s',
+        cursor: 'pointer',
+        boxShadow: '0 10px 30px rgba(102,126,234,0.3)',
+      }),
+    },
+    buttonSuccess: {
+      backgroundColor: '#10b981',
+      shadowColor: '#10b981',
+      shadowOpacity: 0.25,
+      shadowRadius: 18,
+      borderColor: '#10b981',
+    },
+    dividerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 20,
+      paddingHorizontal: 20,
+    },
+    divider: {
+      flex: 1,
+      height: 1,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.18)',
+    },
+    dividerText: {
+      color: isDark ? 'rgba(255,255,255,0.6)' : '#49454F', // Material Design 3 - texte adaptatif
+      fontSize: 13,
+      fontWeight: '600',
+      marginHorizontal: 15,
+      textAlign: 'center',
+    },
+    phoneHint: {
+      fontSize: getFontSize(11),
+      color: isDark ? 'rgba(255,255,255,0.6)' : '#79747E', // Material Design 3 - texte hint
+      marginTop: -getSpacing(12),
+      marginBottom: getSpacing(8),
+      paddingLeft: getSpacing(8),
+      fontStyle: 'italic',
+    },
+    passwordMatchIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: -getSpacing(8),
+      marginBottom: getSpacing(12),
+      paddingLeft: getSpacing(8),
+    },
+    passwordMatchText: {
+      fontSize: getFontSize(11),
+      fontWeight: '600',
+      marginLeft: getSpacing(6),
+      color: isDark ? 'rgba(255,255,255,0.8)' : '#49454F', // Material Design 3 - texte adaptatif
+    },
+    
+    // Styles pour les éléments de voyage animés
+    travelElementsContainer: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 1,
+      pointerEvents: 'none',
+    },
+    travelElement: {
+      position: 'absolute',
+      zIndex: 1,
+    },
+    travelIcon: {
+      textAlign: 'center',
+      opacity: 0.6,
+      textShadowColor: 'rgba(0, 0, 0, 0.3)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 3,
+    },
+  });
+
+  const fixedStyle = {
+    flex: 1,
+    backgroundColor: 'transparent',
+    padding: 0,
+    margin: 0
+  };
+
+  const containerStyle = {
+    flex: 1,
+    backgroundColor: 'transparent',
+    position: 'relative' as const,
+    minHeight: '100%',
+    maxHeight: '100%',
+    overflow: 'hidden'
+  };
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Background Light Mode */}
-      <Animated.View style={{
-        ...StyleSheet.absoluteFillObject,
-        opacity: themeTransition.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 0] // Visible quand isDark = false
-        })
-      }}>
-        <ImageBackground
-          source={LOCAL_ASSETS.loginBackgrounds.light}
-          style={{ flex: 1 }}
-          resizeMode="cover"
-        />
-      </Animated.View>
-
-      {/* Background Dark Mode */}
-      <Animated.View style={{
-        ...StyleSheet.absoluteFillObject,
-        opacity: themeTransition.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 1] // Visible quand isDark = true
-        })
-      }}>
-        <ImageBackground
-          source={LOCAL_ASSETS.loginBackgrounds.dark}
-          style={{ flex: 1 }}
-          resizeMode="cover"
-        />
-      </Animated.View>
-
-      {/* Éléments de voyage animés flottants */}
-      <View style={styles.travelElementsContainer} pointerEvents="none">
-        {/* Avion */}
-        <Animated.View 
-          style={[
-            styles.travelElement,
-            {
-              top: '25%',
-              transform: [
-                {
-                  translateX: planeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-100, width + 100]
-                  })
-                },
-                {
-                  translateY: planeAnim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, -20, 0]
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <Text style={[styles.travelIcon, { fontSize: 21 }]}>✈️</Text>
-        </Animated.View>
-
-        {/* Bateau */}
-        <Animated.View 
-          style={[
-            styles.travelElement,
-            {
-              bottom: '35%',
-              right: '10%',
-              transform: [
-                {
-                  translateY: boatAnim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, -15, 0]
-                  })
-                },
-                {
-                  rotate: boatAnim.interpolate({
-                    inputRange: [0, 0.25, 0.5, 0.75, 1],
-                    outputRange: ['0deg', '3deg', '0deg', '-3deg', '0deg']
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <Text style={[styles.travelIcon, { fontSize: 25 }]}>🚢</Text>
-        </Animated.View>
-
-        {/* Train */}
-        <Animated.View 
-          style={[
-            styles.travelElement,
-            {
-              bottom: '15%',
-              transform: [
-                {
-                  translateX: trainAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [width + 50, -150]
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <Text style={[styles.travelIcon, { fontSize: 23 }]}>🚂</Text>
-        </Animated.View>
-
-        {/* Voiture */}
-        <Animated.View 
-          style={[
-            styles.travelElement,
-            {
-              top: '60%',
-              left: '5%',
-              transform: [
-                {
-                  translateX: carAnim.interpolate({
-                    inputRange: [0, 0.25, 0.5, 0.75, 1],
-                    outputRange: [0, 30, 0, -30, 0]
-                  })
-                },
-                {
-                  translateY: carAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, -200]
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <Text style={[styles.travelIcon, { fontSize: 19 }]}>🚗</Text>
-        </Animated.View>
-
-        {/* Montgolfière */}
-        <Animated.View 
-          style={[
-            styles.travelElement,
-            {
-              top: '10%',
-              right: '20%',
-              transform: [
-                {
-                  translateY: balloonAnim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, -40, 0]
-                  })
-                },
-                {
-                  translateX: balloonAnim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, 15, 0]
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <Text style={[styles.travelIcon, { fontSize: 27 }]}>🎈</Text>
-        </Animated.View>
-
-        {/* Fusée (bonus) */}
-        <Animated.View 
-          style={[
-            styles.travelElement,
-            {
-              top: '45%',
-              right: '5%',
-              transform: [
-                {
-                  translateY: planeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [300, -100]
-                  })
-                },
-                {
-                  rotate: planeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0deg', '360deg']
-                  })
-                }
-              ]
-            }
-          ]}
-        >
-          <Text style={[styles.travelIcon, { fontSize: 17 }]}>🚀</Text>
-        </Animated.View>
-      </View>
-
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView 
-          contentContainerStyle={[
-            styles.scrollContent,
-            Platform.OS === 'web' && {
-              minHeight: screenDimensions.height,
-              paddingBottom: 40,
-              paddingTop: 20,
-            }
-          ]} 
-          keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom : 0}
+        enabled={true}
+      >
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingTop: insets.top + getSpacing(20),
+            paddingBottom: insets.bottom + getSpacing(20),
+            paddingHorizontal: insets.left + insets.right > 0 ? getSpacing(20) : 0,
+          }}
           showsVerticalScrollIndicator={false}
-          style={Platform.OS === 'web' ? { height: screenDimensions.height } : { flex: 1 }}
+          bounces={false}
         >
-      {/* Fond animé (simplifié) - supprimé car le background a déjà des éléments visuels */}
-      {/* <View style={styles.background} pointerEvents="none">
-        <View style={[styles.floatingShape, styles.shape1]} />
-        <View style={[styles.floatingShape, styles.shape2]} />
-        <View style={[styles.floatingShape, styles.shape3]} />
-      </View> */}
-
-      {/* Settings Panel */}
-      <View style={styles.settingsPanel}>
-        <TouchableOpacity 
-          style={[
-            styles.settingBtn,
-            { 
-              backgroundColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)',
-              borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.2)',
-            }
-          ]}
-          onPress={toggleTheme}
-          activeOpacity={0.8}
-          {...(Platform.OS === 'web' && { className: 'setting-btn' })}
+        <View 
+          style={[styles.formContainer, { 
+            backgroundColor: 'transparent',
+            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 1,
+            paddingBottom: getSpacing(20),
+            marginBottom: 0,
+            marginTop: 0,
+            minHeight: 0,
+            maxHeight: undefined
+          }]}
+          importantForAccessibility="no-hide-descendants"
         >
-          <Text style={{ fontSize: 19 }}>
-            {isDark ? '☀️' : '🌙'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[
-            styles.settingBtn,
-            { 
-              backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
-              borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-            }
-          ]}
-          onPress={toggleLanguage}
-          activeOpacity={0.8}
-          {...(Platform.OS === 'web' && { className: 'setting-btn' })}
-        >
-          <Text style={{ 
-            fontSize: 13, 
-            fontWeight: '700', 
-            color: isDark ? '#fff' : '#1C1B1F',
-            letterSpacing: 0.5 
-          }}>
-            {getCurrentLanguageCode()}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.appContainer}>
-        {/* Header */}
-        <Animated.View style={{
-          opacity: headerAnim,
-          transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-        }}>
-          <View style={styles.logoContainer}>
-            <AppLogo 
-              size={getFontSize(100)} 
-              animated={true} 
-              variant="svg"
-              showText={false}
-            />
-            <Text style={[styles.appName, { color: isDark ? '#fff' : '#1C1B1F' }]}>
-                                  Trivenile
-            </Text>
-            <Text style={[styles.tagline, { color: isDark ? 'rgba(255,255,255,0.8)' : '#49454F' }]}>
-              Partagez vos aventures avec le monde ✨
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Form Container */}
-        <Animated.View style={[
-          styles.formContainer,
-          {
-            opacity: formAnim,
-            transform: [{ translateY: formAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
-            ...(Platform.OS === 'web' ? {
-              backdropFilter: 'blur(30px)',
-              WebkitBackdropFilter: 'blur(30px)',
-            } : {}),
-          },
-        ]}>
-          {/* Mode Toggle */}
-          <View style={styles.modeToggle}>
-            {MODES.map(m => (
-              <TouchableOpacity
-                key={m.key}
-                style={[styles.modeBtn, mode === m.key && styles.modeBtnActive]}
-                onPress={() => setMode(m.key as any)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modeBtnText, mode === m.key && styles.modeBtnTextActive]}>{t(`auth.${m.key}`)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Form Title */}
-          <Text style={styles.formTitle}>
-            {mode === 'register' && t('auth.registerTitle')}
-            {mode === 'login' && t('auth.loginTitle')}
-            {mode === 'forgot' && t('auth.forgotTitle')}
-          </Text>
-
-          {/* Champs du formulaire */}
-          {isRegister && (
-            <>
-              <AuthInput
-                icon="person-outline"
-                placeholder={t('register.username')}
-                value={form.username}
-                onChangeText={(v: string) => handleChange('username', v)}
-                error={errors.username}
-                isValid={form.username.length > 0 && !errors.username}
-                style={styles.inputWrapper}
-                success={form.username.length > 0 && !errors.username}
-              />
-              <View style={[styles.inputRow, { flexDirection: screenDimensions.isSmallScreen ? 'column' : 'row' }]}>
-                <AuthInput
-                  icon="person-outline"
-                  placeholder={t('register.firstName')}
-                  value={form.firstName}
-                  onChangeText={(v: string) => handleChange('firstName', v)}
-                  error={errors.firstName}
-                  isValid={form.firstName.length > 0 && !errors.firstName}
-                  autoCapitalize="words"
-                  style={[styles.inputWrapper, { flex: screenDimensions.isSmallScreen ? undefined : 1 }]}
-                  success={form.firstName.length > 0 && !errors.firstName}
-                />
-                <AuthInput
-                  icon="person-outline"
-                  placeholder={t('register.lastName')}
-                  value={form.lastName}
-                  onChangeText={(v: string) => handleChange('lastName', v)}
-                  error={errors.lastName}
-                  isValid={form.lastName.length > 0 && !errors.lastName}
-                  autoCapitalize="words"
-                  style={[styles.inputWrapper, { flex: screenDimensions.isSmallScreen ? undefined : 1 }]}
-                  success={form.lastName.length > 0 && !errors.lastName}
-                />
+              {/* Logo */}
+              <View style={styles.logoContainer}>
+                <AppLogo size={80} />
+                <Text style={styles.appName}>TripShare</Text>
+                <Text style={styles.tagline}>{t('auth.tagline')}</Text>
               </View>
-              <View style={[styles.phoneContainer, { flexDirection: screenDimensions.isSmallScreen ? 'column' : 'row' }]}>
-                <View style={[
-                  styles.countrySelectWrapper, 
-                  { 
-                    width: screenDimensions.isSmallScreen ? '100%' : (Platform.OS === 'web' ? 140 : 120),
-                    marginRight: Platform.OS !== 'web' && !screenDimensions.isSmallScreen ? 8 : 12
-                  }
-                ]}>
-                  {countriesLoading ? (
-                    <View style={[{ alignItems: 'center', justifyContent: 'center', flexDirection: 'row', height: getInputHeight() - 8, backgroundColor: 'rgba(255,255,255,0.13)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' }]}>
-                      <ActivityIndicator size="small" color="#008080" />
-                      <Text style={{ marginLeft: 8, color: COLORS.secondary[600], fontSize: 13 }}>
-                        {t('common.loading')}
+
+              {/* Mode Toggle */}
+              <View style={styles.modeToggle}>
+                {MODES.map(m => (
+                  <TouchableOpacity
+                    key={m.key}
+                    style={[styles.modeBtn, mode === m.key && styles.modeBtnActive]}
+                    onPress={() => setMode(m.key as any)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.modeBtnText, mode === m.key && styles.modeBtnTextActive]}>{m.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Form Title */}
+              <Text style={styles.formTitle}>
+                {mode === 'register' && '✨ Rejoignez l\'aventure'}
+                {mode === 'login' && 'Bon retour !'}
+                {mode === 'forgot' && 'Récupération de compte'}
+              </Text>
+
+              {/* Champs du formulaire */}
+
+              {(isRegister || Platform.OS === 'web') && (
+                <>
+                  <AuthInput
+                    icon="person-outline"
+                                          placeholder={t('auth.usernamePlaceholder')}
+                    value={form.username}
+                    onChangeText={(v: string) => handleChange('username', v)}
+                    error={errors.username}
+                    isValid={form.username.length > 0 && !errors.username}
+                    style={[styles.inputWrapper, form.username.length > 0 && styles.inputWrapperFilled]}
+                    success={form.username.length > 0 && !errors.username}
+                  />
+                  {/* Prénom */}
+                  <AuthInput
+                    icon="person-outline"
+                    placeholder="👤 Prénom"
+                    value={form.firstName}
+                    onChangeText={(v: string) => handleChange('firstName', v)}
+                    error={errors.firstName}
+                    isValid={form.firstName.length > 0 && !errors.firstName}
+                    autoCapitalize="words"
+                    style={[styles.inputWrapper, form.firstName.length > 0 && styles.inputWrapperFilled]}
+                    success={form.firstName.length > 0 && !errors.firstName}
+                  />
+                  
+                  {/* Nom */}
+                  <AuthInput
+                    icon="person-outline"
+                    placeholder="👤 Nom"
+                    value={form.lastName}
+                    onChangeText={(v: string) => handleChange('lastName', v)}
+                    error={errors.lastName}
+                    isValid={form.lastName.length > 0 && !errors.lastName}
+                    autoCapitalize="words"
+                    style={[styles.inputWrapper, form.lastName.length > 0 && styles.inputWrapperFilled]}
+                    success={form.lastName.length > 0 && !errors.lastName}
+                  />
+                  {/* Input téléphone unifié avec indicatif intégré */}
+                  <AuthInput
+                    placeholder="📱 Téléphone"
+                    value={form.phone}
+                    onChangeText={(v: string) => handleChange('phone', v)}
+                    error={errors.phone}
+                    isValid={form.phone.length > 0 && !errors.phone}
+                    keyboardType="phone-pad"
+                    leftComponent={
+                      <View style={styles.embeddedCountrySelector}>
+                        {countriesLoading ? (
+                          <View style={styles.loadingCountryIndicator}>
+                            <ActivityIndicator size="small" color="#008080" />
+                          </View>
+                        ) : (
+                          <>
+                            <CountryPickerModal
+                              selectedValue={form.countryCode}
+                              onValueChange={(v: string) => handleChange('countryCode', v)}
+                              countries={countries}
+                              loading={countriesLoading}
+                            />
+                            <View style={styles.separatorLine} />
+                          </>
+                        )}
+                      </View>
+                    }
+                    style={[
+                      styles.inputWrapper,
+                      form.phone.length > 0 && styles.inputWrapperFilled,
+                      {
+                        marginBottom: Platform.OS === 'android' ? getSpacing(4) : 0,
+                      }
+                    ]}
+                    success={form.phone.length > 0 && !errors.phone}
+                  />
+                  
+                  {/* Message d'aide pour le téléphone avec format unique */}
+                  {isRegister && (
+                    <Text style={[styles.phoneHint, {
+                      marginTop: Platform.OS === 'android' ? getSpacing(4) : getSpacing(8),
+                      marginBottom: Platform.OS === 'android' ? getSpacing(8) : getSpacing(12),
+                    }]}>
+                      Format: {form.countryCode} 123 456 789
+                    </Text>
+                  )}
+                </>
+              )}
+
+              {/* Email et mot de passe */}
+              {(isRegister || isLogin || isForgot) && (
+                <AuthInput
+                  icon="mail-outline"
+                  placeholder={t('auth.emailPlaceholder')}
+                  value={form.email}
+                  onChangeText={(v: string) => handleChange('email', v)}
+                  error={errors.email}
+                  isValid={form.email.length > 0 && !errors.email}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={[styles.inputWrapper, form.email.length > 0 && styles.inputWrapperFilled]}
+                  success={form.email.length > 0 && !errors.email}
+                />
+              )}
+              {(isRegister || isLogin) && (
+                <AuthInput
+                  icon="lock-closed-outline"
+                  placeholder={t('auth.passwordPlaceholder')}
+                  value={form.password}
+                  onChangeText={(v: string) => handleChange('password', v)}
+                  error={errors.password}
+                  isValid={form.password.length > 0 && !errors.password}
+                  secureTextEntry
+                  showPasswordToggle
+                  style={[styles.inputWrapper, form.password.length > 0 && styles.inputWrapperFilled]}
+                  success={form.password.length > 0 && !errors.password}
+                />
+              )}
+              {isRegister && (
+                <>
+                  <AuthInput
+                    icon="lock-closed-outline"
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
+                    value={form.confirmPassword}
+                    onChangeText={(v: string) => handleChange('confirmPassword', v)}
+                    error={errors.confirmPassword}
+                    isValid={form.confirmPassword.length > 0 && !errors.confirmPassword && form.password === form.confirmPassword}
+                    secureTextEntry
+                    showPasswordToggle
+                    style={[styles.inputWrapper, form.confirmPassword.length > 0 && styles.inputWrapperFilled]}
+                    success={form.confirmPassword.length > 0 && !errors.confirmPassword && form.password === form.confirmPassword}
+                  />
+                  
+                  {/* Indicateur de correspondance des mots de passe */}
+                  {form.password.length > 0 && form.confirmPassword.length > 0 && (
+                    <View style={styles.passwordMatchIndicator}>
+                      <Ionicons 
+                        name={form.password === form.confirmPassword ? "checkmark-circle" : "close-circle"} 
+                        size={20} 
+                        color={form.password === form.confirmPassword ? "#4ecdc4" : "#ef4444"} 
+                      />
+                      <Text style={[
+                        styles.passwordMatchText, 
+                        { color: form.password === form.confirmPassword ? "#4ecdc4" : "#ef4444" }
+                      ]}>
+                        {form.password === form.confirmPassword 
+                          ? t('auth.passwordsMatch') 
+                          : t('auth.passwordsDontMatch')
+                        }
                       </Text>
                     </View>
-                  ) : (
-                    <CountryPickerModal
-                      selectedValue={form.countryCode}
-                      onValueChange={(v: string) => handleChange('countryCode', v)}
-                      countries={countries}
-                      loading={countriesLoading}
-                    />
                   )}
-                </View>
-                <AuthInput
-                  icon="call-outline"
-                  placeholder={t('register.phone')}
-                  value={form.phone}
-                  onChangeText={(v: string) => handleChange('phone', v)}
-                  error={errors.phone}
-                  isValid={form.phone.length > 0 && !errors.phone}
-                  keyboardType="phone-pad"
-                  style={[
-                    styles.inputWrapper, 
-                    { 
-                      flex: screenDimensions.isSmallScreen ? undefined : 1,
-                      marginBottom: 0, // Supprimer la marge pour aligner avec le sélecteur de pays
-                    }
-                  ]}
-                  success={form.phone.length > 0 && !errors.phone}
-                />
-              </View>
-              
-              {/* Message d'aide pour le téléphone */}
+                </>
+              )}
+
+              {/* Checkbox conditions d'utilisation */}
               {isRegister && (
-                <Text style={styles.phoneHint}>
-                  {t('register.phoneHint')}
+                <View style={styles.checkboxGroup}>
+                  <TouchableOpacity
+                    style={[styles.checkbox, form.acceptTerms && styles.checkboxChecked]}
+                    onPress={() => handleChange('acceptTerms', !form.acceptTerms)}
+                    activeOpacity={0.8}
+                  >
+                    {form.acceptTerms && (
+                      <Ionicons name="checkmark" size={20} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.checkboxLabel}>
+                    {t('auth.acceptTerms')}
+                    <TouchableOpacity onPress={() => navigation.navigate('TermsScreen')}>
+                      <Text style={styles.termsLink}>{t('auth.termsLink')}</Text>
+                    </TouchableOpacity> <Text style={{ color: COLORS.semantic.error }}>*</Text>
+                  </Text>
+                </View>
+              )}
+
+              {/* Checkbox se rappeler de moi */}
+              {isLogin && (
+                <View style={styles.checkboxGroup}>
+                  <TouchableOpacity
+                    style={[styles.checkbox, form.rememberMe && styles.checkboxChecked]}
+                    onPress={() => handleChange('rememberMe', !form.rememberMe)}
+                    activeOpacity={0.8}
+                  >
+                    {form.rememberMe && (
+                      <Ionicons name="checkmark" size={20} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.checkboxLabel}>{t('auth.rememberMe')}</Text>
+                </View>
+              )}
+
+              {/* Affichage des erreurs */}
+              {error && (
+                <ErrorHandler
+                  error={{
+                    code: 'NETWORK_ERROR',
+                    message: error,
+                    details: null
+                  }}
+                  onRetry={handleSubmitWithSuccess}
+                  onClear={clearError}
+                  compact
+                />
+              )}
+
+              {/* Affichage des erreurs spécifiques d'inscription */}
+              {mode === 'register' && error && (
+                <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 8 }}>
+                  {error.includes('déjà utilisé') || error.includes('duplicate') || error.includes('existe déjà')
+                    ? "Cet email ou nom d'utilisateur est déjà utilisé."
+                    : error}
                 </Text>
               )}
-            </>
-          )}
 
-          {/* Email et mot de passe */}
-          {(isRegister || isLogin || isForgot) && (
-            <AuthInput
-              icon="mail-outline"
-              placeholder={t('auth.emailPlaceholder')}
-              value={form.email}
-              onChangeText={(v: string) => handleChange('email', v)}
-              error={errors.email}
-              isValid={form.email.length > 0 && !errors.email}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.inputWrapper}
-              success={form.email.length > 0 && !errors.email}
-            />
-          )}
-          {(isRegister || isLogin) && (
-            <AuthInput
-              icon="lock-closed-outline"
-              placeholder={t('auth.passwordPlaceholder')}
-              value={form.password}
-              onChangeText={(v: string) => handleChange('password', v)}
-              error={errors.password}
-              isValid={form.password.length > 0 && !errors.password}
-              secureTextEntry
-              showPasswordToggle
-              style={styles.inputWrapper}
-              success={form.password.length > 0 && !errors.password}
-            />
-          )}
-          {isRegister && (
-            <>
-              <AuthInput
-                icon="lock-closed-outline"
-                placeholder={t('auth.confirmPasswordPlaceholder')}
-                value={form.confirmPassword}
-                onChangeText={(v: string) => handleChange('confirmPassword', v)}
-                error={errors.confirmPassword}
-                isValid={form.confirmPassword.length > 0 && !errors.confirmPassword && form.password === form.confirmPassword}
-                secureTextEntry
-                showPasswordToggle
-                style={styles.inputWrapper}
-                success={form.confirmPassword.length > 0 && !errors.confirmPassword && form.password === form.confirmPassword}
-              />
-              
-              {/* Indicateur de correspondance des mots de passe */}
-              {form.password.length > 0 && form.confirmPassword.length > 0 && (
-                <View style={styles.passwordMatchIndicator}>
-                  <Ionicons 
-                    name={form.password === form.confirmPassword ? "checkmark-circle" : "close-circle"} 
-                    size={20} 
-                    color={form.password === form.confirmPassword ? "#4ecdc4" : "#ef4444"} 
-                  />
-                  <Text style={[
-                    styles.passwordMatchText, 
-                    { color: form.password === form.confirmPassword ? "#4ecdc4" : "#ef4444" }
-                  ]}>
-                    {form.password === form.confirmPassword 
-                      ? t('auth.passwordsMatch') 
-                      : t('auth.passwordsDontMatch')
-                    }
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
-
-          {/* Checkbox conditions d'utilisation */}
-          {isRegister && (
-            <View style={styles.checkboxGroup}>
+              {/* Bouton de soumission */}
               <TouchableOpacity
-                style={[styles.checkbox, form.acceptTerms && styles.checkboxChecked]}
-                onPress={() => handleChange('acceptTerms', !form.acceptTerms)}
-                activeOpacity={0.8}
+                onPress={handleSubmitWithSuccess}
+                disabled={isSubmitDisabled}
+                style={[
+                  {
+                    borderRadius: getBorderRadius(18),
+                    height: getInputHeight() + 8,
+                    marginBottom: getSpacing(18),
+                    marginTop: getSpacing(8),
+                    shadowColor: '#008080',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 20,
+                    elevation: 6,
+                    overflow: 'hidden',
+                  },
+                  isSubmitDisabled && { opacity: 0.6 },
+                  success && { backgroundColor: '#10b981' },
+                ]}
+                activeOpacity={0.92}
               >
-                {form.acceptTerms && (
-                  <Ionicons name="checkmark" size={20} color="#fff" />
-                )}
+                <View style={{
+                  backgroundColor: success ? '#34C759' : '#008080',
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  paddingHorizontal: getSpacing(20),
+                }}>
+                  {isLoading ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                      <View style={styles.loadingSpinner} />
+                      <Text style={styles.buttonText}>{t('common.loading')}</Text>
+                    </View>
+                  ) : success ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                      <Ionicons name="checkmark-circle" size={getFontSize(24)} color="#fff" style={{ marginRight: getSpacing(8) }} />
+                      <Text style={styles.buttonText}>{t('common.success')}</Text>
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                      {mode === 'register' && <Ionicons name="rocket" size={getFontSize(22)} color="#fff" style={{ marginRight: getSpacing(8) }} />}
+                      {mode === 'login' && <Ionicons name="airplane" size={getFontSize(22)} color="#fff" style={{ marginRight: getSpacing(8) }} />}
+                      {mode === 'forgot' && <Ionicons name="mail" size={getFontSize(22)} color="#fff" style={{ marginRight: getSpacing(8) }} />}
+                      <Text style={styles.buttonText}>
+                        {mode === 'register' && 'Commencer l\'aventure'}
+                        {mode === 'login' && 'Se connecter'}
+                        {mode === 'forgot' && 'Envoyer le lien'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
-              <Text style={styles.checkboxLabel}>
-                {t('auth.acceptTerms')}
-                <TouchableOpacity onPress={() => navigation.navigate('TermsScreen')}>
-                  <Text style={styles.termsLink}>{t('auth.termsLink')}</Text>
-                </TouchableOpacity> <Text style={{ color: COLORS.error }}>*</Text>
-              </Text>
-            </View>
-          )}
 
-          {/* Checkbox se rappeler de moi */}
-          {isLogin && (
-            <View style={styles.checkboxGroup}>
-              <TouchableOpacity
-                style={[styles.checkbox, form.rememberMe && styles.checkboxChecked]}
-                onPress={() => handleChange('rememberMe', !form.rememberMe)}
-                activeOpacity={0.8}
-              >
-                {form.rememberMe && (
-                  <Ionicons name="checkmark" size={20} color="#fff" />
-                )}
-              </TouchableOpacity>
-              <Text style={styles.checkboxLabel}>{t('auth.rememberMe')}</Text>
-            </View>
-          )}
-
-          {/* Affichage des erreurs */}
-          {error && (
-            <ErrorHandler
-              error={{
-                code: 'NETWORK_ERROR',
-                message: error,
-                details: null
-              }}
-              onRetry={handleSubmitWithSuccess}
-              onClear={clearError}
-              compact
-            />
-          )}
-
-          {/* Affichage des erreurs spécifiques d'inscription */}
-          {mode === 'register' && error && (
-            <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 8 }}>
-              {error.includes('déjà utilisé') || error.includes('duplicate') || error.includes('existe déjà')
-                ? "Cet email ou nom d'utilisateur est déjà utilisé."
-                : error}
-            </Text>
-          )}
-
-          {/* Bouton de soumission */}
-          <TouchableOpacity
-            onPress={handleSubmitWithSuccess}
-            disabled={isLoading}
-            style={[
-              {
-                borderRadius: getBorderRadius(18),
-                height: getInputHeight() + 8,
-                marginBottom: getSpacing(18),
-                marginTop: getSpacing(8),
-                shadowColor: '#008080',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.25,
-                shadowRadius: 20,
-                elevation: 6,
-                overflow: 'hidden',
-              },
-              isLoading && { opacity: 0.6 },
-              success && { backgroundColor: '#10b981' },
-            ]}
-            activeOpacity={0.92}
-          >
-            <View style={{
-              backgroundColor: success ? '#34C759' : '#008080',
-              width: '100%',
-              height: '100%',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'row',
-              paddingHorizontal: getSpacing(20),
-            }}>
-              {isLoading ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <View style={styles.loadingSpinner} />
-                  <Text style={styles.buttonText}>{t('common.loading')}</Text>
+              {/* Séparateur "OU" CACHÉ */}
+              {/* {(mode === 'login' || mode === 'register') && (
+                <View style={styles.dividerContainer}>
+                  <View style={styles.divider} />
+                  <Text style={styles.dividerText}>OU</Text>
+                  <View style={styles.divider} />
                 </View>
-              ) : success ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="checkmark-circle" size={getFontSize(24)} color="#fff" style={{ marginRight: getSpacing(8) }} />
-                  <Text style={styles.buttonText}>{t('common.success')}</Text>
-                </View>
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  {mode === 'register' && <Ionicons name="rocket-outline" size={getFontSize(22)} color="#fff" style={{ marginRight: getSpacing(8) }} />}
-                  {mode === 'login' && <Ionicons name="airplane-outline" size={getFontSize(22)} color="#fff" style={{ marginRight: getSpacing(8) }} />}
-                  {mode === 'forgot' && <Ionicons name="mail-outline" size={getFontSize(22)} color="#fff" style={{ marginRight: getSpacing(8) }} />}
-                  <Text style={styles.buttonText}>
-                    {mode === 'register' && t('auth.registerCta')}
-                    {mode === 'login' && t('auth.loginCta')}
-                    {mode === 'forgot' && t('auth.forgotCta')}
-                  </Text>
-                </View>
+              )} */}
+
+              {/* Boutons d'authentification sociale */}
+              {(mode === 'login' || mode === 'register') && (
+                <SocialAuthButtons
+                  onSuccess={handleSocialAuthSuccess}
+                  onError={handleSocialAuthError}
+                  disabled={isLoading}
+                  fullWidth
+                />
               )}
+
+              {/* Navigation */}
+              <View style={styles.formNavigation}>
+                {mode === 'register' && (
+                  <TouchableOpacity onPress={() => setMode('login')}>
+                    <Text style={styles.link}>🌍 Déjà membre ? Se connecter</Text>
+                  </TouchableOpacity>
+                )}
+                {mode === 'login' && (
+                  <>
+                    <TouchableOpacity onPress={() => setMode('forgot')}>
+                      <Text style={styles.link}>🔑 Mot de passe oublié ?</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setMode('register')}>
+                      <Text style={styles.link}>✨ Créer un compte</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                {mode === 'forgot' && (
+                  <TouchableOpacity onPress={() => setMode('login')}>
+                    <Text style={styles.link}>← Retour à la connexion</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </TouchableOpacity>
-
-          {/* Séparateur "OU" CACHÉ */}
-          {/* {(mode === 'login' || mode === 'register') && (
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>OU</Text>
-              <View style={styles.divider} />
-            </View>
-          )} */}
-
-          {/* Boutons d'authentification sociale */}
-          {(mode === 'login' || mode === 'register') && (
-            <SocialAuthButtons
-              onSuccess={handleSocialAuthSuccess}
-              onError={handleSocialAuthError}
-              disabled={isLoading}
-              fullWidth
-            />
-          )}
-
-          {/* Navigation */}
-          <View style={styles.formNavigation}>
-            {mode === 'register' && (
-              <TouchableOpacity onPress={() => setMode('login')}>
-                <Text style={styles.link}>{t('auth.alreadyMember')}</Text>
-              </TouchableOpacity>
-            )}
-            {mode === 'login' && (
-              <>
-                <TouchableOpacity onPress={() => setMode('forgot')}>
-                  <Text style={styles.link}>{t('auth.forgotLink')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setMode('register')}>
-                  <Text style={styles.link}>{t('auth.createAccount')}</Text>
-                </TouchableOpacity>
-              </>
-            )}
-            {mode === 'forgot' && (
-              <TouchableOpacity onPress={() => setMode('login')}>
-                <Text style={styles.link}>{t('auth.backToLogin')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </Animated.View>
-      </View>
-    </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
-    </View>
-  );
-};
+    );
+  };
 
 const createStyles = (isDark: boolean) => StyleSheet.create({
   safeArea: {
@@ -979,12 +1196,11 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   scrollContent: {
-    flexGrow: 1,
     alignItems: 'center',
-    justifyContent: Platform.OS === 'web' ? 'flex-start' : 'center',
-    minHeight: Platform.OS === 'web' ? screenDimensions.height - 40 : 700,
-    paddingVertical: Platform.OS === 'web' ? getSpacing(20) : getSpacing(24),
-    paddingHorizontal: Platform.OS === 'web' ? getSpacing(20) : 0,
+    justifyContent: 'center', // Centrer le contenu sans forcer la hauteur
+    // Supprimer les paddings qui créent l'espace blanc
+    // paddingVertical: Platform.OS === 'web' ? getSpacing(20) : getSpacing(24),
+    // paddingHorizontal: Platform.OS === 'web' ? getSpacing(20) : 0,
     backgroundColor: 'transparent',
   },
   background: {
@@ -1068,8 +1284,9 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.13,
     shadowRadius: 40,
-    marginBottom: getSpacing(18),
-    marginTop: Platform.OS === 'web' ? getSpacing(20) : 0,
+    // Supprimer les marges qui créent l'espace blanc
+    // marginBottom: getSpacing(18),
+    // marginTop: Platform.OS === 'web' ? getSpacing(20) : 0,
     alignSelf: 'center',
   },
   modeToggle: {
@@ -1119,20 +1336,22 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   },
   inputRow: {
     flexDirection: 'row',
-    gap: getSpacing(12),
-    marginBottom: getSpacing(16),
+    gap: Platform.OS === 'android' ? getSpacing(8) : getSpacing(12),
+    marginBottom: Platform.OS === 'android' ? getSpacing(10) : getSpacing(16),
   },
   phoneContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start', // Aligner les éléments en haut
-    gap: getSpacing(12),
-    marginBottom: getSpacing(16),
+    gap: Platform.OS === 'android' ? getSpacing(2) : getSpacing(6), // Très rapprochés sur Android
+    marginBottom: Platform.OS === 'android' ? getSpacing(8) : getSpacing(16), // Réduire margin bottom sur Android
   },
+
   countrySelectWrapper: {
-    width: Platform.OS === 'web' ? 140 : 120,
+    width: Platform.OS === 'web' ? 120 : Platform.OS === 'android' ? 70 : 95, // Encore plus compact sur Android pour laisser place au téléphone
     marginBottom: 0,
     // Assurer la même hauteur que l'AuthInput
     height: getInputHeight(),
+    marginRight: Platform.OS === 'android' ? 0 : getSpacing(2), // Supprimer margin sur Android
   },
   checkboxGroup: {
     flexDirection: 'row',
@@ -1172,16 +1391,16 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     gap: 10,
   },
   inputWrapper: {
-    borderRadius: 16,
+    borderRadius: 12, // Réduire le border radius
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 12, // Réduire la marge
     backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
-    borderWidth: 1.5,
+    borderWidth: 1, // Réduire l'épaisseur de la bordure
     borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
-    height: 54,
+    height: 48, // Réduire la hauteur pour plus de compacité
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12, // Réduire le padding
   },
   button: {
     backgroundColor: '#008080',
@@ -1259,9 +1478,10 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   },
   phoneHint: {
     fontSize: getFontSize(11),
+    
     color: isDark ? 'rgba(255,255,255,0.6)' : '#79747E', // Material Design 3 - texte hint
-    marginTop: -getSpacing(12),
-    marginBottom: getSpacing(8),
+    marginTop: Platform.OS === 'android' ? -getSpacing(8) : -getSpacing(12),
+    marginBottom: Platform.OS === 'android' ? getSpacing(4) : getSpacing(8),
     paddingLeft: getSpacing(8),
     fontStyle: 'italic',
   },
@@ -1295,6 +1515,23 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
+  },
+  phoneFormatContainer: {
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'android' ? getSpacing(8) : getSpacing(12),
+  },
+  phoneFormatExample: {
+    fontSize: getFontSize(12),
+    color: Platform.OS === 'android' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)',
+    fontFamily: Platform.OS === 'web' ? 'Inter, sans-serif' : undefined,
+    fontWeight: '500',
+    textAlign: 'center',
+    backgroundColor: Platform.OS === 'android' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)',
+    paddingHorizontal: getSpacing(8),
+    paddingVertical: getSpacing(4),
+    borderRadius: getBorderRadius(6),
+    borderWidth: 1,
+    borderColor: Platform.OS === 'android' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)',
   },
 });
 

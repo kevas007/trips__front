@@ -1,5 +1,13 @@
-import { useTheme } from '../contexts/ThemeContext';
+import { useThemeStore } from '../store';
 
 export const useAppTheme = () => {
-  return useTheme();
+  const theme = useThemeStore(state => state.getTheme());
+  const isDark = useThemeStore(state => state.isDark());
+  const toggleTheme = useThemeStore(state => state.toggleTheme);
+  
+  return {
+    theme,
+    isDark,
+    toggleTheme,
+  };
 };

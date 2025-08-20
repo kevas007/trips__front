@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
-import { useSimpleAuth } from '../../contexts/SimpleAuthContext';
+import { useAuthStore } from '../../store';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
 
@@ -51,7 +51,7 @@ interface OnboardingScreenProps {
 
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
   const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
-  const { isNewUser, completeOnboarding } = useSimpleAuth();
+  const { isNewUser, setNewUser } = useAuthStore();
   const { theme, isDark } = useAppTheme();
   const scrollX = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -65,10 +65,8 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
     
     if (!isNewUser) {
       console.log('🎯 OnboardingScreen - Utilisateur pas nouveau, redirection vers AuthScreen');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'AuthScreen' }],
-      });
+      // Utiliser navigate au lieu de reset pour éviter les erreurs de navigation
+      navigation.navigate('AuthScreen');
     } else {
       console.log('🎯 OnboardingScreen - Nouvel utilisateur confirmé, affichage de l\'onboarding');
     }

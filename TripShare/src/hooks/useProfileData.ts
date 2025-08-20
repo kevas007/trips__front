@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { profileService } from '../services/profileService';
-import { authService } from '../services/auth';
+import { useAuthStore, useTripStore } from '../store';
 import { User, UserStats, Badge } from '../types/user';
 
 export function useProfileData() {
@@ -20,7 +20,8 @@ export function useProfileData() {
     }
     
     // Vérifier l'authentification avant de charger les données
-    if (!authService.isAuthenticated()) {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
       console.log('❌ Utilisateur non authentifié');
       setError('Veuillez vous connecter pour voir votre profil');
       setLoading(false);

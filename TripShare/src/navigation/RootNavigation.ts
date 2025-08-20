@@ -10,16 +10,34 @@ export function navigate(name: string, params?: object) {
 export function resetToAuth() {
   if (navigationRef.isReady()) {
     try {
-      // Essayer de naviguer vers Auth
-    navigationRef.reset({
-      index: 0,
-      routes: [{ name: 'Auth' as never }],
-    });
+      console.log('🔄 RootNavigation - resetToAuth appelée');
+      
+      // Vérifier l'état actuel de la navigation
+      const currentState = navigationRef.getState();
+      console.log('🔍 État navigation actuel:', JSON.stringify(currentState, null, 2));
+      
+      // Reset vers l'écran Auth du stack principal
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: 'Auth' as never }],
+      });
+      
+      console.log('✅ Reset vers Auth réussi');
     } catch (error) {
-      console.warn('⚠️ Impossible de naviguer vers Auth, tentative de reload...');
-      // En cas d'échec, forcer un reload de l'app
-      if (typeof window !== 'undefined' && window.location) {
-        window.location.reload();
+      console.warn('⚠️ Erreur lors du reset vers Auth:', error);
+      
+      // Tentative alternative : naviguer vers AuthScreen dans AuthNavigator
+      try {
+        navigationRef.navigate('Auth' as never, { screen: 'AuthScreen' } as never);
+        console.log('✅ Navigation alternative vers Auth réussie');
+      } catch (fallbackError) {
+        console.warn('⚠️ Navigation alternative échouée aussi:', fallbackError);
+        
+        // Dernière tentative : reload si on est sur web
+        if (typeof window !== 'undefined' && window.location) {
+          console.log('🔄 Forcer le reload de la page...');
+          window.location.reload();
+        }
       }
     }
   } else {

@@ -33,7 +33,9 @@ export const getFontSize = (size: number): number => {
 
 // Fonction pour la hauteur des inputs
 export const getInputHeight = (): number => {
-  return Platform.OS === 'ios' ? 50 : 52;
+  if (Platform.OS === 'ios') return 50;
+  if (Platform.OS === 'android') return 48; // Plus compact sur Android
+  return 52;
 };
 
 // Fonction pour l'espacement adaptatif
