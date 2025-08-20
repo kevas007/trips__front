@@ -51,19 +51,19 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 16,
-    color: '#64748B',
+    color: '#9E9E9E',
     fontWeight: '500',
     paddingBottom: 4,
   },
   tabLabelActive: {
-    color: '#1E293B',
+    color: '#008080',
     fontWeight: '700',
   },
   underlineActive: {
     width: 24,
     height: 3,
     borderRadius: 2,
-    backgroundColor: '#4ECDC4',
+    backgroundColor: '#008080',
     marginTop: 2,
   },
 });

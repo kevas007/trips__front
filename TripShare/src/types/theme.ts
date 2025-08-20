@@ -28,6 +28,9 @@ export interface Theme {
       border: string;
       shadow: string;
     };
+    border: {
+      primary: string;
+    };
   };
   spacing: {
     xs: number;
@@ -104,30 +107,33 @@ export interface Translations {
 // constants/themes.ts
 export const lightTheme: Theme = {
   colors: {
-    primary: ['#667eea', '#764ba2', '#f093fb', '#4facfe'],
-    accent: ['#FF6B9D', '#4ECDC4'],
-    secondary: ['#4facfe', '#00f2fe'],
+    primary: ['#008080', '#B2DFDF', '#FFFFFF'],
+    accent: ['#FF6B6B', '#FFE2E2', '#FFFFFF'],
+    secondary: ['#6C757D', '#E9ECEF', '#FFFFFF'],
     background: {
-      primary: '#F8FAFC',
-      card: 'rgba(255, 255, 255, 0.1)',
-      overlay: 'rgba(0, 0, 0, 0.8)',
-      gradient: ['#667eea', '#764ba2', '#f093fb', '#4facfe'],
+      primary: '#FAFAFA',
+      card: '#FFFFFF',
+      overlay: 'rgba(28, 27, 31, 0.8)',
+      gradient: ['#FAFAFA', '#FFFFFF'],
     },
     text: {
-      primary: '#1E293B',
-      secondary: '#64748B',
-      light: 'rgba(255, 255, 255, 0.9)',
+      primary: '#1C1B1F',
+      secondary: '#757575',
+      light: '#FFFFFF',
     },
     semantic: {
-      success: '#4ADE80',
-      warning: '#FBBF24',
-      error: '#EF4444',
-      info: '#3B82F6',
+      success: '#34C759',
+      warning: '#FF9500',
+      error: '#FF3B30',
+      info: '#008080',
     },
     glassmorphism: {
-      background: 'rgba(255, 255, 255, 0.1)',
-      border: 'rgba(255, 255, 255, 0.2)',
-      shadow: 'rgba(0, 0, 0, 0.1)',
+      background: 'rgba(255, 255, 255, 0.7)',
+      border: 'rgba(0, 128, 128, 0.15)',
+      shadow: 'rgba(0, 128, 128, 0.10)',
+    },
+    border: {
+      primary: '#E0E0E0',
     },
   },
   spacing: {
@@ -147,30 +153,33 @@ export const lightTheme: Theme = {
 
 export const darkTheme: Theme = {
   colors: {
-    primary: ['#1a1b3a', '#2d1b69', '#8b5a9a', '#4facfe'],
-    accent: ['#FF6B9D', '#4ECDC4'],
-    secondary: ['#4facfe', '#00f2fe'],
+    primary: ['#00B3B3', '#004D4D', '#000000'],
+    accent: ['#FF8585', '#802D2D', '#000000'],
+    secondary: ['#ADB5BD', '#343A40', '#000000'],
     background: {
-      primary: '#0F172A',
-      card: 'rgba(15, 23, 42, 0.8)',
-      overlay: 'rgba(0, 0, 0, 0.9)',
-      gradient: ['#1a1b3a', '#2d1b69', '#8b5a9a', '#4facfe'],
+      primary: '#121212',
+      card: '#1E1E1E',
+      overlay: 'rgba(0, 0, 0, 0.8)',
+      gradient: ['#121212', '#1E1E1E'],
     },
     text: {
-      primary: '#F1F5F9',
-      secondary: '#94A3B8',
-      light: 'rgba(241, 245, 249, 0.9)',
+      primary: '#FFFFFF',
+      secondary: '#BDBDBD',
+      light: '#000000',
     },
     semantic: {
-      success: '#22C55E',
-      warning: '#F59E0B',
-      error: '#DC2626',
-      info: '#2563EB',
+      success: '#32D74B',
+      warning: '#FFD60A',
+      error: '#FF453A',
+      info: '#00B3B3',
     },
     glassmorphism: {
-      background: 'rgba(15, 23, 42, 0.6)',
-      border: 'rgba(241, 245, 249, 0.1)',
-      shadow: 'rgba(0, 0, 0, 0.3)',
+      background: 'rgba(0, 0, 0, 0.7)',
+      border: 'rgba(0, 179, 179, 0.15)',
+      shadow: 'rgba(0, 179, 179, 0.10)',
+    },
+    border: {
+      primary: '#333333',
     },
   },
   spacing: {

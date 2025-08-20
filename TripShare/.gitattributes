@@ -1,0 +1,25 @@
+# Configuration pour les fichiers longs sur Windows
+* text=auto eol=lf
+
+# Fichiers spécifiques
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Fichiers binaires
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+
+# Configuration pour les chemins longs
+* -text 

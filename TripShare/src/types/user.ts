@@ -1,73 +1,123 @@
+// ========== TYPES UTILISATEUR - ALIGNÉS AVEC LE BACKEND GO ==========
+
 export interface User {
-  id: number;
+  id: string;
   email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  avatar_url?: string | null;
+  name: string;
+  username?: string;
+  avatar?: string;
   bio?: string;
-  phone_number?: string;
-  date_of_birth?: string;
-  created_at: string;
-  updated_at: string;
-  is_verified: boolean;
-  is_premium: boolean;
-  preferences: UserPreferences;
-  privacy_settings: PrivacySettings;
-  notification_settings: NotificationSettings;
-  stats?: UserStats;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  settings: UserSettings;
+  stats: UserStats;
+  preferences: UserTravelPreferences;
 }
 
-export interface UserPreferences {
+export interface UserSettings {
+  biometricEnabled: boolean;
+  notificationsEnabled: boolean;
+  emailNotifications: boolean;
   language: string;
-  theme: 'light' | 'dark' | 'system';
   currency: string;
   timezone: string;
-  measurement_system: 'metric' | 'imperial';
-}
-
-export interface PrivacySettings {
-  profile_visibility: 'public' | 'private' | 'friends';
-  show_email: boolean;
-  show_phone: boolean;
-  show_birth_date: boolean;
-  allow_friend_requests: boolean;
-  allow_messages: boolean;
-  show_activity_status: boolean;
-  show_location: boolean;
-}
-
-export interface NotificationSettings {
-  email_notifications: boolean;
-  push_notifications: boolean;
-  friend_requests: boolean;
-  messages: boolean;
-  comments: boolean;
-  likes: boolean;
-  shares: boolean;
-  new_followers: boolean;
-  trip_updates: boolean;
-  marketing_emails: boolean;
+  privacyLevel: 'public' | 'friends' | 'private';
+  autoSync: boolean;
+  dataCollection: boolean;
 }
 
 export interface UserStats {
-  total_trips: number;
-  total_followers: number;
-  total_following: number;
-  total_likes: number;
-  total_comments: number;
-  total_shares: number;
-  total_views: number;
-  average_rating: number;
-  badges: Badge[];
+  tripsCreated: number;
+  tripsShared: number;
+  tripsLiked: number;
+  followers: number;
+  following: number;
+  totalViews: number;
+  totalLikes: number;
+  countriesVisited: number;
+  citiesVisited: number;
 }
 
+export interface UserTravelPreferences {
+  activities?: string[];
+  accommodation?: string[];
+  transport?: string[];
+  food?: string[];
+  budget?: string[];
+  climate?: string[];
+  culture?: string[];
+}
+
+// ========== PARAMÈTRES DE CONFIDENTIALITÉ ==========
+export interface PrivacySettings {
+  profile_visibility: 'public' | 'friends' | 'private';
+  show_email: boolean;
+  show_phone_number: boolean;
+  show_date_of_birth: boolean;
+  show_trips: 'public' | 'friends' | 'private';
+  show_followers: 'public' | 'friends' | 'private';
+  show_following: 'public' | 'friends' | 'private';
+  show_badges: 'public' | 'friends' | 'private';
+  show_stats: 'public' | 'friends' | 'private';
+  allow_tagging: boolean;
+  allow_messaging: 'everyone' | 'friends' | 'none';
+}
+
+// ========== PARAMÈTRES DE NOTIFICATION ==========
+export interface NotificationSettings {
+  new_follower: boolean;
+  new_like: boolean;
+  new_comment: boolean;
+  new_message: boolean;
+  new_badge: boolean;
+  trip_reminder: boolean;
+  email_notifications: boolean;
+  push_notifications: boolean;
+}
+
+// ========== BADGES ==========
 export interface Badge {
   id: number;
   name: string;
   description: string;
-  icon_url: string;
+  icon: string;
+  category: string;
+  created_at: string;
+}
+
+export interface UserBadge {
+  id: number;
+  user_id: number;
+  badge_id: number;
+  badge: Badge;
   earned_at: string;
-  category: 'achievement' | 'milestone' | 'special';
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  created_at: string;
+}
+
+// ========== RELATIONS SOCIALES ==========
+export interface UserFollow {
+  id: number;
+  follower_id: number;
+  following_id: number;
+  created_at: string;
+}
+
+// ========== PROFIL UTILISATEUR ==========
+export interface UserProfile {
+  id: number;
+  user_id: number;
+  bio?: string;
+  avatar_url?: string;
+  location?: string;
+  website?: string;
+  birthday?: string;
+  travel_preferences?: UserTravelPreferences;
+  created_at: string;
+  updated_at: string;
+}
+
+// ========== TYPES POUR LES DONNÉES PUBLIQUES ==========
+export interface PublicUserData {
+  [key: string]: any; // Le backend renvoie une map[string]interface{}
 } 

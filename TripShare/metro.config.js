@@ -1,4 +1,4 @@
-// === metro.config.js - CONFIGURATION CORRIGÉE ===
+// === metro.config.js - CONFIGURATION SIMPLIFIÉE POUR JSC ===
 
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
@@ -41,29 +41,52 @@ config.resolver = {
 };
 
 // ═══════════════════════════════════════
-// Configuration du transformer
+// Configuration du transformer simplifiée
 config.transformer = {
   ...config.transformer,
   
   // Configuration pour les assets
   assetPlugins: ['expo-asset/tools/hashAssetFiles'],
+  
+  // Minification simplifiée pour JSC
+  minifierConfig: {
+    output: {
+      ascii_only: true,
+      comments: false,
+    },
+    compress: {
+      dead_code: true,
+      drop_console: process.env.NODE_ENV === 'production',
+      drop_debugger: true,
+      unused: true,
+    },
+    mangle: {
+      toplevel: false,
+    },
+  },
 };
 
 // ═══════════════════════════════════════
-// Configuration pour ignorer certains fichiers
+// Configuration pour ignorer les fichiers inutiles
 config.resolver.blockList = [
   // Ignorer les fichiers de test
   /.*\/__tests__\/.*/,
   /.*\.test\.(js|jsx|ts|tsx)$/,
   /.*\.spec\.(js|jsx|ts|tsx)$/,
   
-  // Ignorer les fichiers de configuration et système
+  // Ignorer les fichiers de documentation et config
   /.*\/\.git\/.*/,
   /.*\/\.DS_Store$/,
   /.*\/Thumbs\.db$/,
+  /.*\/\.md$/,
+  /.*\/LICENSE$/,
+  /.*\/CHANGELOG/,
   
   // Éviter les conflits de node_modules imbriqués
   /.*\/node_modules\/.*\/node_modules\/.*/,
+  
+  // Ignorer les sources maps en production
+  ...(process.env.NODE_ENV === 'production' ? [/.*\.map$/] : []),
 ];
 
 // Exporter la configuration

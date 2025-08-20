@@ -19,7 +19,7 @@ export const formStyles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
   },
@@ -64,7 +64,7 @@ export const formStyles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 8,
     fontWeight: 'bold',
   },
   registerContainer: {
@@ -73,11 +73,11 @@ export const formStyles = StyleSheet.create({
     alignItems: 'center',
   },
   registerText: {
-    fontSize: 14,
+    fontSize: 6,
     marginRight: 4,
   },
   registerLink: {
-    fontSize: 14,
+    fontSize: 6,
     fontWeight: '600',
   },
 }); 

@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   title: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 'bold',
   },
   content: {
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(79,140,255,0.1)',
+    backgroundColor: 'rgba(0,128,128,0.1)', // Material Design 3 Teal
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   notificationDescription: {
-    fontSize: 14,
+    fontSize: 6,
   },
   footer: {
     padding: 16,

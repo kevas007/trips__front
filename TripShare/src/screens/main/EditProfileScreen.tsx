@@ -62,7 +62,7 @@ const EditProfileScreen = ({ navigation }: { navigation: EditProfileScreenNaviga
   const handleImagePick = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
   },
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 10,
     paddingHorizontal: 15,
-    fontSize: 16,
+    fontSize: 13,
     borderWidth: 1,
   },
   textArea: {
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
   },
 });

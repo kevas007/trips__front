@@ -1,32 +1,71 @@
 {
   "expo": {
-    "name": "TripShare",
-    "slug": "TripShare",
+    "name": "Trivenile",
+    "slug": "Trivenile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
+    "jsEngine": "jsc",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.trivenile.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "UIStatusBarStyle": "UIStatusBarStyleDefault",
+        "NSLocationWhenInUseUsageDescription": "Cette application utilise votre localisation pour afficher votre position sur la carte et trouver des voyages à proximité.",
+        "NSLocationAlwaysUsageDescription": "Cette application utilise votre localisation pour afficher votre position sur la carte et trouver des voyages à proximité."
+      },
+      "config": {
+        "usesNonExemptEncryption": false,
+        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
+      },
+      "jsEngine": "jsc"
     },
     "android": {
+      "package": "trivenile.android",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "statusBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#ffffff",
+        "translucent": false
+      },
+      "config": {
+        "enableDangerousExperimentalLeanBuilds": true,
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "jsEngine": "jsc"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon_3d_32x32.png",
+      "bundler": "metro"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Autoriser Trivenile à utiliser votre position pour afficher votre localisation sur la carte et trouver des voyages à proximité."
+        }
+      ]
     ],
     "fonts": [
       {
@@ -35,6 +74,15 @@
       {
         "asset": "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf"
       }
-    ]
+    ],
+    "optimization": {
+      "tree-shaking": true,
+      "minify": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    }
   }
 }

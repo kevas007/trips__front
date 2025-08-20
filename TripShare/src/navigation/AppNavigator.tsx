@@ -1,18 +1,27 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore, useThemeStore } from '@/store';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { ActivityIndicator, View } from 'react-native';
-import { useTheme } from '@/theme/ThemeContext';
 
 const Stack = createStackNavigator();
 
 const AppNavigator: React.FC = () => {
-  const { user, loading } = useAuth();
-  const { theme } = useTheme();
+  const { user, isLoading, isAuthenticated, isNewUser } = useAuthStore();
+  const theme = useThemeStore(state => state.getTheme());
 
-  if (loading) {
+  // Debug logs pour comprendre l'état
+  console.log('🔍 AppNavigator - État auth:', {
+    user: !!user,
+    isLoading,
+    isAuthenticated,
+    isNewUser,
+    userEmail: user?.email,
+    userPreferences: user?.preferences
+  });
+
+  if (isLoading) {
     return (
       <View style={{ 
         flex: 1, 
@@ -25,12 +34,18 @@ const AppNavigator: React.FC = () => {
     );
   }
 
+  // Si nouvel utilisateur, toujours montrer Auth (qui contient l'onboarding)
+  // Si utilisateur existant et authentifié, montrer Main
+  const shouldShowAuth = !isAuthenticated || !user || isNewUser;
+  
+  console.log('🔍 AppNavigator - Navigation vers:', shouldShowAuth ? 'Auth' : 'Main');
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user ? (
-        <Stack.Screen name="Main" component={MainNavigator} />
-      ) : (
+      {shouldShowAuth ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
+      ) : (
+        <Stack.Screen name="Main" component={MainNavigator} />
       )}
     </Stack.Navigator>
   );

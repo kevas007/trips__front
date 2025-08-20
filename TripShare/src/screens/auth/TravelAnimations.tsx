@@ -22,7 +22,7 @@ interface FloatingElementProps extends TravelAnimationProps {
 // Animation d'avion avec trajectoire
 export const PlaneAnimation: React.FC<TravelAnimationProps> = ({
   size = 40,
-  color = '#667eea',
+      color = '#008080',
   duration = 3000,
   autoStart = true
 }) => {
@@ -79,7 +79,7 @@ export const PlaneAnimation: React.FC<TravelAnimationProps> = ({
         <Defs>
           <LinearGradient id="planeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={color} />
-            <Stop offset="100%" stopColor="#764ba2" />
+            <Stop offset="100%" stopColor="#4FB3B3" />
           </LinearGradient>
         </Defs>
         <Path
