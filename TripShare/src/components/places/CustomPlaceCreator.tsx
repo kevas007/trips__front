@@ -112,7 +112,7 @@ const CustomPlaceCreator: React.FC<CustomPlaceCreatorProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, // TODO: Migrer vers MediaType quand disponible
         allowsMultipleSelection: true,
         quality: 0.8,
         aspect: [16, 9],

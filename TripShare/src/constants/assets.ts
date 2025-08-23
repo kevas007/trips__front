@@ -29,11 +29,11 @@ export const LOCAL_ASSETS = {
 // === DESTINATIONS PLACEHOLDERS (URLs Unsplash optimisées) ===
 export const DESTINATION_PLACEHOLDERS = {
   paris: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=800&h=600&fit=crop&crop=faces,center',
-  tokyo: 'http://localhost:8085/storage/defaults/default-trip-image.jpg&h=600&fit=crop&crop=faces,center',
-  bali: 'http://localhost:8085/storage/defaults/default-trip-image.jpg&h=600&fit=crop&crop=faces,center',
-  iceland: 'http://localhost:8085/storage/defaults/default-trip-image.jpg&h=600&fit=crop&crop=faces,center',
-  santorini: 'http://localhost:8085/storage/defaults/default-trip-image.jpg&h=600&fit=crop&crop=faces,center',
-  maldives: 'http://localhost:8085/storage/defaults/default-trip-image.jpg&h=600&fit=crop&crop=faces,center',
+  tokyo: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&h=600&fit=crop&crop=faces,center',
+  bali: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800&h=600&fit=crop&crop=faces,center',
+  iceland: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop&crop=faces,center',
+  santorini: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=800&h=600&fit=crop&crop=faces,center',
+  maldives: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=600&fit=crop&crop=faces,center',
   alps: 'https://images.unsplash.com/photo-1464822759844-d150356c4f2e?w=800&h=600&fit=crop&crop=faces,center',
   safari: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=600&fit=crop&crop=faces,center',
 };

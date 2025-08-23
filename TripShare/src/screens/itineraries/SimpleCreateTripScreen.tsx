@@ -21,7 +21,10 @@ import * as Location from 'expo-location';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useAuthStore } from '../../store';
 import { tripShareApi } from '../../services/tripShareApi';
+import { unifiedTripService } from '../../services/unifiedTripService';
 import LocationSearchInput, { LocationSuggestion } from '../../components/places/LocationSearchInput';
+import { ModerationAlert } from '../../components/ui/ModerationAlert';
+import InstagramLikeTagInput from '../../components/tags/InstagramLikeTagInput';
 
 const { width } = Dimensions.get('window');
 
@@ -76,8 +79,8 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
     photos: [],
     duration: '',
     budget: '',
-    startDate: new Date().toISOString().split('T')[0], // Date actuelle
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +7 jours
+    startDate: '', // ✅ Plus de date automatique
+    endDate: '', // ✅ Plus de date automatique
     isPublic: true,
     status: 'completed', // ✅ Statut par défaut
     difficulty: '', // ✅ NOUVEAU CHAMP
@@ -227,7 +230,7 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
       quality: 0.8,
       selectionLimit: 10,
@@ -250,7 +253,7 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
     });
 
@@ -424,7 +427,7 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
     try {
       setIsCreating(true);
       
-      // Valider les données
+      // Valider les données obligatoires
       if (!tripData.title.trim()) {
         Alert.alert('Erreur', 'Le titre du voyage est requis');
         return;
@@ -436,79 +439,79 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
       }
 
       if (tripData.photos.length === 0) {
-        Alert.alert('Erreur', 'Au moins une photo est requise');
+        Alert.alert(
+          'Photos requises', 
+          'Au moins une photo est obligatoire pour créer votre voyage. Ajoutez vos plus beaux souvenirs !',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+
+      if (!tripData.budget || tripData.budget.trim() === '') {
+        Alert.alert(
+          'Budget requis', 
+          'Le budget est obligatoire. Indiquez le coût approximatif de votre voyage pour aider les autres voyageurs.',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+
+      // Valider que le budget est un nombre valide
+      const budgetValue = parseFloat(tripData.budget);
+      if (isNaN(budgetValue) || budgetValue <= 0) {
+        Alert.alert(
+          'Budget invalide', 
+          'Veuillez entrer un montant valide pour le budget (exemple: 500, 1200.50).',
+          [{ text: 'OK', style: 'default' }]
+        );
         return;
       }
       
-      // Préparer les lieux visités
-      const placesPayload = tripData.places.map(place => ({
-        name: place.name,
-        description: place.description || '',
-        address: place.address || '',
-        is_visited: place.isVisited,
-        visit_date: place.visitDate || undefined,
-        photos: place.photos || [],
-        notes: place.notes || '',
-      }));
-
-      // Préparer les données pour l'API (SANS photos)
-      const tripRequest = {
-        title: tripData.title,
-        description: tripData.description,
-        start_date: tripData.startDate,
-        end_date: tripData.endDate,
-        location: {
-          city: tripData.destination,
-          country: tripData.country || 'France', // Utiliser la vraie valeur si disponible
-          latitude: tripData.latitude || 48.8566, // Utiliser la vraie valeur si disponible
-          longitude: tripData.longitude || 2.3522, // Utiliser la vraie valeur si disponible
-        },
-        budget: tripData.budget ? parseFloat(tripData.budget) : undefined,
-        status: tripData.status, // ✅ Utiliser le statut sélectionné par l'utilisateur
-        visibility: tripData.isPublic ? 'public' : 'private', // ✅ Visibilité correcte
-        photos: [], // Pas de photos dans la création initiale
-        duration: tripData.duration,
-        difficulty: tripData.difficulty,
-        tags: tripData.tags,
-        places_visited: placesPayload,
-      };
+      // ✅ Plus besoin de préparer manuellement les données, 
+      // le UnifiedTripService s'en charge automatiquement
       
-      console.log('🚀 Création du voyage avec les données:', JSON.stringify(tripRequest, null, 2));
+      console.log('🚀 Création du voyage via UnifiedTripService');
       console.log('📊 Statut sélectionné par l\'utilisateur:', tripData.status);
       
-      // 1. Créer le voyage via l'API
-      const result = await tripShareApi.createTrip(tripRequest);
+      // ✅ UTILISER LE SERVICE UNIFIÉ
+      const result = await unifiedTripService.createTrip({
+        title: tripData.title,
+        description: tripData.description,
+        destination: tripData.destination,
+        photos: tripData.photos,
+        duration: tripData.duration,
+        budget: tripData.budget,
+        startDate: tripData.startDate,
+        endDate: tripData.endDate,
+        isPublic: tripData.isPublic,
+        status: tripData.status as 'planned' | 'ongoing' | 'completed',
+        difficulty: tripData.difficulty,
+        tags: tripData.tags,
+        places: tripData.places.map(place => ({
+          name: place.name,
+          description: place.description,
+          address: place.address,
+        })),
+      });
       
-      console.log('✅ Voyage créé avec ID:', result.id);
-      
-      // 2. Uploader les photos une par une
-      if (tripData.photos && tripData.photos.length > 0) {
-        console.log('📸 Upload de', tripData.photos.length, 'photos...');
-        
-        for (let i = 0; i < tripData.photos.length; i++) {
-          try {
-            const formData = new FormData();
-            formData.append('photo', {
-              uri: tripData.photos[i],
-              type: 'image/jpeg',
-              name: `photo_${i + 1}.jpg`
-            } as any);
-            
-            formData.append('description', `Photo ${i + 1} du voyage`);
-            
-            await tripShareApi.uploadTripPhoto(result.id, formData);
-            console.log(`✅ Photo ${i + 1}/${tripData.photos.length} uploadée`);
-          } catch (error) {
-            console.warn(`⚠️ Erreur upload photo ${i + 1}:`, error);
-          }
-        }
+      if (result.status === 'error') {
+        throw new Error(result.message);
       }
       
-      console.log('✅ Voyage créé avec succès:', result);
+      console.log('✅ Voyage créé avec succès via UnifiedTripService:', result);
+      
+      // Message de succès avec détails des photos
+      let successMessage = `Votre voyage "${tripData.title}" a été créé avec succès !`;
+      if (result.photos_uploaded > 0) {
+        successMessage += `\n📸 ${result.photos_uploaded} photo(s) uploadée(s)`;
+      }
+      if (result.photos_failed > 0) {
+        successMessage += `\n⚠️ ${result.photos_failed} photo(s) ont échoué`;
+      }
       
       Alert.alert(
         'Succès',
-        'Votre voyage a été créé avec succès !',
+        successMessage,
         [
           {
             text: 'OK',
@@ -580,10 +583,12 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
           }]}
           onPress={() => openDatePicker('start')}
         >
-          <Text style={[styles.dateText, { color: theme.colors.text.primary }]}>
+          <Text style={[styles.dateText, { color: tripData.startDate ? theme.colors.text.primary : theme.colors.text.secondary }]}>
             {tripData.startDate ? new Date(tripData.startDate).toLocaleDateString('fr-FR') : 'Sélectionner une date'}
           </Text>
-          <Ionicons name="calendar-outline" size={20} color={theme.colors.text.secondary} />
+          <View style={{ paddingLeft: 8 }}>
+            <Ionicons name="calendar-outline" size={20} color={theme.colors.text.secondary} />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -598,10 +603,12 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
           }]}
           onPress={() => openDatePicker('end')}
         >
-          <Text style={[styles.dateText, { color: theme.colors.text.primary }]}>
+          <Text style={[styles.dateText, { color: tripData.endDate ? theme.colors.text.primary : theme.colors.text.secondary }]}>
             {tripData.endDate ? new Date(tripData.endDate).toLocaleDateString('fr-FR') : 'Sélectionner une date'}
           </Text>
-          <Ionicons name="calendar-outline" size={20} color={theme.colors.text.secondary} />
+          <View style={{ paddingLeft: 8 }}>
+            <Ionicons name="calendar-outline" size={20} color={theme.colors.text.secondary} />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -718,7 +725,10 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
 
       <View style={styles.quickSelectionContainer}>
         <Text style={[styles.label, { color: theme.colors.text.primary }]}>
-          💰 Budget approximatif
+          💰 Budget approximatif <Text style={{color: '#FF6B6B'}}>*</Text>
+        </Text>
+        <Text style={[styles.requiredHint, { color: theme.colors.text.secondary }]}>
+          Champ obligatoire - Indiquez le coût total de votre voyage
         </Text>
         <View style={styles.budgetGrid}>
           {budgetOptions.map((option, index) => (
@@ -832,6 +842,15 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
 
   const renderPhotosStep = () => (
     <ScrollView style={styles.stepContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.inputGroup}>
+        <Text style={[styles.label, { color: theme.colors.text.primary }]}>
+          📸 Vos photos de voyage <Text style={{color: '#FF6B6B'}}>*</Text>
+        </Text>
+        <Text style={[styles.requiredHint, { color: theme.colors.text.secondary }]}>
+          Champ obligatoire - Ajoutez au moins une photo pour partager vos souvenirs
+        </Text>
+      </View>
+      
       <Text style={[styles.stepDescription, { color: theme.colors.text.secondary }]}>
         📸 Ajoutez vos plus belles photos pour faire rêver les autres voyageurs !
       </Text>
@@ -894,40 +913,17 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
           🏷️ Tags de votre voyage
         </Text>
         <Text style={[styles.tagDescription, { color: theme.colors.text.secondary }]}>
-          Choisissez jusqu'à 5 tags pour aider les autres à découvrir votre voyage
+          Ajoutez des tags pour aider les autres à découvrir votre voyage
         </Text>
-        <View style={styles.tagsContainer}>
-          {suggestedTags.map((tag, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.tagChip,
-                { 
-                  backgroundColor: tripData.tags.includes(tag) 
-                    ? theme.colors.primary[0] 
-                    : theme.colors.background.card,
-                  borderColor: theme.colors.border.primary
-                }
-              ]}
-              onPress={() => toggleTag(tag)}
-              disabled={!tripData.tags.includes(tag) && tripData.tags.length >= 5}
-            >
-              <Text style={[
-                styles.tagText,
-                { 
-                  color: tripData.tags.includes(tag) 
-                    ? 'white' 
-                    : theme.colors.text.primary 
-                }
-              ]}>
-                {tag}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={[styles.tagCounter, { color: theme.colors.text.secondary }]}>
-          {tripData.tags.length}/5 tags sélectionnés
-        </Text>
+        
+        <InstagramLikeTagInput
+          selectedTags={tripData.tags}
+          onTagsChange={(newTags) => setTripData(prev => ({ ...prev, tags: newTags }))}
+          maxTags={8}
+          placeholder="Rechercher ou créer des tags..."
+          showPopularTags={true}
+          allowCustomTags={true}
+        />
       </View>
 
       {/* Section Lieux à visiter */}
@@ -1330,11 +1326,59 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
             <Text style={[styles.stepDescription, { color: theme.colors.text.secondary }]}>
               📅 Sélectionnez la date de début de votre voyage
             </Text>
+            <Text style={[styles.stepDescription, { color: theme.colors.text.secondary, fontSize: 12, fontStyle: 'italic' }]}>
+              💡 Vous pouvez sélectionner une date passée pour documenter un voyage déjà effectué
+            </Text>
             
             {/* Options de dates rapides */}
             <View style={styles.quickSelectionContainer}>
               <Text style={[styles.label, { color: theme.colors.text.primary }]}>
                 Options rapides
+              </Text>
+              
+              {/* Dates passées */}
+              <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary, marginTop: 16, marginBottom: 8 }]}>
+                📅 Dates passées
+              </Text>
+              <View style={styles.optionsRow}>
+                <TouchableOpacity
+                  style={[styles.optionChip, { 
+                    backgroundColor: theme.colors.background.card,
+                    borderColor: theme.colors.border.primary
+                  }]}
+                  onPress={() => handleStartDateChange(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0])}
+                >
+                  <Text style={[styles.optionText, { color: theme.colors.text.primary }]}>
+                    Hier
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.optionChip, { 
+                    backgroundColor: theme.colors.background.card,
+                    borderColor: theme.colors.border.primary
+                  }]}
+                  onPress={() => handleStartDateChange(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])}
+                >
+                  <Text style={[styles.optionText, { color: theme.colors.text.primary }]}>
+                    Il y a 1 semaine
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.optionChip, { 
+                    backgroundColor: theme.colors.background.card,
+                    borderColor: theme.colors.border.primary
+                  }]}
+                  onPress={() => handleStartDateChange(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])}
+                >
+                  <Text style={[styles.optionText, { color: theme.colors.text.primary }]}>
+                    Il y a 1 mois
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Dates futures */}
+              <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary, marginTop: 16, marginBottom: 8 }]}>
+                🚀 Dates futures
               </Text>
               <View style={styles.optionsRow}>
                 <TouchableOpacity
@@ -1418,11 +1462,19 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
             <Text style={[styles.stepDescription, { color: theme.colors.text.secondary }]}>
               📅 Sélectionnez la date de fin de votre voyage
             </Text>
+            <Text style={[styles.stepDescription, { color: theme.colors.text.secondary, fontSize: 12, fontStyle: 'italic' }]}>
+              💡 La date de fin doit être après la date de début
+            </Text>
             
             {/* Options de dates rapides */}
             <View style={styles.quickSelectionContainer}>
               <Text style={[styles.label, { color: theme.colors.text.primary }]}>
                 Options rapides
+              </Text>
+              
+              {/* Dates futures */}
+              <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary, marginTop: 16, marginBottom: 8 }]}>
+                🚀 Dates futures
               </Text>
               <View style={styles.optionsRow}>
                 <TouchableOpacity
@@ -1571,6 +1623,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  requiredHint: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginBottom: 8,
+    marginTop: -4,
   },
   input: {
     borderWidth: 1,
@@ -1942,10 +2000,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginTop: 8,
+    minHeight: 48, // ✅ Hauteur minimale pour iOS
   },
   dateText: {
     fontSize: 16,
     fontWeight: '500',
+    flex: 1, // ✅ Prend tout l'espace disponible
+    textAlignVertical: 'center', // ✅ Centrage vertical sur Android
   },
   // ✅ NOUVEAUX STYLES POUR LA DIFFICULTÉ
   difficultyGrid: {
@@ -1973,6 +2034,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
 

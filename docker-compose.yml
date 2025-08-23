@@ -30,7 +30,7 @@ services:
     container_name: tripshare-postgres
     environment:
       POSTGRES_DB: "${DB_NAME:-tripshare}"
-      POSTGRES_USER: "${DB_USER:-postgres}"
+      POSTGRES_USER: "${DB_USER}"
       POSTGRES_PASSWORD: "${DB_PASSWORD:-defaultpassword}"
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     ports:
@@ -62,7 +62,7 @@ services:
       - TZ=UTC
       - GIN_MODE=release
     ports:
-      - "127.0.0.1:8005:${SERVER_PORT:-8085}"
+      - "127.0.0.1:8085:${SERVER_PORT:-8085}"
     depends_on:
       redis:
         condition: service_healthy

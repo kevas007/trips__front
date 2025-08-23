@@ -12,12 +12,18 @@ interface BackendResponse<T = any> {
 class UnifiedApiService {
   private baseURL = API_CONFIG.BASE_URL;
 
-  private async makeRequest<T>(endpoint: string, options: RequestInit & { skipApiPrefix?: boolean } = {}): Promise<T> {
+  private async makeRequest<T>(
+    endpoint: string, 
+    options: RequestInit & { 
+      skipApiPrefix?: boolean,
+      timeout?: number 
+    } = {}
+  ): Promise<T> {
     // Récupérer le token depuis authService
     let token = authService.getToken();
     
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      'Content-Type': options.headers?.['Content-Type'] || 'application/json',
       ...(!options.skipApiPrefix && token && { Authorization: `Bearer ${token}` }),
       ...options.headers as Record<string, string>,
     };
@@ -29,58 +35,86 @@ class UnifiedApiService {
     console.log(`🔍 UnifiedAPI - Token disponible:`, !!token);
     console.log(`🌐 UnifiedAPI - Base URL: ${this.baseURL}`);
 
-    let response = await fetch(fullUrl, {
-      ...options,
-      headers,
-    });
+    try {
+      // Ajouter un timeout et une gestion d'erreur réseau améliorée
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 secondes
 
-    console.log(`📡 UnifiedAPI Réponse: ${response.status}`);
+      let response = await fetch(fullUrl, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
 
-    // Si 401, essayer de rafraîchir le token et réessayer
-    if (response.status === 401 && token) {
-      try {
-        console.log('🔄 UnifiedAPI - Token expiré, tentative de refresh...');
-        const newToken = await authService.refreshAccessToken();
-        console.log('✅ UnifiedAPI - Token rafraîchi, nouvelle tentative...');
-        
-        // Mettre à jour les headers avec le nouveau token
-        headers.Authorization = `Bearer ${newToken}`;
-        
-        response = await fetch(fullUrl, {
-          ...options,
-          headers,
-        });
-        
-        console.log(`📡 UnifiedAPI Réponse après refresh: ${response.status}`);
-      } catch (refreshError) {
-        console.error('❌ UnifiedAPI - Échec du refresh, déconnexion...');
-        await authService.logout();
-        throw new Error('Session expirée, veuillez vous reconnecter');
+      clearTimeout(timeoutId);
+      console.log(`📡 UnifiedAPI Réponse: ${response.status}`);
+
+      // Si 401, essayer de rafraîchir le token et réessayer
+      if (response.status === 401 && token) {
+        try {
+          console.log('🔄 UnifiedAPI - Token expiré, tentative de refresh...');
+          const newToken = await authService.refreshAccessToken();
+          console.log('✅ UnifiedAPI - Token rafraîchi, nouvelle tentative...');
+          
+          // Mettre à jour les headers avec le nouveau token
+          headers.Authorization = `Bearer ${newToken}`;
+          
+          const retryController = new AbortController();
+          const retryTimeoutId = setTimeout(() => retryController.abort(), 10000);
+          
+          response = await fetch(fullUrl, {
+            ...options,
+            headers,
+            signal: retryController.signal,
+          });
+          
+          clearTimeout(retryTimeoutId);
+          console.log(`📡 UnifiedAPI Réponse après refresh: ${response.status}`);
+        } catch (refreshError) {
+          console.error('❌ UnifiedAPI - Échec du refresh:', refreshError);
+          if (refreshError instanceof Error && refreshError.name !== 'AbortError') {
+            await authService.logout();
+            throw new Error('Session expirée, veuillez vous reconnecter');
+          }
+          throw refreshError;
+        }
       }
-    }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorData: BackendResponse;
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData: BackendResponse;
+        
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { success: false, error: errorText || `HTTP ${response.status}` };
+        }
+
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data: BackendResponse<T> = await response.json();
       
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = { success: false, error: errorText || `HTTP ${response.status}` };
+      // Vérifier le format de réponse du backend Go
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur serveur');
       }
 
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
+      // Retourner les données de réponse
+      return data.data as T;
 
-    const data: BackendResponse<T> = await response.json();
-    
-    // Vérifier le format de réponse du backend Go
-    if (!data.success) {
-      throw new Error(data.error || 'Erreur serveur');
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('❌ UnifiedAPI - Timeout de requête');
+          throw new Error('Timeout de connexion - vérifiez votre connexion internet');
+        } else if (error.message.includes('Network request failed')) {
+          console.error('❌ UnifiedAPI - Erreur réseau');
+          throw new Error('Erreur de connexion - vérifiez que le serveur est accessible');
+        }
+      }
+      throw error;
     }
-
-    // Retourner les données de réponse
-    return data.data as T;
   }
 
   async get<T>(endpoint: string, options: { skipApiPrefix?: boolean } = {}): Promise<T> {

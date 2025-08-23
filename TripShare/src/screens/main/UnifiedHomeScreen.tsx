@@ -106,9 +106,72 @@ interface PostFilters {
   userPreferences?: string[];
 }
 
+// Fonctions utilitaires pour l'organisation des feeds
+const isRelevantForUser = (post: SocialPost, userPreferences?: string[]) => {
+  if (!userPreferences) return true;
+  return userPreferences.some(pref => 
+    post.tags?.includes(pref) || 
+    post.tripInfo?.destination.toLowerCase().includes(pref.toLowerCase())
+  );
+};
+
+const isFromFollowing = (post: SocialPost, following?: string[]) => {
+  if (!following) return false;
+  return following.includes(post.user?.id || '');
+};
+
+const isNearby = (post: SocialPost, userLocation?: { lat: number, lng: number }) => {
+  if (!userLocation || !post.tripInfo?.latitude || !post.tripInfo?.longitude) return false;
+  const distance = getDistance(
+    userLocation.lat,
+    userLocation.lng,
+    post.tripInfo.latitude,
+    post.tripInfo.longitude
+  );
+  return distance <= 100; // Dans un rayon de 100km
+};
+
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // Rayon de la Terre en km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+const deg2rad = (deg: number) => {
+  return deg * (Math.PI/180);
+};
+
 const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const { theme } = useAppTheme();
   const { user, logout } = useAuthStore();
+  
+  // Nouveau système de navigation intelligente
+  const smartNavigation = {
+    toDetails: (tripId: string) => {
+      navigation.navigate('TripDetails', { 
+        id: tripId,
+        transition: 'slide_from_right'
+      });
+    },
+    toMap: (coordinates: { lat: number, lng: number }) => {
+      navigation.navigate('MapView', { 
+        ...coordinates,
+        transition: 'modal'
+      });
+    },
+    toProfile: (userId: string) => {
+      navigation.navigate('UserProfile', { 
+        id: userId,
+        transition: 'fade'
+      });
+    }
+  };
   const { loadPublicTrips, loading: tripsLoading } = useTrips();
   
   // Vérification de l'authentification
@@ -151,6 +214,16 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     return false; // Pas d'erreur d'auth
   };
   
+  // Organisation intelligente des feeds
+  const [organizedFeeds, setOrganizedFeeds] = useState({
+    featured: [] as SocialPost[],    // Voyages mis en avant
+    trending: [] as SocialPost[],    // Tendances
+    forYou: [] as SocialPost[],      // Recommandations personnalisées
+    following: [] as SocialPost[],   // Voyages des personnes suivies
+    nearby: [] as SocialPost[],      // Voyages proches
+    recent: [] as SocialPost[]       // Derniers voyages
+  });
+
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
@@ -166,10 +239,10 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const getImageUrl = (imageUrl: string, postId?: string, imageIndex?: number): string => {
     console.log('🔍 getImageUrl appelé avec:', { imageUrl, postId, imageIndex });
     
-    // Si c'est une URL locale (file://), utiliser une image par défaut MinIO
+    // Si c'est une URL locale (file://), utiliser une image par défaut
     if (imageUrl.startsWith('file://')) {
-      console.log('📱 Image locale détectée, utilisation du fallback MinIO');
-      return 'http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg';
+      console.log('📱 Image locale détectée, utilisation du fallback');
+      return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop&crop=faces,center';
     }
     
     // Si c'est une URL HTTP/HTTPS, l'utiliser directement
@@ -178,16 +251,17 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       return imageUrl;
     }
     
-    // Si c'est une URL relative du backend, la compléter
+    // Si c'est une URL relative du backend, utiliser le proxy d'images
     if (imageUrl.startsWith('/storage/') || imageUrl.startsWith('storage/')) {
-      const fullUrl = `http://localhost:8085${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-      console.log('🔗 URL backend complétée:', fullUrl);
-      return fullUrl;
+      const cleanPath = imageUrl.replace(/^\/storage\//, '').replace(/^storage\//, '');
+      const proxyUrl = `http://localhost:8085/images/${cleanPath}`;
+      console.log('🔗 URL proxy backend:', proxyUrl);
+      return proxyUrl;
     }
     
-    // Fallback par défaut - image MinIO
-    console.log('⚠️ URL non reconnue, utilisation du fallback MinIO');
-    return 'http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg';
+    // Fallback par défaut - image Unsplash
+    console.log('⚠️ URL non reconnue, utilisation du fallback Unsplash');
+    return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop&crop=faces,center';
   };
 
 
@@ -323,6 +397,8 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         
         // Extraire toutes les URLs des photos pour le carrousel Instagram
         let tripImages: string[] = [];
+        
+        // Si le voyage a des photos directement attachées
         if (trip.photos && trip.photos.length > 0) {
           tripImages = trip.photos.map((photo: any) => {
             // Le backend retourne des objets TripPhoto avec un champ url (minuscule)
@@ -340,9 +416,20 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
           }).filter((url: string | null) => url !== null);
         }
         
-        // Si aucune photo valide, utiliser une image par défaut MinIO
+        // Si aucune photo directe, essayer de récupérer les photos via l'API
+        if (tripImages.length === 0 && trip.id) {
+          try {
+            console.log(`🔍 Tentative de récupération des photos pour le voyage ${trip.id}`);
+            // Note: Cette récupération asynchrone sera gérée plus tard
+            // Pour l'instant, on utilise les photos directes
+          } catch (error) {
+            console.warn(`⚠️ Impossible de récupérer les photos pour le voyage ${trip.id}:`, error);
+          }
+        }
+        
+        // Si aucune photo valide, utiliser une image par défaut Unsplash
         if (tripImages.length === 0) {
-          tripImages = ['http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg'];
+          tripImages = ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop&crop=faces,center'];
         }
         
         const tripImage = tripImages[0]; // Première image pour compatibilité
@@ -674,12 +761,39 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 
   // Composant séparé pour la carte avec animations
   const ModernTripCard = React.memo(({ post, index }: { post: SocialPost; index: number }) => {
+    // Animations et états
     const cardAnim = useRef(new Animated.Value(0)).current;
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [localIsLiked, setLocalIsLiked] = useState(post.isLiked);
     const [localLikes, setLocalLikes] = useState(post.likes);
     const [localComments, setLocalComments] = useState(post.comments);
     const [localIsSaved, setLocalIsSaved] = useState(post.isSaved);
+    
+    // Actions intelligentes groupées
+    const smartActions = {
+      like: {
+        icon: localIsLiked ? 'heart' : 'heart-outline',
+        action: handleLocalLike,
+        count: localLikes,
+        color: localIsLiked ? '#FF4B4B' : theme.colors.text.secondary
+      },
+      comment: {
+        icon: 'chatbubble-outline',
+        action: handleLocalComment,
+        count: localComments,
+        color: theme.colors.text.secondary
+      },
+      save: {
+        icon: localIsSaved ? 'bookmark' : 'bookmark-outline',
+        action: handleLocalSave,
+        color: localIsSaved ? theme.colors.primary[0] : theme.colors.text.secondary
+      },
+      share: {
+        icon: 'share-social-outline',
+        action: () => handleShare(post),
+        color: theme.colors.text.secondary
+      }
+    };
     
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -726,6 +840,59 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       console.log('✅ Sauvegarde locale mise à jour pour le voyage:', post.id);
     };
     
+    // Rendu intelligent des actions
+    const renderSmartActions = () => (
+      <View style={styles.actionBar}>
+        {Object.entries(smartActions).map(([key, action]) => (
+          <TouchableOpacity
+            key={key}
+            style={styles.actionButton}
+            onPress={action.action}
+          >
+            <Ionicons name={action.icon} size={24} color={action.color} />
+            {action.count !== undefined && (
+              <Text style={[styles.actionCount, { color: action.color }]}>
+                {action.count}
+              </Text>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+
+    // Rendu du contenu contextuel
+    const renderContextualContent = () => (
+      <View style={styles.contextualContent}>
+        {post.tripInfo && (
+          <>
+            <TouchableOpacity 
+              style={styles.destinationButton}
+              onPress={() => smartNavigation.toMap({
+                lat: post.tripInfo.latitude || 0,
+                lng: post.tripInfo.longitude || 0
+              })}
+            >
+              <Text style={styles.destinationText}>
+                📍 {post.tripInfo.destination}
+              </Text>
+            </TouchableOpacity>
+            
+            <View style={styles.tripDetails}>
+              <Text style={styles.tripInfo}>
+                ⏱️ {post.tripInfo.duration}
+              </Text>
+              <Text style={styles.tripInfo}>
+                💰 {post.tripInfo.budget}
+              </Text>
+              <Text style={styles.tripInfo}>
+                🎯 {post.tripInfo.difficulty}
+              </Text>
+            </View>
+          </>
+        )}
+      </View>
+    );
+
     return (
       <Animated.View 
         style={[
@@ -829,7 +996,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
                           imageIndex
                         });
                       }}
-                                             defaultSource={{ uri: 'http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg' }}
+                                             defaultSource={{ uri: 'http://localhost:8085/storage/tripshare-uploads/defaults/default-trip-image.jpg' }}
                     />
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.3)']}
@@ -1070,6 +1237,40 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     return <ModernTripCard post={post} index={index} />;
   };
 
+  // Rendu intelligent des feeds organisés
+  const renderOrganizedFeeds = () => {
+    const sections = [
+      { title: "✨ À la une", data: organizedFeeds.featured, icon: "star" },
+      { title: "🔥 Tendances", data: organizedFeeds.trending, icon: "trending-up" },
+      { title: "🎯 Pour vous", data: organizedFeeds.forYou, icon: "heart" },
+      { title: "👥 Abonnements", data: organizedFeeds.following, icon: "people" },
+      { title: "📍 À proximité", data: organizedFeeds.nearby, icon: "location" },
+      { title: "🕒 Récents", data: organizedFeeds.recent, icon: "time" }
+    ];
+
+    return sections.map(section => 
+      section.data.length > 0 && (
+        <View key={section.title} style={styles.feedSection}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name={section.icon} size={24} color={theme.colors.primary[0]} />
+            <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
+              {section.title}
+            </Text>
+          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.sectionContent}
+          >
+            {section.data.map((post, index) => (
+              <ModernTripCard key={post.id} post={post} index={index} />
+            ))}
+          </ScrollView>
+        </View>
+      )
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container2025, { backgroundColor: theme.colors.background.primary }]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -1250,6 +1451,67 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
+  // Styles pour les sections de feed organisées
+  feedSection: {
+    marginVertical: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  sectionContent: {
+    paddingLeft: 16,
+  },
+  // Nouveaux styles pour les actions intelligentes
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+  },
+  actionCount: {
+    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  contextualContent: {
+    padding: 16,
+  },
+  destinationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  destinationText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  tripDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  tripInfo: {
+    fontSize: 14,
+    color: '#666',
+  },
   container2025: { 
     flex: 1, 
     backgroundColor: '#f8f9fa' 

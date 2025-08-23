@@ -22,6 +22,7 @@ import AutoItinerarySuggestions from '../../components/itinerary/AutoItinerarySu
 import IntelligentPlacesList from '../../components/places/IntelligentPlacesList';
 import ItineraryEditor from '../../components/itinerary/ItineraryEditor';
 import CustomTagInput from '../../components/tags/CustomTagInput';
+import InstagramLikeTagInput from '../../components/tags/InstagramLikeTagInput';
 import { PopularDestination } from '../../services/enhancedLocationService';
 import { ItineraryStep, ItinerarySuggestionsService } from '../../services/itinerarySuggestionsService';
 import { PlaceDetails, IntelligentPlacesService } from '../../services/intelligentPlacesService';
@@ -172,8 +173,23 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
   };
 
   const handleCreateTrip = async () => {
-    if (!formData.title || !formData.destination || !formData.destinationCoords || formData.steps.length === 0) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires, y compris au moins une étape d\'itinéraire.');
+    // Validation des champs obligatoires
+    if (!formData.title || !formData.destination || !formData.destinationCoords) {
+      Alert.alert('Erreur', 'Veuillez remplir le titre et la destination.');
+      return;
+    }
+
+    if (formData.steps.length === 0) {
+      Alert.alert('Itinéraire requis', 'Veuillez ajouter au moins une étape à votre itinéraire.');
+      return;
+    }
+
+    if (!formData.budget || formData.budget <= 0) {
+      Alert.alert(
+        'Budget requis', 
+        'Le budget est obligatoire. Indiquez le coût approximatif de votre voyage pour aider les autres voyageurs.',
+        [{ text: 'OK', style: 'default' }]
+      );
       return;
     }
 
@@ -193,7 +209,7 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
         budget: formData.budget,
         status: 'planned',
         visibility: 'public',
-        photos: ['http://localhost:8085/storage/defaults/default-trip-image.jpg'], // Photo par défaut obligatoire
+        photos: ['http://localhost:8085/storage/tripshare-uploads/defaults/default-trip-image.jpg'], // Photo par défaut obligatoire
         difficulty: formData.difficulty,
         tags: formData.tags,
         places_visited: formData.steps.map(step => ({
@@ -415,7 +431,10 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.primary }]}>
-                Budget (optionnel)
+                Budget <Text style={{color: '#FF6B6B'}}>*</Text>
+              </Text>
+              <Text style={[styles.requiredHint, { color: theme.colors.text.secondary }]}>
+                Champ obligatoire - Indiquez le coût approximatif de votre voyage
               </Text>
               <TextInput
                 style={[styles.input, { 
@@ -438,18 +457,18 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
               <Text style={[styles.label, { color: theme.colors.text.primary }]}>
                 Tags
               </Text>
-              <View style={[styles.input, { backgroundColor: theme.colors.background.card, borderColor: theme.colors.border.primary }]}>
-                <TextInput
-                  style={{ color: theme.colors.text.primary, fontSize: 16 }}
-                  placeholder="Tapez vos tags séparés par des virgules..."
-                  placeholderTextColor={theme.colors.text.secondary}
-                  value={formData.tags.join(', ')}
-                  onChangeText={(text) => {
-                    const tags = text.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-                    setFormData(prev => ({ ...prev, tags }));
-                  }}
-                />
-              </View>
+              <Text style={[styles.requiredHint, { color: theme.colors.text.secondary }]}>
+                Ajoutez des tags pour améliorer la visibilité de votre voyage
+              </Text>
+              
+              <InstagramLikeTagInput
+                selectedTags={formData.tags}
+                onTagsChange={(newTags) => setFormData(prev => ({ ...prev, tags: newTags }))}
+                maxTags={10}
+                placeholder="Rechercher ou créer des tags..."
+                showPopularTags={true}
+                allowCustomTags={true}
+              />
             </View>
           </ScrollView>
         );
@@ -735,6 +754,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  requiredHint: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginBottom: 8,
+    marginTop: -4,
   },
   input: {
     borderWidth: 1,

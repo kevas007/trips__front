@@ -3,6 +3,8 @@
 
 import { unifiedApi } from './unifiedApi';
 import { User, Trip, Activity, Expense, Badge, UserProfile, TripMember, TripPhoto } from '../types';
+import { API_CONFIG } from '../config/api';
+import { authService } from './auth';
 
 // ========== TYPES D'AUTHENTIFICATION ==========
 export interface AuthResponse {
@@ -348,12 +350,36 @@ export class TripShareApiService {
 
   // GET /api/v1/trips/:id/photos
   async listTripPhotos(tripId: string): Promise<TripPhoto[]> {
-    return unifiedApi.get<TripPhoto[]>(`/trips/${tripId}/photos`);
+    try {
+      console.log(`🔍 TripShareApi - Récupération des photos pour le voyage ${tripId}`);
+      const photos = await unifiedApi.get<TripPhoto[]>(`/trips/${tripId}/photos`);
+      console.log(`✅ TripShareApi - ${photos.length} photos récupérées`);
+      return photos;
+    } catch (error: any) {
+      console.error(`❌ TripShareApi - Erreur récupération photos:`, error);
+      return [];
+    }
   }
 
   // POST /api/v1/trips/:id/photos
   async uploadTripPhoto(tripId: string, formData: FormData): Promise<TripPhoto> {
-    return unifiedApi.post<TripPhoto>(`/trips/${tripId}/photos`, formData);
+    // Utiliser fetch directement pour FormData
+    const token = authService.getToken();
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/trips/${tripId}/photos`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Ne pas définir Content-Type pour FormData
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erreur upload photo: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   // PUT /api/v1/trips/photos/:photo_id

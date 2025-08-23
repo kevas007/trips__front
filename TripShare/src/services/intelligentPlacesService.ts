@@ -571,8 +571,8 @@ export class IntelligentPlacesService {
 
     return suggestions.places.filter(place =>
       tags.some(tag =>
-        place.custom_tags.some(placeTag =>
-          placeTag.toLowerCase().includes(tag.toLowerCase())
+        place.custom_tags && place.custom_tags.some(placeTag =>
+          placeTag && placeTag.toLowerCase().includes(tag.toLowerCase())
         )
       )
     );
@@ -626,12 +626,12 @@ export class IntelligentPlacesService {
     if (userProfile.interests?.length) {
       filteredPlaces = filteredPlaces.filter(place =>
         userProfile.interests!.some(interest =>
-          place.custom_tags.some(tag =>
+          (place.custom_tags && place.custom_tags.some(tag =>
             tag.toLowerCase().includes(interest.toLowerCase())
-          ) ||
-          place.local_insights.best_for.some(bestFor =>
+          )) ||
+          (place.local_insights && place.local_insights.best_for && place.local_insights.best_for.some(bestFor =>
             bestFor.toLowerCase().includes(interest.toLowerCase())
-          )
+          ))
         )
       );
     }
@@ -700,10 +700,10 @@ export class IntelligentPlacesService {
     const searchTerm = query.toLowerCase();
     
     return suggestions.places.filter(place =>
-      place.name.toLowerCase().includes(searchTerm) ||
-      place.subcategory.toLowerCase().includes(searchTerm) ||
-      place.custom_tags.some(tag => tag.toLowerCase().includes(searchTerm)) ||
-      place.recommendation_reason.toLowerCase().includes(searchTerm)
+      (place.name && place.name.toLowerCase().includes(searchTerm)) ||
+      (place.subcategory && place.subcategory.toLowerCase().includes(searchTerm)) ||
+      (place.custom_tags && place.custom_tags.some(tag => tag.toLowerCase().includes(searchTerm))) ||
+      (place.recommendation_reason && place.recommendation_reason.toLowerCase().includes(searchTerm))
     );
   }
 }

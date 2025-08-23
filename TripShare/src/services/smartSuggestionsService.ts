@@ -140,14 +140,45 @@ export class SmartSuggestionsService {
     }
 
     try {
-      // Appel API pour récupérer les préférences
-      const response = await fetch(`${process.env.API_BASE_URL}/api/users/${userId}/destination-preferences`);
-      const preferences = await response.json();
+      // TODO: Implémenter l'API des préférences utilisateur
+      // Pour l'instant, retourner des préférences par défaut
+      console.log('📝 getUserPreferences: Utilisation des préférences par défaut');
       
-      // Mettre en cache
-      this.userPreferencesCache.set(userId, preferences);
+      const defaultPreferences: UserDestinationPreference[] = [
+        { 
+          id: 'pref1',
+          user_id: userId,
+          destination_id: 'europe',
+          destination_name: 'Europe',
+          destination_country: 'France',
+          rating: 4,
+          trip_type: 'city',
+          budget_level: 'medium',
+          duration_days: 7,
+          liked_places: [],
+          created_at: new Date(),
+          updated_at: new Date()
+        },
+        { 
+          id: 'pref2',
+          user_id: userId,
+          destination_id: 'asia',
+          destination_name: 'Asie',
+          destination_country: 'Japon',
+          rating: 5,
+          trip_type: 'cultural',
+          budget_level: 'high',
+          duration_days: 10,
+          liked_places: [],
+          created_at: new Date(),
+          updated_at: new Date()
+        },
+      ];
       
-      return preferences;
+      // Mettre en cache les préférences par défaut
+      this.userPreferencesCache.set(userId, defaultPreferences);
+      
+      return defaultPreferences;
     } catch (error) {
       console.error('Erreur récupération préférences utilisateur:', error);
       return [];
@@ -159,9 +190,78 @@ export class SmartSuggestionsService {
    */
   private static async getPopularDestinations(): Promise<AIGeneratedDestination[]> {
     try {
-      const response = await fetch(`${process.env.API_BASE_URL}/api/destinations/popular`);
-      const destinations = await response.json();
-      return destinations;
+      // TODO: Implémenter l'API des destinations populaires
+      // Pour l'instant, retourner des destinations statiques
+      console.log('📝 getPopularDestinations: Utilisation des destinations statiques');
+      
+      return [
+        {
+          id: 'pop1',
+          name: 'Santorini',
+          display_name: 'Santorini, Grèce',
+          country: 'Grèce',
+          continent: 'Europe',
+          coordinates: { latitude: 36.3932, longitude: 25.4615 },
+          ai_score: 92,
+          popularity_trend: 'stable' as const,
+          trending_reasons: ['architecture unique', 'couchers de soleil'],
+          primary_category: 'romantic',
+          secondary_categories: ['beach', 'cultural'],
+          ai_tags: ['romantique', 'plage', 'coucher_soleil'],
+          best_time_to_visit: ['spring', 'summer'],
+          suggested_duration: '3-5 jours',
+          ideal_traveler_type: ['couples', 'photographes'],
+          cost_estimate: {
+            budget: 'medium' as const,
+            daily_cost_range: '80-150€',
+            accommodation_cost: '60-200€'
+          },
+          ai_description: 'Île paradisiaque avec architecture cycladique',
+          ai_highlights: ['Villages blancs', 'Couchers de soleil d\'Oia'],
+          ai_tips: ['Réserver restaurants tôt', 'Éviter juillet-août'],
+          last_ai_update: new Date(),
+          ai_version: '1.0',
+          data_source: 'ai_generated' as const,
+          photo_urls: ['https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff'],
+          total_likes: 15420,
+          total_visits: 8900,
+          average_rating: 4.6,
+          review_count: 3200
+        },
+        {
+          id: 'pop2',
+          name: 'Kyoto',
+          display_name: 'Kyoto, Japon',
+          country: 'Japon',
+          continent: 'Asie',
+          coordinates: { latitude: 35.0116, longitude: 135.7681 },
+          ai_score: 89,
+          popularity_trend: 'rising' as const,
+          trending_reasons: ['temples historiques', 'culture traditionnelle'],
+          primary_category: 'cultural',
+          secondary_categories: ['nature', 'city'],
+          ai_tags: ['culture', 'temples', 'cerisiers'],
+          best_time_to_visit: ['spring', 'autumn'],
+          suggested_duration: '4-7 jours',
+          ideal_traveler_type: ['amateurs de culture', 'familles'],
+          cost_estimate: {
+            budget: 'high' as const,
+            daily_cost_range: '100-200€',
+            accommodation_cost: '80-300€'
+          },
+          ai_description: 'Ancienne capitale aux temples millénaires',
+          ai_highlights: ['Fushimi Inari', 'Quartier de Gion'],
+          ai_tips: ['Visiter tôt le matin', 'Respecter les traditions'],
+          last_ai_update: new Date(),
+          ai_version: '1.0',
+          data_source: 'ai_generated' as const,
+          photo_urls: ['https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e'],
+          total_likes: 12800,
+          total_visits: 7200,
+          average_rating: 4.7,
+          review_count: 2800
+        }
+      ];
     } catch (error) {
       console.error('Erreur récupération destinations populaires:', error);
       return [];
@@ -173,9 +273,78 @@ export class SmartSuggestionsService {
    */
   private static async getAIGeneratedDestinations(): Promise<AIGeneratedDestination[]> {
     try {
-      const response = await fetch(`${process.env.API_BASE_URL}/api/destinations/ai-generated`);
-      const destinations = await response.json();
-      return destinations;
+      // TODO: Implémenter l'API des destinations IA
+      // Pour l'instant, retourner des destinations statiques
+      console.log('📝 getAIGeneratedDestinations: Utilisation des destinations statiques');
+      
+      return [
+        {
+          id: 'ai1',
+          name: 'Faroe Islands',
+          display_name: 'Îles Féroé, Danemark',
+          country: 'Danemark',
+          continent: 'Europe',
+          coordinates: { latitude: 62.0, longitude: -6.7833 },
+          ai_score: 91,
+          popularity_trend: 'rising' as const,
+          trending_reasons: ['destination méconnue', 'paysages vierges'],
+          primary_category: 'nature',
+          secondary_categories: ['adventure'],
+          ai_tags: ['nature', 'isolé', 'panorama'],
+          best_time_to_visit: ['summer'],
+          suggested_duration: '5-8 jours',
+          ideal_traveler_type: ['aventuriers', 'photographes'],
+          cost_estimate: {
+            budget: 'high' as const,
+            daily_cost_range: '120-200€',
+            accommodation_cost: '100-250€'
+          },
+          ai_description: 'Archipel nordique aux paysages dramatiques',
+          ai_highlights: ['Mulafossur Waterfall', 'Villages colorés'],
+          ai_tips: ['Prévoir vêtements chauds', 'Louer une voiture'],
+          last_ai_update: new Date(),
+          ai_version: '1.0',
+          data_source: 'ai_generated' as const,
+          photo_urls: ['https://images.unsplash.com/photo-1551632436-cbf8dd35adfa'],
+          total_likes: 3200,
+          total_visits: 1800,
+          average_rating: 4.8,
+          review_count: 890
+        },
+        {
+          id: 'ai2',
+          name: 'Luang Prabang',
+          display_name: 'Luang Prabang, Laos',
+          country: 'Laos',
+          continent: 'Asie',
+          coordinates: { latitude: 19.8845, longitude: 102.1348 },
+          ai_score: 88,
+          popularity_trend: 'stable' as const,
+          trending_reasons: ['authenticité préservée', 'prix attractifs'],
+          primary_category: 'cultural',
+          secondary_categories: ['nature', 'adventure'],
+          ai_tags: ['authentique', 'spirituel', 'mekong'],
+          best_time_to_visit: ['winter'],
+          suggested_duration: '3-6 jours',
+          ideal_traveler_type: ['backpackers', 'familles'],
+          cost_estimate: {
+            budget: 'low' as const,
+            daily_cost_range: '20-50€',
+            accommodation_cost: '10-80€'
+          },
+          ai_description: 'Ville UNESCO aux temples bouddhistes',
+          ai_highlights: ['Cérémonie des offrandes', 'Chutes de Kuang Si'],
+          ai_tips: ['Se lever tôt pour les moines', 'Négocier les prix'],
+          last_ai_update: new Date(),
+          ai_version: '1.0',
+          data_source: 'ai_generated' as const,
+          photo_urls: ['https://images.unsplash.com/photo-1528181304800-259b08848526'],
+          total_likes: 2100,
+          total_visits: 1500,
+          average_rating: 4.5,
+          review_count: 650
+        }
+      ];
     } catch (error) {
       console.error('Erreur récupération destinations IA:', error);
       return [];
@@ -225,12 +394,12 @@ export class SmartSuggestionsService {
       }
 
       // 5. Filtres appliqués
-      if (filters.tripType && destination.ai_tags.includes(filters.tripType)) {
+      if (filters.tripType && destination.ai_tags && destination.ai_tags.includes(filters.tripType)) {
         relevanceScore += 0.3;
         matchReasons.push(`Type de voyage: ${filters.tripType}`);
       }
 
-      if (filters.budget && destination.cost_estimate.budget === filters.budget) {
+      if (filters.budget && destination.cost_estimate && destination.cost_estimate.budget === filters.budget) {
         relevanceScore += 0.2;
         matchReasons.push(`Budget adapté: ${filters.budget}`);
       }
@@ -278,19 +447,24 @@ export class SmartSuggestionsService {
       }
 
       // Similarité de type de voyage
-      if (destination.ai_tags.includes(preference.trip_type)) {
+      if (destination.ai_tags && destination.ai_tags.includes(preference.trip_type)) {
         similarity += 0.3;
       }
 
       // Similarité de budget
-      if (preference.budget_level === destination.cost_estimate.budget) {
+      if (destination.cost_estimate && preference.budget_level === destination.cost_estimate.budget) {
         similarity += 0.2;
       }
 
       // Similarité de durée
-      const durationDiff = Math.abs(preference.duration_days - parseInt(destination.suggested_duration.split('-')[0]));
-      if (durationDiff <= 2) {
-        similarity += 0.1;
+      if (destination.suggested_duration) {
+        const durationParts = destination.suggested_duration.split('-');
+        if (durationParts.length > 0) {
+          const durationDiff = Math.abs(preference.duration_days - parseInt(durationParts[0]));
+          if (durationDiff <= 2) {
+            similarity += 0.1;
+          }
+        }
       }
 
       // Bonus si l'utilisateur a bien noté cette destination

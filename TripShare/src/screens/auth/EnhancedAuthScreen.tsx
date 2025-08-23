@@ -1280,10 +1280,25 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     padding: getSpacing(16),
     width: Platform.OS === 'web' ? '100%' : '90%',
     maxWidth: Platform.OS === 'web' ? 450 : 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.13,
-    shadowRadius: 40,
+    ...Platform.select({
+      ios: {
+        shadowColor: isDark ? '#000' : '#000',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: isDark ? 0.25 : 0.15,
+        shadowRadius: 16,
+        backgroundColor: isDark 
+          ? 'rgba(255,255,255,0.15)' 
+          : 'rgba(255,255,255,0.35)',
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: isDark 
+          ? '0 12px 24px rgba(0,0,0,0.25)' 
+          : '0 12px 24px rgba(0,0,0,0.15)'
+      }
+    }),
     // Supprimer les marges qui créent l'espace blanc
     // marginBottom: getSpacing(18),
     // marginTop: Platform.OS === 'web' ? getSpacing(20) : 0,
@@ -1391,28 +1406,78 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     gap: 10,
   },
   inputWrapper: {
-    borderRadius: 12, // Réduire le border radius
+    borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 12, // Réduire la marge
-    backgroundColor: isDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.25)',
-    borderWidth: 1, // Réduire l'épaisseur de la bordure
-    borderColor: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)',
-    height: 48, // Réduire la hauteur pour plus de compacité
+    marginBottom: 12,
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12, // Réduire le padding
+    paddingHorizontal: 12,
+    ...Platform.select({
+      ios: {
+        backgroundColor: isDark 
+          ? 'rgba(255,255,255,0.15)' 
+          : 'rgba(255,255,255,0.35)',
+        borderWidth: 1,
+        borderColor: isDark 
+          ? 'rgba(255,255,255,0.25)' 
+          : 'rgba(255,255,255,0.45)',
+        shadowColor: isDark ? '#000' : '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.15 : 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        backgroundColor: isDark 
+          ? 'rgba(255,255,255,0.13)' 
+          : 'rgba(255,255,255,0.25)',
+        borderWidth: 1,
+        borderColor: isDark 
+          ? 'rgba(255,255,255,0.22)' 
+          : 'rgba(255,255,255,0.35)',
+        elevation: 2,
+      },
+      web: {
+        backgroundColor: isDark 
+          ? 'rgba(255,255,255,0.13)' 
+          : 'rgba(255,255,255,0.25)',
+        borderWidth: 1,
+        borderColor: isDark 
+          ? 'rgba(255,255,255,0.22)' 
+          : 'rgba(255,255,255,0.35)',
+        boxShadow: isDark 
+          ? '0 4px 8px rgba(0,0,0,0.15)' 
+          : '0 4px 8px rgba(0,0,0,0.1)'
+      }
+    }),
   },
   button: {
-    backgroundColor: '#008080',
     borderRadius: getBorderRadius(18),
     height: getInputHeight() + 8,
     marginBottom: getSpacing(18),
     marginTop: getSpacing(8),
-    shadowColor: '#008080',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 6,
+    ...Platform.select({
+      ios: {
+        backgroundColor: '#008080',
+        shadowColor: '#008080',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+      },
+      android: {
+        backgroundColor: '#008080',
+        elevation: 6,
+      },
+      web: {
+        backgroundColor: '#008080',
+        boxShadow: '0 8px 16px rgba(0,128,128,0.35)',
+        transition: 'all 0.3s ease',
+        ':hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 12px 20px rgba(0,128,128,0.4)',
+        }
+      }
+    }),
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',

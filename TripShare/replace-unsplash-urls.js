@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// Configuration
-const LOCAL_IMAGE_URL = 'http://localhost:9000/tripshare-uploads/defaults/default-trip-image.jpg';
-const LOCAL_AVATAR_URL = 'http://localhost:9000/tripshare-uploads/defaults/default-avatar.jpg';
+// Configuration - Utiliser le proxy backend au lieu de Minio direct
+const LOCAL_IMAGE_URL = 'http://localhost:8085/storage/tripshare-uploads/defaults/default-trip-image.jpg';
+const LOCAL_AVATAR_URL = 'http://localhost:8085/storage/tripshare-uploads/defaults/default-avatar.jpg';
 
 // Patterns de remplacement
 const replacements = [

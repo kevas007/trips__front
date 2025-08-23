@@ -39,7 +39,15 @@ const TermsScreen = ({ navigation }) => {
           - Données d'identification (nom, prénom, email, téléphone){'\n'}
           - Données de géolocalisation et de mobilité{'\n'}
           - Photos et contenus partagés{'\n'}
-          - Données d'utilisation et préférences de voyage{'\n\n'}
+          - Données d'utilisation et préférences de voyage{'\n'}
+          - Métadonnées d'analyse de contenu (pour la modération automatique){'\n\n'}
+          
+          <Text style={styles.bold}>3.2bis Modération automatique et protection des données :{'\n'}</Text>
+          - Les images sont analysées automatiquement par des services tiers sécurisés (Sightengine){'\n'}
+          - Seules les métadonnées d'analyse sont conservées, jamais les images elles-mêmes{'\n'}
+          - L'analyse est effectuée de manière chiffrée et confidentielle{'\n'}
+          - Aucune donnée personnelle n'est transmise lors de l'analyse de modération{'\n'}
+          - Les résultats d'analyse sont supprimés après traitement{'\n\n'}
           
           <Text style={styles.bold}>3.3 Vos droits :{'\n'}</Text>
           - Droit d'accès : consulter vos données personnelles{'\n'}
@@ -56,23 +64,42 @@ const TermsScreen = ({ navigation }) => {
           Pour exercer vos droits : contact@trivenile.app ou depuis les paramètres de l'application.
         </Text>
 
-        <Text style={[styles.sectionTitle, { color: theme.colors.primary[0] }]}>4. Responsabilité du Contenu Utilisateur</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.primary[0] }]}>4. Modération de Contenu et Règles Communautaires</Text>
         <Text style={[styles.paragraph, { color: theme.colors.text.primary }]}>
-          <Text style={styles.bold}>4.1 Obligations de l'utilisateur :{'\n'}</Text>
+          <Text style={styles.bold}>4.1 Contenu interdit :{'\n'}</Text>
           L'utilisateur s'engage à ne pas publier de contenus :{'\n'}
           - Illicites, offensants, diffamatoires ou discriminatoires{'\n'}
           - Violant les droits d'autrui (vie privée, image, propriété intellectuelle){'\n'}
           - Contenant des données personnelles de tiers sans autorisation{'\n'}
-          - Portant atteinte à l'ordre public ou aux bonnes mœurs{'\n\n'}
+          - Portant atteinte à l'ordre public ou aux bonnes mœurs{'\n'}
+          - Présentant des armes, de la violence ou des menaces{'\n'}
+          - À caractère sexuel, pornographique ou inapproprié{'\n'}
+          - Montrant du contenu gore ou excessivement violent{'\n'}
+          - Comportant des gestes ou symboles offensants{'\n\n'}
           
-          <Text style={styles.bold}>4.2 Signalement et modération :{'\n'}</Text>
-          - Un système de signalement est disponible pour tout contenu inapproprié{'\n'}
-          - Trivenile se réserve le droit de supprimer tout contenu non conforme{'\n'}
+          <Text style={styles.bold}>4.2 Modération automatique intelligente :{'\n'}</Text>
+          - TripShare utilise des technologies d'intelligence artificielle pour analyser automatiquement les images téléchargées{'\n'}
+          - Cette modération permet de détecter et bloquer instantanément les contenus inappropriés{'\n'}
+          - Les images sont analysées selon des critères stricts de sécurité et de bienveillance{'\n'}
+          - Le système respecte la vie privée : les analyses sont effectuées de manière sécurisée et confidentielle{'\n\n'}
+          
+          <Text style={styles.bold}>4.3 Processus de validation :{'\n'}</Text>
+          - <Text style={styles.bold}>Approbation automatique :</Text> Les images conformes sont approuvées instantanément{'\n'}
+          - <Text style={styles.bold}>Blocage immédiat :</Text> Les contenus inappropriés sont refusés avec un message explicatif{'\n'}
+          - <Text style={styles.bold}>Validation manuelle :</Text> Certaines images peuvent être mises en attente pour vérification humaine (24-48h){'\n'}
+          - L'utilisateur reçoit une notification claire sur le statut de chaque image{'\n\n'}
+          
+          <Text style={styles.bold}>4.4 Signalement et modération humaine :{'\n'}</Text>
+          - Un système de signalement reste disponible pour tout contenu inapproprié{'\n'}
+          - L'équipe de modération traite les signalements sous 48h ouvrées{'\n'}
           - En cas de violation répétée, le compte peut être suspendu ou supprimé{'\n'}
-          - Les signalements sont traités sous 48h ouvrées{'\n\n'}
+          - Les décisions de modération peuvent être contestées via contact@trivenile.app{'\n\n'}
           
-          <Text style={styles.bold}>4.3 Clause de non-responsabilité :{'\n'}</Text>
-          Trivenile agit en tant qu'hébergeur et ne peut être tenue responsable du contenu publié par les utilisateurs. L'utilisateur reste seul responsable des contenus qu'il publie et des conséquences de leur publication.
+          <Text style={styles.bold}>4.5 Responsabilité de l'utilisateur :{'\n'}</Text>
+          Malgré la modération automatique, l'utilisateur reste entièrement responsable du contenu qu'il tente de publier. TripShare agit en tant qu'hébergeur et ne peut être tenue responsable du contenu publié par les utilisateurs.{'\n\n'}
+          
+          <Text style={styles.bold}>4.6 Amélioration continue :{'\n'}</Text>
+          Les algorithmes de modération sont constamment améliorés pour garantir une expérience sûre et positive. Les utilisateurs peuvent contribuer en signalant les erreurs de modération.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: theme.colors.primary[0] }]}>5. Droits d'Auteur et Propriété Intellectuelle</Text>

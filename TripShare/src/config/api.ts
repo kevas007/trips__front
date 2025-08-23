@@ -44,8 +44,8 @@ const getCurrentEnvironment = (): keyof typeof LOCAL_ENVIRONMENTS => {
   }
 };
 
-// Force la configuration pour Android et iOS - UTILISER NETWORK POUR LES DEVICES PHYSIQUES
-const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = 'network';
+// Force la configuration pour Android et iOS - UTILISER LOCALHOST POUR LE DÉVELOPPEMENT
+const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = 'localhost';
 
 export const API_CONFIG = {
   // Configuration de base

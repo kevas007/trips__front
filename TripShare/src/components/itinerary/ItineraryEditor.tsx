@@ -112,7 +112,7 @@ const ItineraryEditor: React.FC<ItineraryEditorProps> = ({
   const takePicture = async (index?: number) => {
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, // TODO: Migrer vers MediaType quand disponible
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -139,7 +139,7 @@ const ItineraryEditor: React.FC<ItineraryEditorProps> = ({
   const pickImage = async (index?: number) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, // TODO: Migrer vers MediaType quand disponible
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
