@@ -16,9 +16,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import FloatingActionButton from '../../components/ui/FloatingActionButton';
 import SimpleMapView from '../../components/places/SimpleMapView';
 import * as Linking from 'expo-linking';

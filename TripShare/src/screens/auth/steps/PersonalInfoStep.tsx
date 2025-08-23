@@ -9,8 +9,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../hooks/useAppTheme';
 
 interface PersonalInfoStepProps {
   onNext: (data: any) => void;

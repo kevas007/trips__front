@@ -10,8 +10,6 @@ import {
   ToastAndroid,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../hooks/useAppTheme';
-
 interface PostActionsProps {
   postId: string;
   likes: number;

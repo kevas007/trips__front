@@ -10,11 +10,11 @@ import {
   Platform,
   Linking,
 } from 'react-native';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store';
 import { useNavigation } from '@react-navigation/native';
 import AppBackground from '../../components/ui/AppBackground';
+import { useAppTheme } from '../../hooks/useAppTheme';
 
 interface SectionProps {
   title: string;
@@ -118,11 +118,11 @@ const SettingsScreen = () => {
       {/* À propos */}
       <Section title="À propos">
         <Row icon="information-circle" label="Version 1.0.0" />
-        <Row icon="help-circle" label="Support" onPress={() => Linking.openURL('mailto:support@trivenile.app?subject=Support Trivenile')}/>
+        <Row icon="help-circle" label="Support" onPress={() => Linking.openURL('mailto:support@tripshare.app?subject=Support TripShare')}/>
         {/* <Row icon="globe" label="Site officiel" onPress={() => Linking.openURL('https://www.trivenile.app')} /> */}
         <View style={{ alignItems: 'center', marginTop: 18, marginBottom: 8 }}>
           <Text style={{ color: theme.colors.text.secondary, fontSize: 3 }}>
-            © {new Date().getFullYear()} Trivenile. Tous droits réservés.
+            © {new Date().getFullYear()} TripShare. Tous droits réservés.
           </Text>
         </View>
       </Section>

@@ -11,9 +11,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { LocationSuggestion } from './LocationSearchInput';
 
 const { width, height } = Dimensions.get('window');

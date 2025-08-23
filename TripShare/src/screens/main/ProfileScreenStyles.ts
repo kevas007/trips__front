@@ -406,5 +406,89 @@ export const ProfileScreenStyles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Boutons d'édition
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: getSpacing(12),
+    paddingVertical: getSpacing(6),
+    borderRadius: getBorderRadius(BORDER_RADIUS.sm),
+    gap: getSpacing(4),
+  },
+  editButtonText: {
+    fontSize: getFontSize(12),
+    fontWeight: '600',
+    color: '#008080',
+  },
+
+  // États vides
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: getSpacing(32),
+    backgroundColor: 'white',
+    borderRadius: getBorderRadius(BORDER_RADIUS.lg),
+    marginBottom: getSpacing(8),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  emptyStateText: {
+    fontSize: getFontSize(16),
+    fontWeight: '600',
+    color: COLORS.neutral[700],
+    marginTop: getSpacing(12),
+    marginBottom: getSpacing(4),
+  },
+  emptyStateSubtext: {
+    fontSize: getFontSize(14),
+    color: COLORS.neutral[500],
+    textAlign: 'center',
+  },
+
+  // Prochains badges disponibles
+  nextBadgesSection: {
+    marginTop: getSpacing(16),
+    paddingTop: getSpacing(16),
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  nextBadgesTitle: {
+    fontSize: getFontSize(14),
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: getSpacing(12),
+    opacity: 0.8,
+  },
+  nextBadgesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: getSpacing(8),
+  },
+  nextBadgeItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: getSpacing(12),
+    borderRadius: getBorderRadius(BORDER_RADIUS.md),
+    alignItems: 'center',
+    minWidth: 80,
+    flex: 1,
+  },
+  nextBadgeName: {
+    fontSize: getFontSize(10),
+    fontWeight: '600',
+    color: 'white',
+    textAlign: 'center',
+    marginTop: getSpacing(4),
+    opacity: 0.8,
+  },
+  nextBadgeDescription: {
+    fontSize: getFontSize(8),
+    color: 'white',
+    textAlign: 'center',
+    marginTop: getSpacing(2),
+    opacity: 0.6,
+  },
+
 
 }); 

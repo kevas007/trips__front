@@ -18,7 +18,7 @@
       "ios": {
         "buildConfiguration": "Release",
         "config": {
-          "bundleIdentifier": "com.trivenile.app.preview"
+          "bundleIdentifier": "com.tripshare.app.preview"
         }
       },
       "android": {
@@ -28,7 +28,7 @@
     "production": {
       "ios": {
         "buildConfiguration": "Release",
-        "bundleIdentifier": "com.trivenile.app"
+        "bundleIdentifier": "com.tripshare.app"
       },
       "android": {
         "buildType": "aab"

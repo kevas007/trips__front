@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import { LOCAL_ASSETS } from '../../constants/assets';
 
 interface AppBackgroundProps {

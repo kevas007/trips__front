@@ -11,8 +11,6 @@ import {
   ImageStyle,
 } from 'react-native';
 import { getOptimizedImage, STATE_ASSETS } from '../../constants/assets';
-import { useAppTheme } from '../../hooks/useAppTheme';
-
 interface OptimizedImageProps {
   source: string | { uri: string } | any;
   style?: ImageStyle | ViewStyle;

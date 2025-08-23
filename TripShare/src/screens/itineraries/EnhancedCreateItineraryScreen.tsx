@@ -14,8 +14,8 @@ import {
   Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import { useAuthStore } from '../../store';
 import LocationSearchInput from '../../components/places/LocationSearchInput';
 // import DateTimePicker from '@react-native-community/datetimepicker';

@@ -3,7 +3,6 @@ import type { FC } from 'react';
 import { View, TextInput, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
-
 export interface FormInputProps {
   label?: string;
   value: string;

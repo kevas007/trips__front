@@ -102,7 +102,7 @@ export interface UserStats {
 export interface UserPreferences {
   activities?: string[];
   accommodation?: string[];
-  transport?: string[];
+  transportation?: string[];
   food?: string[];
   budget?: string[];
   climate?: string[];
@@ -1696,40 +1696,85 @@ class ApiService {
 
 export const apiService = new ApiService();
 
-// ========== EXPORTS ==========
+// ========== EXPORT DES TYPES ==========
 
-export default apiService;
-
-// Types utilitaires
+// Types de base
 export type {
-  User,
-  Trip,
-  Activity,
-  Location,
-  TripBudget,
-  Expense,
-  AIRecommendation,
-  SearchFilters,
-  UserProfile,
-  DeviceInfo,
+  APIError,
+  APIResponse,
+  APIService,
+  BaseAPIResponse,
+  PaginatedResponse,
+} from './base';
+
+// Types d'authentification
+export type {
   AuthResponse,
   LoginCredentials,
   RegisterData,
-  PaginatedResponse,
-  TripStats,
+} from './auth';
+
+// Types utilisateur
+export type {
+  User,
+  UserProfile,
   UserStats,
   UserSettings,
   UserPreferences,
-  AIItineraryRequest,
-  Collaborator,
+} from './user';
+
+// Types de voyage
+export type {
+  Trip,
+  TripStats,
+} from './trip';
+
+// Types d'activité
+export type {
+  Activity,
+  ActivityType,
+  BookingInfo,
+  Contact,
+} from './activity';
+
+// Types de localisation
+export type {
+  Location,
+} from './location';
+
+// Types de budget
+export type {
+  TripBudget,
+  BudgetCategory,
+  BudgetSummary,
+  Money,
+} from './budget';
+
+// Types de dépenses
+export type {
+  Expense,
   ExpenseSplit,
   Settlement,
   SharedExpense,
-  BudgetCategory,
-  BudgetSummary,
-  WeatherInfo,
-  BookingInfo,
-  Contact,
-  Money,
-  ActivityType,
-};
+} from './expense';
+
+// Types de recommandation
+export type {
+  AIRecommendation,
+  AIItineraryRequest,
+} from './recommendation';
+
+// Types de recherche
+export type {
+  SearchFilters,
+} from './search';
+
+// Types de profil
+export type {
+  DeviceInfo,
+} from './device';
+
+// Types de collaboration
+export type {
+  Collaborator,
+} from './collaboration';

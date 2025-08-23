@@ -11,10 +11,9 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import { CountryOption } from '../../services/countryService';
 import { getSpacing, getFontSize, getInputHeight } from '../../utils/responsive';
-import { useAppTheme } from '../../hooks/useAppTheme';
-
 interface CountryPickerModalProps {
   countries: CountryOption[];
   selectedValue: string;

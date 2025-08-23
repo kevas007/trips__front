@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { useAuthStore } from '../../store';
 import PlacesVisitedManager, { PlaceVisited } from '../../components/PlacesVisitedManager';
 import { tripShareApi } from '../../services/tripShareApi';

@@ -20,18 +20,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useAppTheme } from '../../hooks/useAppTheme';
-import { useAuthStore, useTrips } from '../../store';
+import { useAuthStore } from '../../store';
 import { useRequireAuth } from '../../hooks/useRequireAuth';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import SimpleMapView from '../../components/places/SimpleMapView';
 import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
-import { tripShareApi } from '../../services/tripShareApi';
-import { Trip } from '../../types';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import { useFocusEffect } from '@react-navigation/native';
 import { API_CONFIG } from '../../config/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import { tripService, Trip } from '../../services/tripService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -172,10 +171,47 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       });
     }
   };
-  const { loadPublicTrips, loading: tripsLoading } = useTrips();
+  // Chargement des voyages publics
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [tripsLoading, setTripsLoading] = useState(false);
+  
+  const loadPublicTrips = async () => {
+    try {
+      setTripsLoading(true);
+      console.log('🔍 UnifiedHomeScreen - Chargement des voyages publics');
+      const response = await tripService.getPublicTrips(1, 20);
+      console.log('✅ UnifiedHomeScreen - Voyages récupérés:', response);
+      
+      // S'assurer que response.data existe et est un tableau
+      if (response && response.data && Array.isArray(response.data)) {
+        setTrips(response.data);
+      } else {
+        console.log('⚠️ UnifiedHomeScreen - Réponse invalide, utilisation d\'un tableau vide');
+        setTrips([]);
+      }
+    } catch (error) {
+      console.error('❌ UnifiedHomeScreen - Erreur lors du chargement des voyages:', error);
+      // Ne pas afficher d'erreur à l'utilisateur, juste un tableau vide
+      setTrips([]);
+    } finally {
+      setTripsLoading(false);
+    }
+  };
   
   // Vérification de l'authentification
   useRequireAuth();
+  
+  // Charger les voyages au montage du composant
+  useEffect(() => {
+    loadPublicTrips();
+  }, []);
+  
+  // Recharger les voyages quand l'écran est focalisé
+  useFocusEffect(
+    React.useCallback(() => {
+      loadPublicTrips();
+    }, [])
+  );
   
   // Animations pour 2025
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -224,16 +260,98 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     recent: [] as SocialPost[]       // Derniers voyages
   });
 
-  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [_posts, _setPosts] = useState<SocialPost[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loadingFeed, setLoadingFeed] = useState(true);
-  const [refreshingFeed, setRefreshingFeed] = useState(false);
+  const [_loadingFeed, _setLoadingFeed] = useState(true);
+  const [_refreshingFeed, _setRefreshingFeed] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [mapPost, setMapPost] = useState<SocialPost | null>(null);
   const postRef = useRef<{ [key: string]: number }>({});
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState('all');
+
+  // Fonction pour rendre une carte de voyage
+  const renderTripCard = ({ item }: { item: Trip }) => {
+    return (
+      <TouchableOpacity 
+        style={[styles.tripCard, { backgroundColor: theme.colors.background.secondary }]}
+        onPress={() => navigation.navigate('TripDetail', { tripId: item.id })}
+        activeOpacity={0.8}
+      >
+        <View style={styles.tripCardHeader}>
+          <View style={styles.tripCardUserInfo}>
+            <Image 
+              source={{ uri: item.user?.avatar || 'https://via.placeholder.com/40' }}
+              style={styles.tripCardAvatar}
+            />
+            <View style={styles.tripCardUserDetails}>
+              <Text style={[styles.tripCardUserName, { color: theme.colors.text.primary }]}>
+                {item.user?.name || 'Utilisateur'}
+              </Text>
+              <Text style={[styles.tripCardDestination, { color: theme.colors.text.secondary }]}>
+                {item.destination}
+              </Text>
+            </View>
+          </View>
+          <Text style={[styles.tripCardDate, { color: theme.colors.text.secondary }]}>
+            {new Date(item.created_at).toLocaleDateString('fr-FR')}
+          </Text>
+        </View>
+        
+        <Text style={[styles.tripCardTitle, { color: theme.colors.text.primary }]}>
+          {item.title}
+        </Text>
+        
+        {item.description && (
+          <Text style={[styles.tripCardDescription, { color: theme.colors.text.secondary }]}>
+            {item.description}
+          </Text>
+        )}
+        
+        {/* Aperçu des images du voyage */}
+        {(item.images && item.images.length > 0) && (
+          <View style={styles.tripCardImages}>
+            {item.images.slice(0, 3).map((image, index) => (
+              <Image
+                key={index}
+                source={{ uri: getImageUrl(image) }}
+                style={[
+                  styles.tripCardImage,
+                  index === 0 && styles.tripCardImageFirst,
+                  index > 0 && styles.tripCardImageOverlap
+                ]}
+                resizeMode="cover"
+              />
+            ))}
+            {item.images.length > 3 && (
+              <View style={styles.tripCardImageOverlay}>
+                <Text style={styles.tripCardImageCount}>+{item.images.length - 3}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        
+        <View style={styles.tripCardFooter}>
+          <View style={styles.tripCardStats}>
+            <Ionicons name="heart-outline" size={16} color={theme.colors.text.secondary} />
+            <Text style={[styles.tripCardStatText, { color: theme.colors.text.secondary }]}>
+              {item.likes_count || 0}
+            </Text>
+            <Ionicons name="chatbubble-outline" size={16} color={theme.colors.text.secondary} />
+            <Text style={[styles.tripCardStatText, { color: theme.colors.text.secondary }]}>
+              {item.comments_count || 0}
+            </Text>
+          </View>
+          <View style={[styles.tripCardStatus, { backgroundColor: theme.colors.primary[0] + '20' }]}>
+            <Text style={[styles.tripCardStatusText, { color: theme.colors.primary[0] }]}>
+              {item.status === 'active' ? 'En cours' : item.status === 'completed' ? 'Terminé' : 'Brouillon'}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   // Fonction pour gérer les URLs d'images
   const getImageUrl = (imageUrl: string, postId?: string, imageIndex?: number): string => {
@@ -1358,14 +1476,14 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       )}
 
       {/* Feed moderne avec animations */}
-      {loadingFeed ? (
+      {tripsLoading ? (
         <View style={styles.loadingContainer2025}>
           <ActivityIndicator size="large" color={theme.colors.primary[0]} />
           <Text style={[styles.loadingText2025, { color: theme.colors.text.secondary }]}>
             Chargement des voyages...
           </Text>
         </View>
-      ) : posts.length === 0 ? (
+      ) : trips.length === 0 ? (
         <View style={styles.emptyFeedContainer2025}>
           <View style={[styles.emptyIconContainer2025, { backgroundColor: theme.colors.primary[0] + '15' }]}>
             <Ionicons name="airplane-outline" size={48} color={theme.colors.primary[0]} />
@@ -1389,14 +1507,14 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       ) : (
         <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <FlatList
-            data={posts}
-            renderItem={renderModernTripCard}
+            data={trips}
+            renderItem={renderTripCard}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.modernFeedContainer2025}
             refreshControl={
     <RefreshControl 
-      refreshing={refreshingFeed} 
-      onRefresh={handleRefreshFeed}
+      refreshing={tripsLoading} 
+      onRefresh={loadPublicTrips}
       colors={[theme.colors.primary[0]]}
       tintColor={theme.colors.primary[0]}
       title="Mise à jour..."
@@ -1995,6 +2113,121 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'right',
     marginTop: 8,
+  },
+  // Styles pour les cartes de voyage
+  tripCard: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tripCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tripCardUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  tripCardAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  tripCardUserDetails: {
+    flex: 1,
+  },
+  tripCardUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  tripCardDestination: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  tripCardDate: {
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  tripCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  tripCardDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  tripCardImages: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    height: 80,
+    position: 'relative',
+  },
+  tripCardImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  tripCardImageFirst: {
+    marginRight: 8,
+  },
+  tripCardImageOverlap: {
+    marginLeft: -20,
+    marginRight: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  tripCardImageOverlay: {
+    position: 'absolute',
+    right: 8,
+    top: 0,
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tripCardImageCount: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  tripCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tripCardStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tripCardStatText: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  tripCardStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tripCardStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 

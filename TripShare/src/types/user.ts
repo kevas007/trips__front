@@ -42,7 +42,7 @@ export interface UserStats {
 export interface UserTravelPreferences {
   activities?: string[];
   accommodation?: string[];
-  transport?: string[];
+  transportation?: string[];
   food?: string[];
   budget?: string[];
   climate?: string[];

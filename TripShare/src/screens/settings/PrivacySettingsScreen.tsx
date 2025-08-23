@@ -9,7 +9,6 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { NavigationProp } from '@react-navigation/native';
 
 interface PrivacyOption {

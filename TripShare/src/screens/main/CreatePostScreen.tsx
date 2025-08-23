@@ -18,8 +18,8 @@ import {
 
 const { width } = Dimensions.get('window');
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useAppTheme } from '../../hooks/useAppTheme';
+import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store';
 import { useTrips } from '../../hooks/useTripShareApi';

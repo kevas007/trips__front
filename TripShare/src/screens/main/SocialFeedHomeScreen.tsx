@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { useAuthStore } from '../../store';
 
 const { width } = Dimensions.get('window');

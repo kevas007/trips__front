@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet } from 'react-native';
 import { useAppTheme } from '../../hooks/useAppTheme';
-
+import { Ionicons } from '@expo/vector-icons';
 const SearchScreen: React.FC = () => {
   const { theme } = useAppTheme();
   return (
@@ -12,7 +11,7 @@ const SearchScreen: React.FC = () => {
         Recherche
       </Text>
       <Text style={{ fontSize: 5, color: theme.colors.text.secondary, marginTop: 10, textAlign: 'center', paddingHorizontal: 40 }}>
-                  Recherchez des destinations, des utilisateurs ou des voyages sur Trivenile.
+                  Recherchez des destinations, des utilisateurs ou des voyages sur TripShare.
       </Text>
     </View>
   );

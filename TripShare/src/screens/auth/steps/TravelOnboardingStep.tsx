@@ -10,8 +10,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../../hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../hooks/useAppTheme';
 import { PlaneAnimation, BoatAnimation, TrainAnimation } from '../TravelAnimations';
 
 const { width } = Dimensions.get('window');

@@ -2,19 +2,18 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { Text, View } from 'react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
-import { Text, Platform, View } from 'react-native';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
+import EditPreferencesScreen from '../screens/main/EditPreferencesScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
 import PublicProfileScreen from '../screens/main/PublicProfileScreen';
 import CategoryTripsScreen from '../screens/main/CategoryTripsScreen';
 import EnhancedTripCreationScreen from '../screens/itineraries/EnhancedTripCreationScreen';
-import SimpleCreateTripScreen from '../screens/itineraries/SimpleCreateTripScreen';
 import SocialFeedScreen from '../screens/main/SocialFeedScreen';
 import CommentsScreen from '../screens/main/CommentsScreen';
 import CreatePostScreen from '../screens/main/CreatePostScreen';
-import MapsScreen from '../screens/main/MapsScreen';
 import UnifiedHomeScreen from '../screens/main/UnifiedHomeScreen';
 import UserTripsScreen from '../screens/main/UserTripsScreen';
 import TripPlacesManagerScreen from '../screens/main/TripPlacesManagerScreen';
@@ -111,6 +110,11 @@ const ProfileStackNavigator = () => {
         name="EditProfile" 
         component={EditProfileScreen} 
         options={{ title: 'Modifier le profil' }}
+      />
+      <ProfileStack.Screen 
+        name="EditPreferences" 
+        component={EditPreferencesScreen} 
+        options={{ title: 'Préférences' }}
       />
       <ProfileStack.Screen 
         name="Settings" 

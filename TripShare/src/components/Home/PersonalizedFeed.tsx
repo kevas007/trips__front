@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { api } from '../../services/api';
 import { Trip, UserTravelPreferences } from '../../types';
 import TripCard from './TripCard';

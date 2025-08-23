@@ -1,180 +1,185 @@
-# 🌍 Trivenile - Plateforme Sociale de Voyage Nouvelle Génération
+# TripShare/Trivenile - Frontend Mobile
 
-<div align="center">
-  <img src="./assets/icon.png" alt="Trivenile Logo" width="120" height="120" />
-  
-  [![React Native](https://img.shields.io/badge/React%20Native-0.79-blue.svg)](https://reactnative.dev/)
-  [![Expo](https://img.shields.io/badge/Expo-53.0-black.svg)](https://expo.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
-  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-</div>
+> Plateforme sociale de voyage nouvelle génération avec IA
 
-## 🚀 **À propos de Trivenile**
+## 🚀 **Démarrage Rapide**
 
-**Trivenile** est une plateforme sociale de voyage révolutionnaire qui combine l'intelligence artificielle, la gamification et une expérience utilisateur moderne pour transformer la façon dont vous planifiez, partagez et vivez vos aventures.
-
-### ✨ **Fonctionnalités principales**
-
-🤖 **IA Intelligente**
-- Recommandations personnalisées basées sur vos préférences
-- Planification automatique d'itinéraires optimisés
-- Assistant voyage intelligent
-
-🎮 **Expérience Gamifiée**
-- Système de points et récompenses
-- Défis de voyage quotidiens
-- Badges et accomplissements
-
-📱 **Interface Moderne**
-- Design élégant et intuitif
-- Animations fluides et immersives
-- Mode sombre/clair adaptatif
-
-🌐 **Social & Partage**
-- Partage d'itinéraires en temps réel
-- Communauté de voyageurs passionnés
-- Photos et souvenirs géolocalisés
-
-## 🛠️ **Technologies**
-
-### **Frontend Mobile**
-- **React Native 0.79** - Framework multiplateforme
-- **Expo 53** - Plateforme de développement
-- **TypeScript** - Typage statique
-- **Zustand** - Gestion d'état moderne
-- **React Hook Form** - Gestion des formulaires
-- **react-native-svg** - Graphiques vectoriels
-
-### **Design System**
-- **Expo Linear Gradient** - Dégradés natifs
-- **Responsive Design** - Adaptation multi-écrans
-- **Animations** - React Native Animated API
-- **Thèmes** - Support mode sombre/clair
-
-### **Internationalisation**
-- **i18next** - Support multilingue
-- **Français & Anglais** - Langues supportées
-
-## 📱 **Installation & Démarrage**
-
-### **Prérequis**
-- Node.js 18+
-- npm ou yarn
-- Expo CLI
-- iOS Simulator / Android Emulator
-
-### **Installation**
 ```bash
-# Cloner le repository
-git clone https://github.com/trivenile/mobile-app.git
-cd trivenile
-
-# Installer les dépendances
+# Installation des dépendances
 npm install
 
-# Démarrer le serveur de développement
+# Démarrage de l'application
 npm start
-
-# Ou directement sur plateforme
-npm run ios     # iOS Simulator
-npm run android # Android Emulator
 ```
 
-### **Scripts disponibles**
-```bash
-npm start          # Serveur Expo
-npm run ios        # iOS
-npm run android    # Android  
-npm run clear      # Cache clear
-npm test          # Tests Jest
-npm run lint      # ESLint
-npm run type-check # TypeScript
-```
+## 📱 **Technologies**
 
-## 🏗️ **Architecture du Projet**
+- **React Native** + **Expo** - Framework mobile
+- **TypeScript** - Typage statique strict
+- **Zustand** - Gestion d'état par slices
+- **React Navigation** - Navigation fluide
+- **i18next** - Internationalisation
+- **ESLint** + **Prettier** - Qualité du code
+
+## 🏗️ **Architecture**
+
+L'application suit une architecture **Feature-First** conforme aux consignes d'AGENTS-frontend.md :
 
 ```
 src/
-├── components/          # Composants réutilisables
-│   ├── auth/           # Authentification
-│   ├── Home/           # Écran d'accueil
-│   └── ui/             # Composants UI génériques
-├── screens/            # Écrans de l'application
-│   ├── auth/           # Connexion/Inscription
-│   ├── main/           # Écrans principaux
-│   └── settings/       # Paramètres
-├── navigation/         # Configuration navigation
-├── services/           # Services API
-├── contexts/           # Contextes React
-├── hooks/              # Hooks personnalisés
-├── utils/              # Utilitaires
-├── types/              # Types TypeScript
-├── constants/          # Constantes
-└── i18n/               # Traductions
+├── features/           # Domaines métier
+│   └── auth/          # Authentification
+│       ├── components/ # Composants spécifiques
+│       ├── hooks/     # Hooks personnalisés
+│       ├── services/  # Services API
+│       ├── types/     # Types TypeScript
+│       └── index.ts   # Export principal
+├── shared/            # Ressources partagées
+│   ├── components/    # Composants réutilisables
+│   ├── constants/     # Design system
+│   ├── utils/         # Utilitaires
+│   └── index.ts       # Export principal
+├── store/             # Gestion d'état Zustand
+│   ├── slices/        # Slices par domaine
+│   └── index.ts       # Store principal
+└── navigation/        # Configuration navigation
 ```
 
-## 🎨 **Assets & Design**
+## 🎯 **Fonctionnalités**
 
-### **Icons & Images**
-- 📱 **26 icônes** multi-résolutions (iOS/Android/Web)
-- 🎭 **Fonds d'écran** optimisés (mode clair/sombre)
-- 🌍 **Logo SVG** vectoriel adaptatif
+### ✅ **Implémentées**
+- **Authentification** - Login/Register avec validation
+- **Architecture Feature-First** - Organisation modulaire
+- **Store Zustand** - Gestion d'état optimisée
+- **Design System** - Couleurs, espacement, typographie
+- **Tests** - Tests d'interaction avec RN Testing Library
+- **Linting** - ESLint + Prettier configurés
+- **TypeScript** - Types stricts et validation
 
-### **Optimisations**
-- ✅ **Lazy loading** automatique
-- ✅ **Compression** intelligente
-- ✅ **Fallbacks** gracieux
-- ✅ **Cache** optimisé
+### 🔄 **En Cours**
+- **Navigation** - Flux d'authentification
+- **API Integration** - Services backend
+- **Internationalisation** - Support multilingue
 
-## 🔐 **Sécurité & Authentification**
+## 📦 **Scripts Disponibles**
 
-- 🔒 **JWT** sécurisé
-- 🍎 **Apple Sign-In** 
-- 🔵 **Google OAuth**
-- 📱 **Biométrie** (Face ID/Touch ID)
-- 🔐 **Secure Store** pour les tokens
-
-## 🌍 **Déploiement**
-
-### **Expo Application Services (EAS)**
 ```bash
-# Build Android
-npm run build:android
+# Développement
+npm start              # Démarrage Expo
+npm run android        # Build Android
+npm run ios           # Build iOS
 
-# Build iOS  
-npm run build:ios
+# Qualité
+npm run lint          # Vérification ESLint
+npm run lint:fix      # Correction automatique
+npm run format        # Formatage Prettier
+npm run type-check    # Vérification TypeScript
+
+# Tests
+npm run test          # Tests unitaires
+npm run test:watch    # Tests en mode watch
+npm run test:coverage # Couverture de tests
+
+# Build
+npm run build:web     # Build pour le web
+npm run build:android # Build Android
+npm run build:ios     # Build iOS
+
+# Sécurité
+npm run security-audit # Audit des dépendances
+npm run depcheck      # Vérification des dépendances
 ```
 
-### **Configuration**
-- **Bundle ID**: `com.trivenile.app`
-- **Package**: `trivenile.android`
-- **Version**: `1.0.0`
+## 🔧 **Configuration**
+
+### Variables d'Environnement
+
+Créez un fichier `.env.local` :
+
+```env
+EXPO_PUBLIC_API_URL=http://localhost:8085
+EXPO_PUBLIC_ENVIRONMENT=development
+```
+
+### Configuration Expo
+
+L'application utilise la nouvelle architecture React Native :
+
+```json
+{
+  "newArchEnabled": true,
+  "jsEngine": "hermes"
+}
+```
+
+## 🧪 **Tests**
+
+```bash
+# Tests unitaires
+npm run test
+
+# Tests d'interaction
+npm run test:integration
+
+# Couverture
+npm run test:coverage
+```
+
+## 📚 **Documentation**
+
+- **Architecture** : `doc/FRONTEND_ARCHITECTURE.md`
+- **API** : `doc/api/`
+- **Guides** : `doc/guides/`
+- **Setup** : `doc/setup/`
+
+## 🚀 **Déploiement**
+
+### Web
+```bash
+npm run build:web
+```
+
+### Mobile
+```bash
+# Android
+eas build --platform android
+
+# iOS
+eas build --platform ios
+```
+
+## 🔒 **Sécurité**
+
+- **SecureStore** - Stockage sécurisé des tokens
+- **Validation** - Sanitisation des données
+- **HTTPS** - Communication sécurisée
+- **Audit** - Vérification des dépendances
+
+## 📊 **Performance**
+
+- **Hermes** - Moteur JavaScript optimisé
+- **Mémoïsation** - React.memo, useMemo, useCallback
+- **Lazy Loading** - Chargement à la demande
+- **Bundle Optimization** - Tree shaking, minification
 
 ## 🤝 **Contribution**
 
-Les contributions sont les bienvenues ! Consultez notre [guide de contribution](CONTRIBUTING.md).
-
-### **Développement**
 1. Fork le projet
-2. Créer une branche feature (`git checkout -b feature/amazing-feature`)
-3. Commit (`git commit -m 'Add amazing feature'`)
-4. Push (`git push origin feature/amazing-feature`)
-5. Ouvrir une Pull Request
+2. Créez une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrez une Pull Request
 
 ## 📄 **Licence**
 
-Ce projet est sous licence MIT. Voir [LICENSE](LICENSE) pour plus de détails.
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
-## 📞 **Support & Contact**
+## 🆘 **Support**
 
-- 📧 **Email**: support@trivenile.app
-- 🌐 **Site web**: https://trivenile.app
-- 📱 **App Store**: [À venir]
-- 🤖 **Google Play**: [À venir]
+- **Documentation** : `doc/`
+- **Issues** : GitHub Issues
+- **Discussions** : GitHub Discussions
 
 ---
 
-<div align="center">
-  <p><strong>Développé avec ❤️ par l'équipe Trivenile</strong></p>
-  <p>🌍 Révolutionnons ensemble l'expérience voyage</p>
-</div> 
+**TripShare/Trivenile** - Révolutionnez vos voyages avec l'IA ! 🌍✈️ 

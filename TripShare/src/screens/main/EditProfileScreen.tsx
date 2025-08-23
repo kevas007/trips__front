@@ -11,8 +11,8 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import { profileService } from '../../services/profileService';
 import { User } from '../../types/user';
 import * as ImagePicker from 'expo-image-picker';

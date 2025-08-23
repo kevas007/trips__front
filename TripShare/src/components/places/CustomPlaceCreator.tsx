@@ -13,8 +13,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useAppTheme } from '../../hooks/useAppTheme';
+import * as ImagePicker from 'expo-image-picker';
 import { PlaceDetails } from '../../services/intelligentPlacesService';
 
 const { width } = Dimensions.get('window');

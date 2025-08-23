@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAppTheme } from '../../hooks/useAppTheme';
-
 interface Tag {
   id: string;
   name: string;

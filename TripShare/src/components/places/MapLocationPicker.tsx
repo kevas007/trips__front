@@ -10,9 +10,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../../hooks/useAppTheme';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { LocationSuggestion } from './LocationSearchInput';
 
 const { width, height } = Dimensions.get('window');

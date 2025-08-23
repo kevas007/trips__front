@@ -8,8 +8,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../hooks/useAppTheme';
 
-const { width } = Dimensions.get('window');
-
 interface FloatingActionButtonProps {
   onPress: () => void;
   icon?: keyof typeof Ionicons.glyphMap;

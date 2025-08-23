@@ -3,8 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'rea
 import { authService } from '../../services/auth';
 import { tripShareApi } from '../../services/tripShareApi';
 import { unifiedApi } from '../../services/unifiedApi';
-import { useAppTheme } from '../../hooks/useAppTheme';
-
 const EnhancedAuthTestComponent = () => {
   const { theme } = useAppTheme();
   const [isLoading, setIsLoading] = useState(false);

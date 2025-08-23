@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { profileService } from '../services/profileService';
-import { useAuthStore, useTripStore } from '../store';
+import { useAuthStore } from '../store';
 import { User, UserStats, Badge } from '../types/user';
+import { authService } from '../services/auth';
 
 export function useProfileData() {
   const [user, setUser] = useState<User | null>(null);
@@ -12,6 +13,7 @@ export function useProfileData() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedRef = useRef(false);
+  const { isAuthenticated } = useAuthStore();
 
   const fetchAll = useCallback(async () => {
     // Éviter les appels multiples lors du premier chargement
@@ -20,9 +22,15 @@ export function useProfileData() {
     }
     
     // Vérifier l'authentification avant de charger les données
-    const { isAuthenticated } = useAuthStore.getState();
-    if (!isAuthenticated) {
-      console.log('❌ Utilisateur non authentifié');
+    const token = authService.getToken();
+    
+    console.log('🔍 useProfileData - État de l\'authentification:');
+    console.log('  - isAuthenticated:', isAuthenticated);
+    console.log('  - Token disponible:', !!token);
+    console.log('  - Token:', token ? `${token.substring(0, 20)}...` : 'Aucun');
+    
+    if (!isAuthenticated || !token) {
+      console.log('❌ Utilisateur non authentifié ou token manquant');
       setError('Veuillez vous connecter pour voir votre profil');
       setLoading(false);
       return;
@@ -76,13 +84,36 @@ export function useProfileData() {
     } finally {
       setLoading(false);
     }
-  }, [refreshing]);
+  }, [refreshing, isAuthenticated]);
+
+  // Vérifier les nouveaux badges après chaque action
+  const checkForNewBadges = useCallback(async () => {
+    if (badges.length > 0) {
+      try {
+        const newBadges = await profileService.checkNewBadges(badges);
+        if (newBadges.length > 0) {
+          console.log('🎉 Nouveaux badges détectés:', newBadges);
+          setBadges(prev => [...prev, ...newBadges]);
+          // Ici on pourrait afficher une notification à l'utilisateur
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors de la vérification des nouveaux badges:', error);
+      }
+    }
+  }, [badges]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) {
       fetchAll();
     }
   }, [fetchAll]);
+
+  // Vérifier les nouveaux badges après chaque mise à jour des stats
+  useEffect(() => {
+    if (stats && badges.length > 0) {
+      checkForNewBadges();
+    }
+  }, [stats, checkForNewBadges]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -104,5 +135,6 @@ export function useProfileData() {
     error,
     refreshing,
     onRefresh,
+    checkForNewBadges,
   };
 } 

@@ -12,10 +12,10 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../../hooks/useAppTheme';
 import { api } from '../../services/api';
 import { Trip } from '../../types/trip';
 import TripCard from '../../components/Home/TripCard';
+import { useAppTheme } from '../../hooks/useAppTheme';
 
 interface CategoryTripsScreenProps {
   route: {

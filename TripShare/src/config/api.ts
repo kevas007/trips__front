@@ -44,8 +44,9 @@ const getCurrentEnvironment = (): keyof typeof LOCAL_ENVIRONMENTS => {
   }
 };
 
-// Force la configuration pour Android et iOS - UTILISER LOCALHOST POUR LE DÉVELOPPEMENT
-const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = 'localhost';
+// Détection automatique de la plateforme pour choisir la bonne URL
+// FORCER network pour iOS Simulator
+const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = 'network';
 
 export const API_CONFIG = {
   // Configuration de base

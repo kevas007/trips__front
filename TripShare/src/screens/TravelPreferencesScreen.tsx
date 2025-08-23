@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme } from '../hooks/useAppTheme';
 import { authService } from '../services/auth';
 import { UserTravelPreferences } from '../types/user';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../store';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { screenStyles } from './TravelPreferencesStyles';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';

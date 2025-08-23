@@ -2,12 +2,9 @@
 
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { API_CONFIG, getFullApiUrl } from '../config/api';
-import { APIResponse, UserTravelPreferences, User, Trip, Activity, Location, TripBudget, Expense, AIRecommendation, SearchFilters, UserProfile, DeviceInfo } from '../types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authService } from './auth';
-import { APIService as BaseAPIService, APIError } from '../types/api';
-import { TripFilters } from '../types/trip';
+import { API_CONFIG } from '../config/api';
+import { User } from '../types';
+import { APIError } from '../types/api';
 
 // ========== TYPES ==========
 export interface AuthResponse {
@@ -30,25 +27,13 @@ export interface RegisterRequest {
   password: string;
 }
 
-// ========== FORMAT RÉPONSE BACKEND GO ==========
-interface BackendResponse {
-  success: boolean;
-  error?: string;
-  data?: any;
-}
-
-const SECURE_STORE_OPTIONS = {
-  keychainService: 'TripShare',
-  keychainAccessible: SecureStore.WHEN_UNLOCKED,
-};
-
 export class APIErrorImpl extends Error implements APIError {
   public code?: string;
   
   constructor(
     message: string,
     public status: number,
-    public data?: any
+    public data?: unknown
   ) {
     super(message);
     this.name = 'APIError';
@@ -87,7 +72,7 @@ export class APIService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.API_URL || 'http://localhost:3000/api';
+    this.baseUrl = process.env.API_URL || API_CONFIG.BASE_URL + API_CONFIG.API_PREFIX;
     console.log(`🚀 APIService initialisé en mode ${API_CONFIG.ENV_NAME}:`, this.baseUrl);
   }
 
@@ -98,212 +83,117 @@ export class APIService {
     // Ne pas vérifier le token pour les routes d'authentification
     if (!endpoint.includes('/auth/')) {
       // Vérifier la validité du token avant chaque requête
-      const isTokenValid = await authService.checkTokenValidity();
-      if (!isTokenValid) {
-        throw new APIErrorImpl('Session expirée', 401, null);
+      const token = await this.getValidToken();
+      if (token) {
+        options.headers = {
+          ...options.headers,
+          'Authorization': `Bearer ${token}`
+        };
       }
     }
 
-    const url = getFullApiUrl(endpoint);
-    console.log('🔍 URL construite:', {
-      endpoint,
-      url,
-      method: options.method || 'GET'
-    });
+    const url = `${this.baseUrl}${endpoint}`;
+    console.log('🌐 URL complète:', url);
 
     try {
-      // Utiliser le token du service d'authentification
-      const token = authService.getToken();
-      console.log('🔑 Token trouvé:', !!token);
-
-      if (!token && !endpoint.includes('/auth/')) {
-        throw new APIErrorImpl('Non authentifié', 401, null);
-      }
-
-      // Créer le contrôleur d'abort avec timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.REQUEST_TIMEOUT);
-
-      try {
-        // Faire l'appel avec le signal d'abort
-        const response = await fetch(url, {
-          ...options,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-            ...options.headers,
-          },
-          signal: controller.signal,
-        });
-
-        // Vérifier la réponse
-        if (!response.ok) {
-          // Si on reçoit une erreur 401, essayer de rafraîchir le token
-          if (response.status === 401 && !endpoint.includes('/auth/')) {
-            try {
-              // Tenter de rafraîchir le token
-              await authService.refreshAccessToken();
-              
-              // Réessayer la requête avec le nouveau token
-              const newToken = authService.getToken();
-              const retryResponse = await fetch(url, {
-                ...options,
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(newToken ? { 'Authorization': `Bearer ${newToken}` } : {}),
-                  ...options.headers,
-                },
-              });
-
-              if (!retryResponse.ok) {
-                throw new APIErrorImpl(
-                  `${retryResponse.status} ${retryResponse.statusText}`,
-                  retryResponse.status,
-                  await retryResponse.json().catch(() => null)
-                );
-              }
-
-              return await retryResponse.json();
-            } catch (refreshError) {
-              // Si le rafraîchissement échoue, déconnecter l'utilisateur
-              await authService.logout();
-              throw new APIErrorImpl('Session expirée', 401, null);
-            }
-          }
-
-          throw new APIErrorImpl(
-            `${response.status} ${response.statusText}`,
-            response.status,
-            await response.json().catch(() => null)
-          );
-        }
-
-        // Parser et retourner la réponse
-        const data = await response.json();
-        return data;
-
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          throw new APIErrorImpl('Timeout de la requête', 408, null);
-        }
-        throw error;
-      } finally {
-        clearTimeout(timeoutId);
-      }
-
-    } catch (error) {
-      console.error(`❌ Erreur API: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-      throw error;
-    }
-  }
-
-  // -------- MÉTHODES GÉNÉRIQUES --------
-  async get(endpoint: string, options: RequestInit = {}): Promise<any> {
-    return this.apiCall(endpoint, { ...options, method: 'GET' });
-  }
-
-  async post(endpoint: string, data?: any, options: RequestInit = {}): Promise<any> {
-    return this.apiCall(endpoint, {
-      ...options,
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async put(endpoint: string, data?: any, options: RequestInit = {}): Promise<any> {
-    return this.apiCall(endpoint, {
-      ...options,
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async delete(endpoint: string, options: RequestInit = {}): Promise<any> {
-    return this.apiCall(endpoint, { ...options, method: 'DELETE' });
-  }
-
-  // -------- PRÉFÉRENCES UTILISATEUR --------
-  async updatePreferences(preferences: Partial<UserTravelPreferences>): Promise<APIResponse<UserTravelPreferences>> {
-    try {
-      const response = await this.apiCall<APIResponse<UserTravelPreferences>>('/users/me/preferences', {
-        method: 'PUT',
-        body: JSON.stringify(preferences),
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
       });
-      return response;
+
+      console.log('📡 Réponse reçue:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new APIErrorImpl(
+          errorData.message || `HTTP ${response.status}`,
+          response.status,
+          errorData
+        );
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des préférences:', error);
+      console.error('❌ Erreur API:', error);
       throw error;
     }
   }
 
-  async getUserTravelPreferences(): Promise<APIResponse<UserTravelPreferences>> {
+  // -------- GESTION DES TOKENS --------
+  private async getValidToken(): Promise<string | null> {
     try {
-      const response = await this.apiCall<APIResponse<UserTravelPreferences>>('/users/me/travel-preferences');
-      return response;
+      const token = await Storage.getItem('access_token');
+      if (!token) return null;
+
+      // TODO: Vérifier l'expiration du token
+      return token;
     } catch (error) {
-      console.error('Erreur lors de la récupération des préférences:', error);
-      throw error;
+      console.error('❌ Erreur lors de la récupération du token:', error);
+      return null;
     }
   }
 
-  // -------- RECOMMANDATIONS --------
-  async getRecommendedTrips(page: number = 1, limit: number = 10): Promise<APIResponse<any[]>> {
+  private async refreshToken(): Promise<string | null> {
     try {
-      const response = await this.apiCall<APIResponse<any[]>>(`/recommendations/trips?page=${page}&limit=${limit}`);
-      return response;
+      const refreshToken = await Storage.getItem('refresh_token');
+      if (!refreshToken) return null;
+
+      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (response.ok) {
+        const data: AuthResponse = await response.json();
+        await Storage.setItem('access_token', data.access_token);
+        if (data.refresh_token) {
+          await Storage.setItem('refresh_token', data.refresh_token);
+        }
+        return data.access_token;
+      }
     } catch (error) {
-      console.error('Erreur lors de la récupération des recommandations:', error);
-      throw error;
+      console.error('❌ Erreur lors du refresh token:', error);
     }
+    return null;
   }
 
-  async getTripsByCategory(category: string, page: number = 1, limit: number = 10): Promise<APIResponse<Trip[]>> {
-    try {
-      const response = await this.apiCall<APIResponse<Trip[]>>(`/recommendations/travel-category/${category}?page=${page}&limit=${limit}`);
-      return response;
-    } catch (error) {
-      console.error('Erreur lors de la récupération des voyages par catégorie:', error);
-      throw error;
-    }
+  // -------- MÉTHODES PUBLIQUES --------
+  async get<T>(endpoint: string): Promise<T> {
+    return this.apiCall<T>(endpoint, { method: 'GET' });
   }
 
-  // -------- VOYAGES --------
-  async getTrips(filters: TripFilters): Promise<APIResponse<Trip[]>> {
-    try {
-      const queryParams = new URLSearchParams();
-      if (filters.category) queryParams.append('category', filters.category);
-      if (filters.difficulty) queryParams.append('difficulty', filters.difficulty);
-      if (filters.duration) queryParams.append('duration', filters.duration);
-      if (filters.budget) queryParams.append('budget', filters.budget);
-      if (filters.location) queryParams.append('location', filters.location);
-
-      const response = await this.apiCall<APIResponse<Trip[]>>(`/trips?${queryParams.toString()}`);
-      return response;
-    } catch (error) {
-      return {
-        success: false,
-        data: [],
-        error: error instanceof Error ? error.message : 'Une erreur est survenue',
-      };
-    }
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.apiCall<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 
-  private handleError(error: unknown): APIError {
-    if (error instanceof Error) {
-      return {
-        message: error.message,
-        code: 'unknown_error',
-        status: 500,
-      };
-    }
-    return {
-      message: 'Une erreur inattendue s\'est produite',
-      code: 'unknown_error',
-      status: 500,
-    };
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.apiCall<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.apiCall<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.apiCall<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 }
 
-// ========== INSTANCE SINGLETON ==========
+// Instance exportée
 export const api = new APIService();
-export default api;

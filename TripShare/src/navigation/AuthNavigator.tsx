@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuthStore } from '../store';
-import EnhancedAuthScreen from '../screens/auth/EnhancedAuthScreen';
+import SimpleAuthScreen from '../screens/auth/SimpleAuthScreen';
 import TermsScreen from '../screens/legal/TermsScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
@@ -19,21 +19,10 @@ export type AuthStackParamList = {
 const Stack = createStackNavigator<AuthStackParamList>();
 
 const AuthNavigator = () => {
-  const { isAuthenticated, isNewUser } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const navigation = useNavigation<any>();
 
-  console.log('🎯 AuthNavigator - État:', { isAuthenticated, isNewUser });
-
-  // Redirection automatique vers l'onboarding pour les nouveaux utilisateurs
-  React.useEffect(() => {
-    if (isNewUser && isAuthenticated) {
-      console.log('🎯 AuthNavigator - Redirection vers OnboardingScreen pour nouvel utilisateur');
-      // Utiliser un délai pour éviter les conflits de navigation
-      setTimeout(() => {
-        navigation.navigate('OnboardingScreen');
-      }, 100);
-    }
-  }, [isNewUser, isAuthenticated, navigation]);
+  console.log('🎯 AuthNavigator - État:', { isAuthenticated });
 
   return (
     <Stack.Navigator
@@ -60,7 +49,7 @@ const AuthNavigator = () => {
       {/* Écran principal d'authentification avec toggle */}
       <Stack.Screen 
         name="AuthScreen" 
-        component={EnhancedAuthScreen}
+        component={SimpleAuthScreen}
         options={{
           title: 'Authentification',
         }}

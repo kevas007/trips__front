@@ -4,8 +4,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Input, InputRef } from './Input';
-import { useAppTheme } from '../../hooks/useAppTheme';
-
 export const SmartFormExample: React.FC = () => {
   const { theme } = useAppTheme();
   const [formData, setFormData] = useState({

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthError } from '../../services/auth';
 import { useAppTheme } from '../../hooks/useAppTheme';
+import { AuthError } from '../../services/auth';
 import { getFontSize, getSpacing, getBorderRadius } from '../../utils/responsive';
 
 interface ErrorHandlerProps {

@@ -1,7 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useAppTheme } from '../../hooks/useAppTheme';
-
 interface FormButtonProps {
   onPress: () => void;
   title: string;

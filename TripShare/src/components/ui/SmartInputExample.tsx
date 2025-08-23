@@ -4,8 +4,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Input } from './Input';
-import { useAppTheme } from '../../hooks/useAppTheme';
-
 export const SmartInputExample: React.FC = () => {
   const { theme } = useAppTheme();
   const [formData, setFormData] = useState({

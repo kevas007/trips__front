@@ -1,5 +1,6 @@
 import { unifiedApi } from './unifiedApi';
 import { User, UserStats, Badge, PrivacySettings, NotificationSettings } from '../types/user';
+import { badgeService } from './badgeService';
 
 export interface ProfileUpdateData {
   first_name?: string;
@@ -29,18 +30,6 @@ const DEFAULT_STATS: UserStats = {
   countriesVisited: 0,
   citiesVisited: 0,
 };
-
-// Données de fallback pour les badges
-const DEFAULT_BADGES: Badge[] = [
-  {
-    id: 1,
-    name: 'Nouveau Voyageur',
-    description: 'Bienvenue sur TripShare !',
-    icon: '🎒',
-    category: 'achievement',
-    created_at: new Date().toISOString(),
-  },
-];
 
 class ProfileService {
   // Récupérer le profil de l'utilisateur connecté
@@ -141,23 +130,48 @@ class ProfileService {
     }
   }
 
-  // Récupérer les badges avec fallback
+  // Récupérer les badges automatiquement basés sur les statistiques
   async getBadges(): Promise<Badge[]> {
     try {
-      const response = await unifiedApi.get<any>('/users/me/badges');
-      // L'API unifiée retourne directement les données
-      const badges = response;
+      // Récupérer les statistiques utilisateur
+      const stats = await this.getStats();
+      const user = await this.getProfile();
       
-      // Vérifier que c'est un tableau
-      if (Array.isArray(badges) && badges.length > 0) {
-        return badges;
+      // Calculer les badges automatiquement
+      const calculatedBadges = badgeService.calculateBadges(stats, user.createdAt || new Date().toISOString());
+      
+      console.log('🎖️ Badges calculés automatiquement:', calculatedBadges);
+      return calculatedBadges;
+    } catch (error) {
+      console.warn('⚠️ Erreur lors du calcul des badges, utilisation du fallback:', error);
+      // Retourner un badge par défaut pour les nouveaux utilisateurs
+      return [{
+        id: 1,
+        name: 'Nouveau Voyageur',
+        description: 'Bienvenue sur TripShare !',
+        icon: '🎒',
+        category: 'achievement',
+        created_at: new Date().toISOString(),
+      }];
+    }
+  }
+
+  // Vérifier les nouveaux badges gagnés
+  async checkNewBadges(currentBadges: Badge[]): Promise<Badge[]> {
+    try {
+      const stats = await this.getStats();
+      const user = await this.getProfile();
+      
+      const newBadges = badgeService.checkForNewBadges(currentBadges, stats, user.createdAt || new Date().toISOString());
+      
+      if (newBadges.length > 0) {
+        console.log('🎉 Nouveaux badges gagnés:', newBadges);
       }
       
-      console.warn('⚠️ Aucun badge trouvé, utilisation du fallback');
-      return DEFAULT_BADGES;
+      return newBadges;
     } catch (error) {
-      console.warn('⚠️ Erreur lors de la récupération des badges, utilisation du fallback:', error);
-      return DEFAULT_BADGES;
+      console.error('❌ Erreur lors de la vérification des nouveaux badges:', error);
+      return [];
     }
   }
 
@@ -300,6 +314,18 @@ class ProfileService {
     } catch (error) {
       console.error('❌ Erreur lors de la récupération des voyages:', error);
       return { data: [], total: 0, page, limit, has_more: false };
+    }
+  }
+
+  // Mettre à jour les préférences de voyage
+  async updateTravelPreferences(preferences: any): Promise<void> {
+    try {
+      const response = await unifiedApi.put<any>('/users/me/travel-preferences', preferences);
+      // L'API unifiée retourne directement les données
+      return response;
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour des préférences de voyage:', error);
+      throw new Error('Impossible de mettre à jour les préférences de voyage');
     }
   }
 }
