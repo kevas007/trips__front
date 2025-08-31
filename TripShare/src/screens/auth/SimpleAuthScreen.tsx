@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   Animated,
+  Image,
 } from 'react-native';
 import { useAuthStore } from '../../store';
 import { LoginCredentials, RegisterData } from '../../types/unified';
@@ -29,10 +30,12 @@ const SimpleAuthScreen: React.FC = () => {
   const [logoAnimation] = useState(new Animated.Value(0));
   const [language, setLanguage] = useState<Language>('fr');
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
-  const [currentTransportIndex, setCurrentTransportIndex] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
-  // Animations
-  const transportAnimation = new Animated.Value(0);
+  // Animations pour les images de vacances
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const scaleAnim = useState(new Animated.Value(0.8))[0];
+  const rotateAnim = useState(new Animated.Value(0))[0];
   
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
@@ -48,8 +51,39 @@ const SimpleAuthScreen: React.FC = () => {
     lastName: '',
   });
 
-  // Moyens de transport pour l'animation
-  const transports = ['✈️', '🚗', '🚂', '🚢', '🚁', '🚲', '🏍️', '🚅'];
+  // Images de vacances pour l'animation
+  const vacationImages = [
+    {
+      uri: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop&crop=center',
+      title: 'Plage paradisiaque',
+      description: 'Détendez-vous sur des plages de sable blanc'
+    },
+    {
+      uri: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=300&fit=crop&crop=center',
+      title: 'Aventure en montagne',
+      description: 'Explorez des paysages montagneux époustouflants'
+    },
+    {
+      uri: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=300&h=300&fit=crop&crop=center',
+      title: 'Ville historique',
+      description: 'Découvrez des villes chargées d\'histoire'
+    },
+    {
+      uri: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop&crop=center',
+      title: 'Coucher de soleil',
+      description: 'Admirez des couchers de soleil inoubliables'
+    },
+    {
+      uri: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=300&fit=crop&crop=center',
+      title: 'Nature sauvage',
+      description: 'Immergez-vous dans une nature préservée'
+    },
+    {
+      uri: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=300&h=300&fit=crop&crop=center',
+      title: 'Culture locale',
+      description: 'Partagez des moments avec les locaux'
+    },
+  ];
 
   // Textes selon la langue
   const texts = {
@@ -104,10 +138,10 @@ const SimpleAuthScreen: React.FC = () => {
       loading: 'Logging in...',
       loadingRegister: 'Registering...',
       loadingForgot: 'Sending...',
-      forgotPassword: 'Forgot password?',
-      noAccount: 'No account? Register',
-      hasAccount: 'Have an account? Login',
-      backToLogin: 'Back to login',
+      forgotPassword: 'Forgot Password?',
+      noAccount: 'Don\'t have an account? Register',
+      hasAccount: 'Already have an account? Login',
+      backToLogin: 'Back to Login',
       forgotText: 'Enter your email address to receive a password recovery link.',
       termsText: 'I accept the terms of use and privacy policy',
       termsTitle: 'Terms of Use',
@@ -127,7 +161,7 @@ const SimpleAuthScreen: React.FC = () => {
       login: 'Iniciar sesión',
       register: 'Registrarse',
       forgot: 'Olvidé mi contraseña',
-      email: 'Correo electrónico',
+      email: 'Email',
       password: 'Contraseña',
       firstName: 'Nombre',
       lastName: 'Apellido',
@@ -140,9 +174,9 @@ const SimpleAuthScreen: React.FC = () => {
       loadingForgot: 'Enviando...',
       forgotPassword: '¿Olvidaste tu contraseña?',
       noAccount: '¿No tienes cuenta? Regístrate',
-      hasAccount: '¿Tienes cuenta? Inicia sesión',
+      hasAccount: '¿Ya tienes cuenta? Inicia sesión',
       backToLogin: 'Volver al inicio de sesión',
-      forgotText: 'Ingresa tu correo electrónico para recibir un enlace de recuperación de contraseña.',
+      forgotText: 'Ingresa tu dirección de email para recibir un enlace de recuperación de contraseña.',
       termsText: 'Acepto los términos de uso y la política de privacidad',
       termsTitle: 'Términos de Uso',
       termsContent: 'Al usar TripShare, aceptas:\n\n• Compartir solo contenido apropiado\n• Respetar la privacidad de otros usuarios\n• No usar la app con fines comerciales\n• Respetar las leyes locales durante tus viajes\n\nTripShare se reserva el derecho de suspender tu cuenta por incumplimiento de estas condiciones.',
@@ -150,7 +184,7 @@ const SimpleAuthScreen: React.FC = () => {
       errorAcceptTerms: 'Por favor acepta los términos de uso',
       successLogin: '¡Inicio de sesión exitoso!',
       successRegister: '¡Registro exitoso!',
-      recoverySent: 'Se enviará un correo de recuperación a tu dirección de email.',
+      recoverySent: 'Se enviará un email de recuperación a tu dirección de email.',
       close: 'Cerrar',
       language: 'Idioma',
       confirmPassword: 'Confirmar contraseña',
@@ -173,8 +207,8 @@ const SimpleAuthScreen: React.FC = () => {
       loadingRegister: 'Registrierung läuft...',
       loadingForgot: 'Senden...',
       forgotPassword: 'Passwort vergessen?',
-      noAccount: 'Kein Konto? Registrieren',
-      hasAccount: 'Hast du ein Konto? Anmelden',
+      noAccount: 'Noch kein Konto? Registrieren',
+      hasAccount: 'Bereits ein Konto? Anmelden',
       backToLogin: 'Zurück zur Anmeldung',
       forgotText: 'Gib deine E-Mail-Adresse ein, um einen Passwort-Wiederherstellungslink zu erhalten.',
       termsText: 'Ich akzeptiere die Nutzungsbedingungen und Datenschutzrichtlinie',
@@ -211,21 +245,61 @@ const SimpleAuthScreen: React.FC = () => {
     ).start();
   }, []);
 
-  // Animation des moyens de transport
+  // Animation des images de vacances
   useEffect(() => {
-    const interval = setInterval(() => {
-      Animated.timing(transportAnimation, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(() => {
-        setCurrentTransportIndex((currentTransportIndex + 1) % transports.length);
-        transportAnimation.setValue(0);
+    const animateImages = () => {
+      // Animation d'entrée
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+                 // Animation de sortie après 4 secondes
+         setTimeout(() => {
+           Animated.parallel([
+             Animated.timing(fadeAnim, {
+               toValue: 0,
+               duration: 500,
+               useNativeDriver: true,
+             }),
+             Animated.timing(scaleAnim, {
+               toValue: 0.8,
+               duration: 500,
+               useNativeDriver: true,
+             }),
+           ]).start(() => {
+             // Passer à l'image suivante
+             setCurrentImageIndex((prev) => (prev + 1) % vacationImages.length);
+             // Réinitialiser les animations
+             fadeAnim.setValue(0);
+             scaleAnim.setValue(0.8);
+             rotateAnim.setValue(0);
+           });
+         }, 4000);
       });
-    }, 3000);
+    };
 
+    // Démarrer l'animation
+    animateImages();
+    
+         // Continuer l'animation en boucle
+     const interval = setInterval(animateImages, 5500);
+    
     return () => clearInterval(interval);
-  }, [currentTransportIndex]); // Added currentTransportIndex to dependency array
+  }, [currentImageIndex]);
 
   const handleLogin = async () => {
     if (!credentials.email || !credentials.password) {
@@ -335,38 +409,42 @@ const SimpleAuthScreen: React.FC = () => {
     </View>
   );
 
-  const renderTransportAnimation = () => {
-    const currentTransport = transports[currentTransportIndex];
+  const renderVacationAnimation = () => {
+    const currentImage = vacationImages[currentImageIndex];
     
     return (
-      <View style={styles.transportContainer}>
-        <Animated.Text 
+      <View style={styles.vacationContainer}>
+        <Animated.View
           style={[
-            styles.transportIcon,
+            styles.vacationImageContainer,
             {
+              opacity: fadeAnim,
               transform: [
+                { scale: scaleAnim },
                 {
-                  scale: transportAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1.2],
-                  }),
-                },
-                {
-                  rotate: transportAnimation.interpolate({
+                  rotate: rotateAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: ['0deg', '360deg'],
                   }),
                 },
               ],
-              opacity: transportAnimation.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0.5, 1, 0.5],
-              }),
             },
           ]}
         >
-          {currentTransport}
-        </Animated.Text>
+          <Image 
+            source={{ uri: currentImage.uri }}
+            style={styles.vacationImage}
+            resizeMode="cover"
+          />
+        </Animated.View>
+        
+        <Text style={styles.vacationTitle}>
+          {currentImage.title}
+        </Text>
+        
+        <Text style={styles.vacationDescription}>
+          {currentImage.description}
+        </Text>
       </View>
     );
   };
@@ -500,96 +578,67 @@ const SimpleAuthScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-             {/* Case à cocher pour les termes d'utilisation */}
-       <View style={styles.termsContainer}>
-         <TouchableOpacity 
-           style={styles.checkboxContainer}
-           onPress={() => setAcceptedTerms(!acceptedTerms)}
-         >
-           <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
-             {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
-           </View>
-           <Text style={styles.termsText}>
-             {currentTexts.termsText}
-           </Text>
-         </TouchableOpacity>
-         <TouchableOpacity 
-           style={styles.termsLink}
-           onPress={() => {
-             // Navigation vers les termes d'utilisation
-             Alert.alert(
-               currentTexts.termsTitle,
-               currentTexts.termsContent,
-               [{ text: currentTexts.close, style: 'default' }]
-             );
-           }}
-         >
-           <Text style={[styles.linkText, styles.termsLinkText]}>
-             Lire les termes d'utilisation
-           </Text>
-         </TouchableOpacity>
-       </View>
+      <TouchableOpacity
+        style={styles.termsContainer}
+        onPress={() => setAcceptedTerms(!acceptedTerms)}
+      >
+        <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+          {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
+        </View>
+        <Text style={styles.termsText}>{currentTexts.termsText}</Text>
+      </TouchableOpacity>
 
-       <TouchableOpacity
-         style={[styles.button, styles.registerButton]}
-         onPress={handleRegister}
-         disabled={authLoading}
-       >
-         <Text style={styles.buttonText}>
-           {authLoading ? currentTexts.loadingRegister : currentTexts.registerButton}
-         </Text>
-       </TouchableOpacity>
-
-       <TouchableOpacity onPress={() => setMode('login')} style={styles.linkButton}>
-         <Text style={styles.linkText}>
-           {currentTexts.hasAccount}
-         </Text>
-       </TouchableOpacity>
-     </>
-   );
-
-  const renderForgotPasswordForm = () => {
-    return (
-      <>
-        <Text style={styles.forgotText}>
-          {currentTexts.forgotText}
+      <TouchableOpacity
+        style={[styles.button, authLoading && styles.buttonDisabled]}
+        onPress={handleRegister}
+        disabled={authLoading}
+      >
+        <Text style={styles.buttonText}>
+          {authLoading ? currentTexts.loadingRegister : currentTexts.registerButton}
         </Text>
+      </TouchableOpacity>
 
-        <TextInput
-          style={styles.inputSimple}
-          placeholder={currentTexts.email}
-          value={forgotEmail}
-          onChangeText={setForgotEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+      <TouchableOpacity onPress={() => setMode('login')} style={styles.linkButton}>
+        <Text style={styles.linkText}>
+          {currentTexts.hasAccount}
+        </Text>
+      </TouchableOpacity>
+    </>
+  );
 
-        <TouchableOpacity
-          style={[styles.button, authLoading && styles.buttonDisabled]}
-          onPress={handleForgotPassword}
-          disabled={authLoading}
-        >
-          <Text style={styles.buttonText}>
-            {authLoading ? currentTexts.loadingForgot : currentTexts.forgotButton}
-          </Text>
-        </TouchableOpacity>
+  const renderForgotPasswordForm = () => (
+    <>
+      <Text style={styles.forgotText}>{currentTexts.forgotText}</Text>
+      
+      <TextInput
+        style={styles.inputSimple}
+        placeholder={currentTexts.email}
+        value={forgotEmail}
+        onChangeText={setForgotEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
 
-        <TouchableOpacity 
-          style={styles.linkButton}
-          onPress={() => setMode('login')}
-        >
-          <Text style={styles.linkText}>
-            {currentTexts.backToLogin}
-          </Text>
-        </TouchableOpacity>
-      </>
-    );
-  };
+      <TouchableOpacity
+        style={[styles.button, authLoading && styles.buttonDisabled]}
+        onPress={handleForgotPassword}
+        disabled={authLoading}
+      >
+        <Text style={styles.buttonText}>
+          {authLoading ? currentTexts.loadingForgot : currentTexts.forgotButton}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setMode('login')} style={styles.linkButton}>
+        <Text style={styles.linkText}>
+          {currentTexts.backToLogin}
+        </Text>
+      </TouchableOpacity>
+    </>
+  );
 
   const getTitle = () => {
     switch (mode) {
-      case 'login': return currentTexts.login;
       case 'register': return currentTexts.register;
       case 'forgot': return currentTexts.forgot;
       default: return currentTexts.login;
@@ -628,8 +677,8 @@ const SimpleAuthScreen: React.FC = () => {
               </Animated.View>
               <Text style={styles.subtitle}>{currentTexts.subtitle}</Text>
               
-              {/* Animation des moyens de transport */}
-              {renderTransportAnimation()}
+              {/* Animation des images de vacances */}
+              {renderVacationAnimation()}
             </View>
             
             {/* Titre du mode */}
@@ -705,7 +754,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 5,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -714,7 +763,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    minWidth: 120,
+    minWidth: 150,
   },
   languageOption: {
     paddingVertical: 8,
@@ -725,7 +774,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#008080',
   },
   languageOptionText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#333',
   },
   languageOptionTextSelected: {
@@ -734,46 +783,94 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   logoContainer: {
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#666',
     marginBottom: 20,
   },
-
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 10,
-    color: '#666',
-  },
-  transportContainer: {
-    marginTop: 20,
+  vacationContainer: {
     alignItems: 'center',
+    marginBottom: 20,
   },
-  transportIcon: {
-    fontSize: 30,
+  vacationImageContainer: {
+    marginBottom: 10,
+  },
+  vacationImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: '#008080',
+  },
+  vacationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#008080',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  vacationDescription: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   modeTitle: {
     fontSize: 24,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 30,
+    fontWeight: 'bold',
     color: '#333',
-  },
-  forgotText: {
-    fontSize: 14,
     textAlign: 'center',
     marginBottom: 20,
-    color: '#666',
-    lineHeight: 20,
   },
-
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#c62828',
+    textAlign: 'center',
+  },
+  inputSimple: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  eyeButton: {
+    padding: 15,
+    marginLeft: 10,
+  },
+  eyeButtonText: {
+    fontSize: 20,
+  },
   button: {
     backgroundColor: '#008080',
-    borderRadius: 12,
     padding: 15,
-    alignItems: 'center',
-    marginTop: 10,
+    borderRadius: 10,
     marginBottom: 15,
   },
   buttonDisabled: {
@@ -781,122 +878,54 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+    textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
   },
   linkButton: {
-    marginTop: 10,
-    alignItems: 'center',
+    marginBottom: 10,
   },
   linkText: {
     color: '#008080',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  errorContainer: {
-    backgroundColor: '#FFE5E5',
-    borderColor: '#FF0000',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
-  },
-  errorText: {
-    color: '#FF0000',
-    fontSize: 14,
     textAlign: 'center',
+    fontSize: 14,
   },
-
-  registerButton: {
-    marginTop: 10,
-    marginBottom: 15,
-  },
-
-
-
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 15,
-    backgroundColor: '#FFFFFF',
-    height: 50, // Hauteur fixe exacte
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    backgroundColor: 'transparent',
-    padding: 0, // Supprimer le padding interne
-    height: '100%', // Prendre toute la hauteur du conteneur
-  },
-  inputSimple: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 15,
-    fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    height: 50, // Hauteur fixe exacte identique aux conteneurs
-  },
-  eyeButton: {
-    padding: 5,
-    position: 'absolute',
-    right: 10,
-    zIndex: 1,
-  },
-  eyeButtonText: {
-    fontSize: 20,
-  },
-
   termsContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
+    paddingHorizontal: 10,
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 4,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#008080',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 3,
     marginRight: 10,
-    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxChecked: {
     backgroundColor: '#008080',
-    borderColor: '#008080',
   },
   checkmark: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   termsText: {
-    fontSize: 14,
+    flex: 1,
+    fontSize: 12,
     color: '#666',
+    lineHeight: 18,
+  },
+  forgotText: {
     textAlign: 'center',
+    color: '#666',
+    marginBottom: 20,
     lineHeight: 20,
   },
-  termsLink: {
-    marginTop: 5,
-  },
-  termsLinkText: {
-    color: '#008080',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-
 });
 
 export default SimpleAuthScreen;

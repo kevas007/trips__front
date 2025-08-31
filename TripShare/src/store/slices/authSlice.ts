@@ -8,6 +8,7 @@ export interface AuthSlice {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isNewUser: boolean;
   
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -16,6 +17,8 @@ export interface AuthSlice {
   refreshToken: () => Promise<void>;
   clearError: () => void;
   setUser: (user: User) => void;
+  setNewUser: (isNew: boolean) => void;
+  completeOnboarding: () => void;
 }
 
 export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
@@ -24,6 +27,7 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  isNewUser: false,
 
   // Actions
   login: async (credentials) => {
@@ -37,14 +41,44 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
       const user: User = {
         id: (response.user as any).id || 'unknown',
         email: (response.user as any).email || credentials.email,
+        name: (response.user as any).name || `${(response.user as any).first_name || 'User'} ${(response.user as any).last_name || 'Name'}`,
         username: (response.user as any).username || 'user',
-        firstName: (response.user as any).first_name || (response.user as any).firstName || 'User',
-        lastName: (response.user as any).last_name || (response.user as any).lastName || 'Name',
-        avatarUrl: (response.user as any).avatar_url || (response.user as any).avatarUrl,
+        avatar: (response.user as any).avatar_url || (response.user as any).avatarUrl,
         bio: (response.user as any).bio,
+        verified: (response.user as any).verified || false,
         createdAt: (response.user as any).created_at || (response.user as any).createdAt || new Date().toISOString(),
         updatedAt: (response.user as any).updated_at || (response.user as any).updatedAt || new Date().toISOString(),
-        lastLogin: (response.user as any).last_login || (response.user as any).lastLogin,
+        settings: {
+          biometricEnabled: false,
+          notificationsEnabled: true,
+          emailNotifications: true,
+          language: 'fr',
+          currency: 'EUR',
+          timezone: 'Europe/Paris',
+          privacyLevel: 'public',
+          autoSync: true,
+          dataCollection: true,
+        },
+        stats: {
+          tripsCreated: 0,
+          tripsShared: 0,
+          tripsLiked: 0,
+          followers: 0,
+          following: 0,
+          totalViews: 0,
+          totalLikes: 0,
+          countriesVisited: 0,
+          citiesVisited: 0,
+        },
+        preferences: {
+          activities: [],
+          accommodation: [],
+          transportation: [],
+          food: [],
+          budget: [],
+          climate: [],
+          culture: [],
+        },
       };
       
       set({
@@ -109,19 +143,50 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
       const user: User = {
         id: (response.user as any).id || 'unknown',
         email: (response.user as any).email || data.email,
+        name: (response.user as any).name || `${data.firstName || 'User'} ${data.lastName || 'Name'}`,
         username: (response.user as any).username || data.username,
-        firstName: (response.user as any).first_name || (response.user as any).firstName || data.firstName,
-        lastName: (response.user as any).last_name || (response.user as any).lastName || data.lastName,
-        avatarUrl: (response.user as any).avatar_url || (response.user as any).avatarUrl,
+        avatar: (response.user as any).avatar_url || (response.user as any).avatarUrl,
         bio: (response.user as any).bio,
+        verified: (response.user as any).verified || false,
         createdAt: (response.user as any).created_at || (response.user as any).createdAt || new Date().toISOString(),
         updatedAt: (response.user as any).updated_at || (response.user as any).updatedAt || new Date().toISOString(),
-        lastLogin: (response.user as any).last_login || (response.user as any).lastLogin,
+        settings: {
+          biometricEnabled: false,
+          notificationsEnabled: true,
+          emailNotifications: true,
+          language: 'fr',
+          currency: 'EUR',
+          timezone: 'Europe/Paris',
+          privacyLevel: 'public',
+          autoSync: true,
+          dataCollection: true,
+        },
+        stats: {
+          tripsCreated: 0,
+          tripsShared: 0,
+          tripsLiked: 0,
+          followers: 0,
+          following: 0,
+          totalViews: 0,
+          totalLikes: 0,
+          countriesVisited: 0,
+          citiesVisited: 0,
+        },
+        preferences: {
+          activities: [],
+          accommodation: [],
+          transportation: [],
+          food: [],
+          budget: [],
+          climate: [],
+          culture: [],
+        },
       };
       
       set({
         user,
         isAuthenticated: true,
+        isNewUser: true, // Marquer comme nouvel utilisateur
         isLoading: false,
         error: null,
       });
@@ -169,5 +234,13 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
 
   setUser: (user) => {
     set({ user, isAuthenticated: !!user });
+  },
+
+  setNewUser: (isNew: boolean) => {
+    set({ isNewUser: isNew });
+  },
+
+  completeOnboarding: () => {
+    set({ isNewUser: false });
   },
 });

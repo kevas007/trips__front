@@ -1,4 +1,6 @@
 import { unifiedApi } from './unifiedApi';
+import { authService } from './auth';
+import { API_CONFIG } from '../config/api';
 import { User, UserStats, Badge, PrivacySettings, NotificationSettings } from '../types/user';
 import { badgeService } from './badgeService';
 
@@ -32,40 +34,144 @@ const DEFAULT_STATS: UserStats = {
 };
 
 class ProfileService {
+  // Test de connectivité avec le backend
+  async testBackendConnection(): Promise<boolean> {
+    try {
+      console.log('🔍 ProfileService.testBackendConnection - Test de connectivité');
+      console.log('🔍 ProfileService.testBackendConnection - URL:', `${API_CONFIG.BASE_URL}/api/v1/categories`);
+      
+      // Utiliser l'endpoint categories qui existe maintenant dans le backend
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/categories`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('🔍 ProfileService.testBackendConnection - Status:', response.status);
+      
+      // Considérer 200, 401, 403 comme "backend accessible" (même si non authentifié)
+      if (response.status === 200 || response.status === 401 || response.status === 403) {
+        console.log('✅ ProfileService.testBackendConnection - Backend accessible');
+        return true;
+      } else {
+        console.error('❌ ProfileService.testBackendConnection - Backend non accessible:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ ProfileService.testBackendConnection - Erreur de connectivité:', error);
+      // En cas d'erreur réseau, on considère que le backend n'est pas accessible
+      return false;
+    }
+  }
+
   // Récupérer le profil de l'utilisateur connecté
   async getProfile(): Promise<User> {
     try {
-      const response = await unifiedApi.get<any>('/users/me');
-      console.log('🔍 ProfileService.getProfile - Réponse brute:', response);
+      console.log('🔍 ProfileService.getProfile - DÉBUT');
       
-      // L'API unifiée retourne directement les données (après extraction de data.data)
-      // Le backend retourne { user: ..., profile: ... }
-      const { user, profile } = response;
-      console.log('🔍 ProfileService.getProfile - User:', user);
-      console.log('🔍 ProfileService.getProfile - Profile:', profile);
+      // Utiliser fetch directement pour éviter les problèmes avec unifiedApi
+      const token = authService.getToken();
+      console.log('🔍 ProfileService.getProfile - Token disponible:', !!token);
+      console.log('🔍 ProfileService.getProfile - Token (premiers 20 chars):', token ? `${token.substring(0, 20)}...` : 'Aucun');
       
-      if (!user || !profile) {
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
+
+      const url = `${API_CONFIG.BASE_URL}/api/v1/users/me`;
+      console.log('🔍 ProfileService.getProfile - URL:', url);
+      console.log('🔍 ProfileService.getProfile - API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('🔍 ProfileService.getProfile - Status:', response.status);
+      console.log('🔍 ProfileService.getProfile - StatusText:', response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ ProfileService.getProfile - Erreur HTTP:', errorText);
+        
+        // Si c'est une erreur 401, le token est invalide
+        if (response.status === 401) {
+          console.error('❌ Token invalide - Déconnexion automatique');
+          await authService.logout();
+          throw new Error('Session expirée, veuillez vous reconnecter');
+        }
+        
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('🔍 ProfileService.getProfile - Réponse brute:', JSON.stringify(data, null, 2));
+      
+      // Le backend retourne { success: true, data: { user: ..., profile: ... } }
+      let userData, profileData;
+      
+      if (data.success && data.data) {
+        // Structure: { success: true, data: { user: ..., profile: ... } }
+        userData = data.data.user;
+        profileData = data.data.profile;
+      } else if (data.user && data.profile) {
+        // Structure: { user: ..., profile: ... } (fallback)
+        userData = data.user;
+        profileData = data.profile;
+      } else if (data.id || data.email) {
+        // Structure: données utilisateur directement (fallback)
+        userData = data;
+        profileData = data.profile || {};
+      } else {
+        // Structure inattendue
+        console.error('❌ Structure de réponse inattendue:', data);
+        throw new Error('Format de réponse invalide du serveur');
+      }
+      
+      console.log('🔍 ProfileService.getProfile - UserData:', userData);
+      console.log('🔍 ProfileService.getProfile - ProfileData:', profileData);
+      
+      // Vérifier si on a au moins les données utilisateur de base
+      if (!userData || (!userData.id && !userData.email)) {
+        console.error('❌ Données utilisateur manquantes:', userData);
         throw new Error('Données de profil incomplètes');
       }
       
       // Fusionner user et profile pour compatibilité avec le frontend
       const userWithProfile = {
-        ...user,
-        profile: profile,
-        // Ajouter l'avatar directement sur l'objet user pour compatibilité
-        avatar: profile?.avatar_url || user?.avatar_url,
-        avatar_url: profile?.avatar_url || user?.avatar_url,
-        // S'assurer que le nom est correctement défini
-        name: user?.first_name && user?.last_name ? 
-          `${user.first_name} ${user.last_name}`.trim() : 
-          user?.username || user?.name || 'Utilisateur TripShare',
-        username: user?.username || user?.email?.split('@')[0] || 'utilisateur',
+        id: userData.id || 'unknown',
+        email: userData.email || '',
+        username: userData.username || userData.email?.split('@')[0] || 'utilisateur',
+        firstName: userData.first_name || userData.firstName || userData.name?.split(' ')[0] || 'Utilisateur',
+        lastName: userData.last_name || userData.lastName || userData.name?.split(' ').slice(1).join(' ') || 'TripShare',
+        avatarUrl: profileData?.avatar_url || userData.avatar_url || userData.avatarUrl,
+        bio: profileData?.bio || userData.bio,
+        createdAt: userData.created_at || userData.createdAt || new Date().toISOString(),
+        updatedAt: userData.updated_at || userData.updatedAt || new Date().toISOString(),
+        lastLogin: userData.last_login || userData.lastLogin,
+        verified: userData.verified || false,
+        settings: userData.settings || {},
+        stats: userData.stats || {},
+        preferences: userData.preferences || {},
+        // Propriétés de compatibilité
+        profile: profileData || {},
+        avatar: profileData?.avatar_url || userData.avatar_url || userData.avatarUrl,
+        avatar_url: profileData?.avatar_url || userData.avatar_url || userData.avatarUrl,
+        name: userData.first_name && userData.last_name ? 
+          `${userData.first_name} ${userData.last_name}`.trim() : 
+          userData.name || userData.username || 'Utilisateur TripShare',
       };
       
       console.log('🔍 ProfileService.getProfile - User fusionné:', userWithProfile);
+      console.log('✅ ProfileService.getProfile - SUCCÈS');
       return userWithProfile;
     } catch (error) {
-      console.error('❌ Erreur lors de la récupération du profil:', error);
+      console.error('❌ ProfileService.getProfile - Erreur complète:', error);
+      console.error('❌ ProfileService.getProfile - Stack:', error instanceof Error ? error.stack : 'Pas de stack');
       throw new Error('Impossible de récupérer le profil utilisateur');
     }
   }
@@ -299,14 +405,30 @@ class ProfileService {
       // Calculer l'offset à partir de la page
       const offset = (page - 1) * limit;
       
-      // Utiliser created_by=me pour récupérer uniquement les voyages de l'utilisateur connecté
-      // Le backend attend offset et limit, pas page et limit
-      const response = await unifiedApi.get<any>(`/trips?created_by=me&offset=${offset}&limit=${limit}`);
-      console.log('📡 ProfileService.getUserTrips - Réponse avec created_by=me:', response);
+      // Utiliser fetch directement pour éviter les problèmes avec unifiedApi
+      const token = authService.getToken();
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/trips?created_by=me&offset=${offset}&limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📡 ProfileService.getUserTrips - Réponse avec created_by=me:', data);
       
-      if (Array.isArray(response) && response.length > 0) {
-        console.log('✅ ProfileService.getUserTrips - Voyages trouvés avec created_by=me:', response);
-        return { data: response, total: response.length, page, limit, has_more: response.length === limit };
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('✅ ProfileService.getUserTrips - Voyages trouvés avec created_by=me:', data);
+        return { data: data, total: data.length, page, limit, has_more: data.length === limit };
       }
       
       console.log('⚠️ ProfileService.getUserTrips - Aucun voyage trouvé pour l\'utilisateur connecté');

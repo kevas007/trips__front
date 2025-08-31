@@ -253,7 +253,7 @@ const TripCard: React.FC<TripCardProps> = ({
             <Ionicons
               name={isLiked ? 'heart' : 'heart-outline'}
               size={16}
-              color={isLiked ? theme.colors.primary[0] : theme.colors.text.secondary}
+              color={isLiked ? '#ff4757' : theme.colors.text.secondary}
               onPress={handleLike}
             />
             <Text style={[styles.statText, { color: theme.colors.text.secondary }]}>

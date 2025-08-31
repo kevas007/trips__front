@@ -1,31 +1,36 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Image,
-  ImageBackground,
-  Text,
+  ActivityIndicator,
   StyleSheet,
-  Animated,
-  Platform,
-  ViewStyle,
+  ImageSourcePropType,
   ImageStyle,
+  ViewStyle,
 } from 'react-native';
-import { getOptimizedImage, STATE_ASSETS } from '../../constants/assets';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../../hooks/useAppTheme';
+import { imageService } from '../../services/imageService';
+
 interface OptimizedImageProps {
-  source: string | { uri: string } | any;
-  style?: ImageStyle | ViewStyle;
+  source: string | ImageSourcePropType;
+  style?: ImageStyle;
   containerStyle?: ViewStyle;
-  placeholder?: string | React.ReactNode;
-  isBackground?: boolean;
-  children?: React.ReactNode;
-  fallbackSource?: string;
-  quality?: number;
-  width?: number;
-  lazy?: boolean;
-  showLoader?: boolean;
-  borderRadius?: number;
+  placeholder?: React.ReactNode;
+  errorPlaceholder?: React.ReactNode;
+  showLoadingIndicator?: boolean;
+  resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center';
   onLoad?: () => void;
-  onError?: () => void;
+  onError?: (error: any) => void;
+  onLoadStart?: () => void;
+  onLoadEnd?: () => void;
+  // Options d'optimisation
+  thumbnail?: boolean;
+  thumbnailSize?: number;
+  optimized?: boolean;
+  maxWidth?: number;
+  quality?: number;
+  format?: 'webp' | 'jpeg' | 'png';
 }
 
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -33,187 +38,152 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   style,
   containerStyle,
   placeholder,
-  isBackground = false,
-  children,
-  fallbackSource,
-  quality = 80,
-  width = 400,
-  lazy = true,
-  showLoader = true,
-  borderRadius,
+  errorPlaceholder,
+  showLoadingIndicator = true,
+  resizeMode = 'cover',
   onLoad,
   onError,
+  onLoadStart,
+  onLoadEnd,
+  thumbnail = false,
+  thumbnailSize = 150,
+  optimized = true,
+  maxWidth = 800,
+  quality = 85,
+  format = 'jpeg',
 }) => {
   const { theme } = useAppTheme();
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [shouldLoad, setShouldLoad] = useState(!lazy);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const loaderOpacity = useRef(new Animated.Value(1)).current;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const mountedRef = useRef(true);
 
-  // Optimiser l'URL de l'image
-  const optimizedSource = React.useMemo(() => {
-    if (typeof source === 'string') {
-      return { uri: getOptimizedImage(source, width, quality) };
-    } else if (source?.uri) {
-      return { uri: getOptimizedImage(source.uri, width, quality) };
-    }
-    return source;
-  }, [source, width, quality]);
-
-  // Source de fallback
-  const fallbackImageSource = React.useMemo(() => {
-    if (fallbackSource) {
-      return { uri: getOptimizedImage(fallbackSource, width, quality) };
-    }
-    return null;
-  }, [fallbackSource, width, quality]);
-
-  // Gestion du lazy loading
   useEffect(() => {
-    if (lazy) {
-      const timer = setTimeout(() => {
-        setShouldLoad(true);
-      }, 100);
-      return () => clearTimeout(timer);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof source === 'string') {
+      processImageUrl(source);
+    } else {
+      // Si c'est un ImageSourcePropType, l'utiliser directement
+      setImageUrl(null);
+      setLoading(false);
+      setError(false);
     }
-  }, [lazy]);
+  }, [source, thumbnail, thumbnailSize, optimized, maxWidth, quality, format]);
 
-  // Animation au chargement
-  const handleImageLoad = () => {
-    setIsLoaded(true);
-    
-    // Cacher le loader
-    Animated.timing(loaderOpacity, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+  const processImageUrl = async (url: string) => {
+    try {
+      setLoading(true);
+      setError(false);
 
-    // Afficher l'image
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+      let processedUrl: string;
 
+      if (thumbnail) {
+        processedUrl = imageService.getThumbnailURL(url, thumbnailSize);
+      } else if (optimized) {
+        processedUrl = imageService.getOptimizedImageURL(url, maxWidth);
+      } else {
+        processedUrl = imageService.getImageURL(url);
+      }
+
+      if (mountedRef.current) {
+        setImageUrl(processedUrl);
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(true);
+        setImageUrl(null);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleLoadStart = () => {
+    setLoading(true);
+    onLoadStart?.();
+  };
+
+  const handleLoadEnd = () => {
+    setLoading(false);
+    onLoadEnd?.();
+  };
+
+  const handleLoad = () => {
+    setLoading(false);
+    setError(false);
     onLoad?.();
   };
 
-  const handleImageError = () => {
-    setHasError(true);
-    setIsLoaded(false);
-    
-    Animated.timing(loaderOpacity, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    onError?.();
+  const handleError = (err: any) => {
+    setLoading(false);
+    setError(true);
+    onError?.(err);
   };
 
-  // Placeholder par défaut
-  const renderPlaceholder = () => {
-    if (placeholder) {
-      if (typeof placeholder === 'string') {
-        return (
-          <Text style={[styles.placeholderEmoji, { color: theme.colors.text.secondary }]}>
-            {placeholder}
-          </Text>
-        );
-      }
-      return placeholder;
-    }
-
+  // Si c'est un ImageSourcePropType, l'utiliser directement
+  if (typeof source !== 'string') {
     return (
-      <Text style={[styles.placeholderEmoji, { color: theme.colors.text.secondary }]}>
-        {hasError ? STATE_ASSETS.error : STATE_ASSETS.placeholders.photo}
-      </Text>
-    );
-  };
-
-  // Loader animé
-  const renderLoader = () => {
-    if (!showLoader || isLoaded) return null;
-
-    return (
-      <Animated.View style={[styles.loader, { opacity: loaderOpacity }]}>
-        <Text style={[styles.loaderEmoji, { color: theme.colors.primary[0] }]}>
-          {STATE_ASSETS.loading}
-        </Text>
-      </Animated.View>
-    );
-  };
-
-  // Styles combinés
-  const combinedStyle = {
-    ...style,
-    borderRadius: borderRadius || (style as any)?.borderRadius,
-    opacity: isLoaded ? 1 : 0.5,
-  } as ImageStyle;
-
-  const containerStyles = [
-    styles.container,
-    containerStyle,
-    {
-      backgroundColor: theme.colors.background.card,
-      borderRadius: borderRadius || (style as any)?.borderRadius,
-    },
-  ];
-
-  // Rendu conditionnel selon si c'est un background ou pas
-  if (!shouldLoad) {
-    return (
-      <View style={containerStyles}>
-        {renderPlaceholder()}
-      </View>
-    );
-  }
-
-  if (isBackground) {
-    return (
-      <View style={containerStyles}>
-        <ImageBackground
-          source={hasError && fallbackImageSource ? fallbackImageSource : optimizedSource}
-          style={combinedStyle}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-          resizeMode="cover"
-        >
-          <Animated.View style={{ opacity: fadeAnim, flex: 1 }}>
-            {children}
-          </Animated.View>
-        </ImageBackground>
-        
-        {!isLoaded && !hasError && (
-          <View style={styles.placeholderContainer}>
-            {renderPlaceholder()}
-            {renderLoader()}
+      <View style={[styles.container, containerStyle]}>
+        <Image
+          source={source}
+          style={[styles.image, style]}
+          resizeMode={resizeMode}
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+        {loading && showLoadingIndicator && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color={theme.colors.primary[0]} />
           </View>
         )}
       </View>
     );
   }
 
+  // Si pas d'URL ou erreur, afficher le placeholder
+  if (!imageUrl || error) {
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {error ? (
+          errorPlaceholder || (
+            <View style={[styles.placeholder, { backgroundColor: theme.colors.background.secondary }]}>
+              <Ionicons name="image-outline" size={32} color={theme.colors.text.secondary} />
+            </View>
+          )
+        ) : (
+          placeholder || (
+            <View style={[styles.placeholder, { backgroundColor: theme.colors.background.secondary }]}>
+              <ActivityIndicator size="small" color={theme.colors.primary[0]} />
+            </View>
+          )
+        )}
+      </View>
+    );
+  }
+
   return (
-    <View style={containerStyles}>
-      {shouldLoad && (
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <Image
-            source={hasError && fallbackImageSource ? fallbackImageSource : optimizedSource}
-            style={combinedStyle}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-            resizeMode="cover"
-          />
-        </Animated.View>
-      )}
-      
-      {(!isLoaded || hasError) && (
-        <View style={styles.placeholderContainer}>
-          {renderPlaceholder()}
-          {renderLoader()}
+    <View style={[styles.container, containerStyle]}>
+      <Image
+        source={{ uri: imageUrl }}
+        style={[styles.image, style]}
+        resizeMode={resizeMode}
+        onLoadStart={handleLoadStart}
+        onLoadEnd={handleLoadEnd}
+        onLoad={handleLoad}
+        onError={handleError}
+      />
+      {loading && showLoadingIndicator && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="small" color={theme.colors.primary[0]} />
         </View>
       )}
     </View>
@@ -223,37 +193,26 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  placeholderContainer: {
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  loadingOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  placeholderEmoji: {
-    fontSize: 32,
-    textAlign: 'center',
-  },
-  loader: {
-    position: 'absolute',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loaderEmoji: {
-    fontSize: 24,
-    textAlign: 'center',
-    ...Platform.select({
-      web: {
-        animation: 'spin 2s linear infinite',
-      },
-    }),
+  placeholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

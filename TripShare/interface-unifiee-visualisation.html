@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripShare - Interface Unifiée</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .phone-container {
+            width: 375px;
+            height: 812px;
+            background: #000;
+            border-radius: 40px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: linear-gradient(135deg, #008080 0%, #00b3b3 100%);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .search-bar {
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 8px 15px;
+            flex: 1;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-bar::before {
+            content: "🔍";
+            margin-right: 8px;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        /* Stories Bar */
+        .stories-bar {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            z-index: 10;
+        }
+
+        .stories-container {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+        }
+
+        .story-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+
+        .story-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 5px;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .story-name {
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+        }
+
+        /* Main Feed */
+        .main-feed {
+            flex: 1;
+            background: #fff;
+            overflow-y: auto;
+        }
+
+        /* Image Post */
+        .image-post {
+            background: #fff;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .image-post:hover {
+            transform: scale(1.02);
+        }
+
+        .image-post-header {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .post-user-info {
+            flex: 1;
+        }
+
+        .post-username {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .post-time {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .post-more {
+            font-size: 20px;
+            color: #666;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            overflow: hidden;
+        }
+
+        .post-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 20px;
+            color: white;
+        }
+
+        .image-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .image-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .image-actions {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .left-actions {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .action-icon {
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .action-icon:hover {
+            transform: scale(1.2);
+        }
+
+        .action-text {
+            font-size: 14px;
+            color: #666;
+            margin-left: 5px;
+        }
+
+        .right-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .image-footer {
+            padding: 0 20px 15px;
+        }
+
+        .image-caption {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .image-hashtags {
+            color: #008080;
+            font-weight: 600;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .nav-item.active {
+            color: #008080;
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Modal for Itinerary Details */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #008080 0%, #00b3b3 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .modal-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .itinerary-steps {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .step-item:last-child {
+            border-bottom: none;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #008080, #00b3b3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .step-description {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .modal-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #008080 0%, #00b3b3 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="screen">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="search-bar">Rechercher des voyages...</div>
+                <div class="top-actions">
+                    <div class="avatar">👤</div>
+                    <div style="font-size: 20px;">📹</div>
+                    <div style="font-size: 20px;">🔔</div>
+                </div>
+            </div>
+
+            <!-- Stories Bar -->
+            <div class="stories-bar">
+                <div class="stories-container">
+                    <div class="story-item">
+                        <div class="story-avatar">👤</div>
+                        <div class="story-name">Voyageur1</div>
+                    </div>
+                    <div class="story-item">
+                        <div class="story-avatar">👤</div>
+                        <div class="story-name">Voyageur2</div>
+                    </div>
+                    <div class="story-item">
+                        <div class="story-avatar">👤</div>
+                        <div class="story-name">Voyageur3</div>
+                    </div>
+                    <div class="story-item">
+                        <div class="story-avatar">👤</div>
+                        <div class="story-name">Voyageur4</div>
+                    </div>
+                    <div class="story-item">
+                        <div class="story-avatar">➕</div>
+                        <div class="story-name">Ajouter</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Feed -->
+            <div class="main-feed">
+                <!-- Image Post (Paris) -->
+                <div class="image-post" onclick="showItineraryModal('paris')">
+                    <div class="image-post-header">
+                        <div class="post-avatar">👤</div>
+                        <div class="post-user-info">
+                            <div class="post-username">Voyageur</div>
+                            <div class="post-time">Il y a 2h</div>
+                        </div>
+                        <div class="post-more">⋯</div>
+                    </div>
+
+                    <div class="image-container">
+                        <div class="post-image">🗼</div>
+                        <div class="image-overlay">
+                            <div class="image-title">🗺️ Voyage à Paris</div>
+                            <div class="image-meta">
+                                <span>⏱️ 5 jours</span>
+                                <span>💰 800€</span>
+                                <span>🎯 Facile</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="image-actions">
+                        <div class="left-actions">
+                            <div class="action-icon">❤️</div>
+                            <span class="action-text">1.2k</span>
+                            <div class="action-icon">💬</div>
+                            <span class="action-text">45</span>
+                            <div class="action-icon">📤</div>
+                            <span class="action-text">Partager</span>
+                        </div>
+                        <div class="right-actions">
+                            <div class="action-icon">🔖</div>
+                        </div>
+                    </div>
+
+                    <div class="image-footer">
+                        <div class="image-caption">✨ Culture • Gastronomie • Architecture</div>
+                        <div class="image-hashtags">#voyage #paris #culture #gastronomie</div>
+                    </div>
+                </div>
+
+                <!-- Image Post (Rome) -->
+                <div class="image-post" onclick="showItineraryModal('rome')">
+                    <div class="image-post-header">
+                        <div class="post-avatar">👤</div>
+                        <div class="post-user-info">
+                            <div class="post-username">Voyageur</div>
+                            <div class="post-time">Il y a 1j</div>
+                        </div>
+                        <div class="post-more">⋯</div>
+                    </div>
+
+                    <div class="image-container">
+                        <div class="post-image">🏛️</div>
+                        <div class="image-overlay">
+                            <div class="image-title">🗺️ Voyage à Rome</div>
+                            <div class="image-meta">
+                                <span>⏱️ 7 jours</span>
+                                <span>💰 1200€</span>
+                                <span>🎯 Moyen</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="image-actions">
+                        <div class="left-actions">
+                            <div class="action-icon">❤️</div>
+                            <span class="action-text">856</span>
+                            <div class="action-icon">💬</div>
+                            <span class="action-text">23</span>
+                            <div class="action-icon">📤</div>
+                            <span class="action-text">Partager</span>
+                        </div>
+                        <div class="right-actions">
+                            <div class="action-icon">🔖</div>
+                        </div>
+                    </div>
+
+                    <div class="image-footer">
+                        <div class="image-caption">✨ Histoire • Culture • Gastronomie</div>
+                        <div class="image-hashtags">#voyage #rome #histoire #culture #gastronomie</div>
+                    </div>
+                </div>
+
+                <!-- Image Post (Tokyo) -->
+                <div class="image-post" onclick="showItineraryModal('tokyo')">
+                    <div class="image-post-header">
+                        <div class="post-avatar">👤</div>
+                        <div class="post-user-info">
+                            <div class="post-username">Voyageur</div>
+                            <div class="post-time">Il y a 30min</div>
+                        </div>
+                        <div class="post-more">⋯</div>
+                    </div>
+
+                    <div class="image-container">
+                        <div class="post-image">🗾</div>
+                        <div class="image-overlay">
+                            <div class="image-title">🗺️ Voyage à Tokyo</div>
+                            <div class="image-meta">
+                                <span>⏱️ 10 jours</span>
+                                <span>💰 2000€</span>
+                                <span>🎯 Difficile</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="image-actions">
+                        <div class="left-actions">
+                            <div class="action-icon">❤️</div>
+                            <span class="action-text">2.1k</span>
+                            <div class="action-icon">💬</div>
+                            <span class="action-text">89</span>
+                            <div class="action-icon">📤</div>
+                            <span class="action-text">Partager</span>
+                        </div>
+                        <div class="right-actions">
+                            <div class="action-icon">🔖</div>
+                        </div>
+                    </div>
+
+                    <div class="image-footer">
+                        <div class="image-caption">✨ Technologie • Culture • Gastronomie</div>
+                        <div class="image-hashtags">#voyage #tokyo #japon #culture #technologie</div>
+                    </div>
+                </div>
+
+                <!-- Image Post (Bali) -->
+                <div class="image-post" onclick="showItineraryModal('bali')">
+                    <div class="image-post-header">
+                        <div class="post-avatar">👤</div>
+                        <div class="post-user-info">
+                            <div class="post-username">Voyageur</div>
+                            <div class="post-time">Il y a 3h</div>
+                        </div>
+                        <div class="post-more">⋯</div>
+                    </div>
+
+                    <div class="image-container">
+                        <div class="post-image">🏝️</div>
+                        <div class="image-overlay">
+                            <div class="image-title">🗺️ Voyage à Bali</div>
+                            <div class="image-meta">
+                                <span>⏱️ 14 jours</span>
+                                <span>💰 1500€</span>
+                                <span>🎯 Facile</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="image-actions">
+                        <div class="left-actions">
+                            <div class="action-icon">❤️</div>
+                            <span class="action-text">1.2k</span>
+                            <div class="action-icon">💬</div>
+                            <span class="action-text">67</span>
+                            <div class="action-icon">📤</div>
+                            <span class="action-text">Partager</span>
+                        </div>
+                        <div class="right-actions">
+                            <div class="action-icon">🔖</div>
+                        </div>
+                    </div>
+
+                    <div class="image-footer">
+                        <div class="image-caption">✨ Nature • Plage • Spiritualité</div>
+                        <div class="image-hashtags">#voyage #bali #nature #plage #spiritualité</div>
+                    </div>
+                </div>
+
+                <div class="scroll-indicator">Swipe ↓</div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <div class="nav-item active">
+                    <div class="nav-icon">🏠</div>
+                    <div>Accueil</div>
+                </div>
+                <div class="nav-item">
+                    <div class="nav-icon">🔍</div>
+                    <div>Découvrir</div>
+                </div>
+                <div class="nav-item">
+                    <div class="nav-icon">➕</div>
+                    <div>Créer</div>
+                </div>
+                <div class="nav-item">
+                    <div class="nav-icon">👤</div>
+                    <div>Profil</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Itinerary Details -->
+    <div class="modal-overlay" id="itineraryModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="hideItineraryModal()">×</button>
+                <div class="modal-title">🗺️ Voyage à Rome</div>
+                <div class="modal-meta">
+                    <span>⏱️ 7 jours</span>
+                    <span>💰 1200€</span>
+                    <span>🎯 Moyen</span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="itinerary-steps">
+                    <div class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">🏛️ Colisée</div>
+                            <div class="step-description">Visite du monument antique</div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">🍝 Restaurant</div>
+                            <div class="step-description">Cuisine italienne traditionnelle</div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">🎨 Vatican</div>
+                            <div class="step-description">Musées et chapelle Sixtine</div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <div class="step-title">⛪ Basilique</div>
+                            <div class="step-description">Architecture religieuse</div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <div class="step-title">🍕 Pizzeria</div>
+                            <div class="step-description">Dégustation traditionnelle</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn btn-primary">🗺️ Voir carte</button>
+                    <button class="modal-btn btn-secondary">📋 Copier</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showItineraryModal(city) {
+            document.getElementById('itineraryModal').style.display = 'flex';
+            // In a real app, you would fetch itinerary data based on 'city'
+            // For now, we'll just set a placeholder title and meta
+            document.querySelector('.modal-title').textContent = `🗺️ Voyage à ${city.toUpperCase()}`;
+            document.querySelector('.modal-meta span:nth-child(1)').textContent = `⏱️ 7 jours`;
+            document.querySelector('.modal-meta span:nth-child(2)').textContent = `💰 1200€`;
+            document.querySelector('.modal-meta span:nth-child(3)').textContent = `🎯 Moyen`;
+        }
+
+        function hideItineraryModal() {
+            document.getElementById('itineraryModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('itineraryModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideItineraryModal();
+            }
+        });
+    </script>
+</body>
+</html>

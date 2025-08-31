@@ -5,10 +5,25 @@ import { Platform, Dimensions } from 'react-native';
 
 // === ASSETS LOCAUX ===
 export const LOCAL_ASSETS = {
-  // Fonds d'écran optimisés
+  // Fonds d'écran optimisés - NOUVEAUX BACKGROUNDS
   loginBackgrounds: {
     light: require('../../assets/login_bg_light.png'),
     dark: require('../../assets/login_bg_dark.png'),
+  },
+  
+  // Nouveaux backgrounds modernes
+  backgrounds: {
+    // Backgrounds principaux
+    primary: require('../../assets/backgrounds/modern_gradient.png'),
+    secondary: require('../../assets/backgrounds/abstract_waves.png'),
+    nature: require('../../assets/backgrounds/nature_landscape.png'),
+    urban: require('../../assets/backgrounds/city_skyline.png'),
+    travel: require('../../assets/backgrounds/travel_inspiration.png'),
+    
+    // Backgrounds pour sections spécifiques
+    home: require('../../assets/backgrounds/home_hero.png'),
+    profile: require('../../assets/backgrounds/profile_header.png'),
+    search: require('../../assets/backgrounds/search_background.png'),
   },
   
   // Icônes et logos
@@ -76,7 +91,7 @@ export const generateAvatarUrl = (identifier: string, style: 'initials' | 'avata
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodedId}&backgroundColor=008080,4FB3B3,B2DFDF`;
 };
 
-// Optimisation automatique des URLs Unsplash
+// Optimisation automatique des URLs Unsplash - SUPPRIMÉE LA REDIMENSION
 export const getOptimizedImage = (
   unsplashUrl: string,
   width: number = 400,
@@ -95,7 +110,7 @@ export const getOptimizedImage = (
     android: quality,
   });
   
-  // Construire l'URL optimisée
+  // Construire l'URL optimisée - SANS REDIMENSION
   if (unsplashUrl.includes('unsplash.com')) {
     const baseUrl = unsplashUrl.split('?')[0];
     return `${baseUrl}?w=${optimalWidth}&h=${height}&fit=crop&crop=faces,center&auto=format&q=${platformQuality}`;

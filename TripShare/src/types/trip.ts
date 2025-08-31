@@ -1,4 +1,11 @@
 // Types pour les voyages
+import { 
+  TripStatus, 
+  Activity, 
+  Expense, 
+  TripStats,
+  TripFilters 
+} from './common';
 
 export interface Trip {
   id: string;
@@ -16,9 +23,24 @@ export interface Trip {
   photos: string[];
   createdAt: string;
   updatedAt: string;
+  // Propriétés étendues pour la compatibilité
+  visibility?: 'public' | 'private' | 'friends';
+  tags?: string[];
+  difficulty?: 'easy' | 'moderate' | 'hard';
+  places_visited?: any[];
+  stats?: TripStats;
+  user?: any;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  created_by?: string;
+  travel_categories?: string[];
+  category?: string;
+  tripInfo?: {
+    tags?: string[];
+  };
 }
-
-export type TripStatus = 'planning' | 'active' | 'completed' | 'cancelled';
 
 export interface CreateTripData {
   title: string;
@@ -42,57 +64,13 @@ export interface UpdateTripData {
   participants?: string[];
 }
 
-export interface Activity {
-  id: string;
-  title: string;
-  description: string;
-  category: ActivityCategory;
-  location: string;
-  startTime: string;
-  endTime: string;
-  cost: number;
-  currency: string;
-  notes?: string;
-}
-
-export type ActivityCategory = 
-  | 'sightseeing' 
-  | 'restaurant' 
-  | 'shopping' 
-  | 'transport' 
-  | 'accommodation' 
-  | 'entertainment' 
-  | 'outdoor' 
-  | 'cultural' 
-  | 'other';
-
-export interface Expense {
-  id: string;
-  title: string;
-  description: string;
-  amount: number;
-  currency: string;
-  category: ExpenseCategory;
-  date: string;
-  paidBy: string;
-  splitBetween: string[];
-  receipt?: string;
-}
-
-export type ExpenseCategory = 
-  | 'accommodation' 
-  | 'transport' 
-  | 'food' 
-  | 'activities' 
-  | 'shopping' 
-  | 'entertainment' 
-  | 'other';
-
-export interface TripStats {
-  totalExpenses: number;
-  averageDailyExpense: number;
-  mostExpensiveCategory: ExpenseCategory;
-  totalActivities: number;
-  completedActivities: number;
-  daysRemaining: number;
-} 
+// Ré-export des types depuis common.ts pour la compatibilité
+export type { 
+  TripStatus, 
+  Activity, 
+  ActivityCategory, 
+  Expense, 
+  ExpenseCategory, 
+  TripStats,
+  TripFilters 
+} from './common'; 

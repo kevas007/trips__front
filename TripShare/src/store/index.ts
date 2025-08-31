@@ -22,10 +22,13 @@ export const useAuthStore = () => useStore((state) => ({
   isAuthenticated: state.isAuthenticated,
   isLoading: state.isLoading,
   error: state.error,
+  isNewUser: state.isNewUser,
   login: state.login,
   logout: state.logout,
   register: state.register,
   refreshToken: state.refreshToken,
   clearError: state.clearError,
   setUser: state.setUser,
+  setNewUser: state.setNewUser,
+  completeOnboarding: state.completeOnboarding,
 }));

@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store';
 import { useRequireAuth } from '../../hooks/useRequireAuth';
 import { useAppTheme } from '../../hooks/useAppTheme';
@@ -28,9 +27,10 @@ import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import { useFocusEffect } from '@react-navigation/native';
-import { API_CONFIG } from '../../config/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tripService, Trip } from '../../services/tripService';
+import { likeService } from '../../services/likeService';
+import { useGlobalRefresh } from '../../hooks/useGlobalRefresh';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,6 +85,7 @@ interface SocialPost {
     latitude?: number;
     longitude?: number;
     highlights?: string[];
+    tags?: string[];
     steps: Array<{
       order: number;
       title: string;
@@ -103,6 +104,13 @@ interface SocialPost {
 
 interface PostFilters {
   userPreferences?: string[];
+}
+
+interface SmartAction {
+  icon: string;
+  action: () => void | Promise<void>;
+  count?: number;
+  color: string;
 }
 
 // Fonctions utilitaires pour l'organisation des feeds
@@ -124,8 +132,8 @@ const isNearby = (post: SocialPost, userLocation?: { lat: number, lng: number })
   const distance = getDistance(
     userLocation.lat,
     userLocation.lng,
-    post.tripInfo.latitude,
-    post.tripInfo.longitude
+    post.tripInfo?.latitude || 0,
+    post.tripInfo?.longitude || 0
   );
   return distance <= 100; // Dans un rayon de 100km
 };
@@ -149,6 +157,7 @@ const deg2rad = (deg: number) => {
 const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const { theme } = useAppTheme();
   const { user, logout } = useAuthStore();
+  const { registerRefreshCallback, unregisterRefreshCallback } = useGlobalRefresh();
   
   // Nouveau système de navigation intelligente
   const smartNavigation = {
@@ -184,7 +193,10 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       
       // S'assurer que response.data existe et est un tableau
       if (response && response.data && Array.isArray(response.data)) {
-        setTrips(response.data);
+        // Vérifier que chaque élément est un objet valide
+        const validTrips = response.data.filter(trip => trip && typeof trip === 'object');
+        console.log(`✅ UnifiedHomeScreen - ${validTrips.length} voyages valides sur ${response.data.length} récupérés`);
+        setTrips(validTrips);
       } else {
         console.log('⚠️ UnifiedHomeScreen - Réponse invalide, utilisation d\'un tableau vide');
         setTrips([]);
@@ -212,6 +224,15 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       loadPublicTrips();
     }, [])
   );
+
+  // S'enregistrer dans le système de rafraîchissement global
+  useEffect(() => {
+    registerRefreshCallback('home', loadPublicTrips);
+    
+    return () => {
+      unregisterRefreshCallback('home');
+    };
+  }, [registerRefreshCallback, unregisterRefreshCallback, loadPublicTrips]);
   
   // Animations pour 2025
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -260,12 +281,13 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     recent: [] as SocialPost[]       // Derniers voyages
   });
 
-  const [_posts, _setPosts] = useState<SocialPost[]>([]);
+  const [posts, setPosts] = useState<SocialPost[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [_loadingFeed, _setLoadingFeed] = useState(true);
-  const [_refreshingFeed, _setRefreshingFeed] = useState(false);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [refreshingFeed, setRefreshingFeed] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [mapPost, setMapPost] = useState<SocialPost | null>(null);
+  const [showCreationModal, setShowCreationModal] = useState(false);
   const postRef = useRef<{ [key: string]: number }>({});
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -273,29 +295,50 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 
   // Fonction pour rendre une carte de voyage
   const renderTripCard = ({ item }: { item: Trip }) => {
+    // Protection contre les items invalides
+    if (!item || typeof item !== 'object') {
+      console.warn('⚠️ UnifiedHomeScreen - Item invalide dans renderTripCard:', item);
+      return null;
+    }
+    
     return (
       <TouchableOpacity 
         style={[styles.tripCard, { backgroundColor: theme.colors.background.secondary }]}
-        onPress={() => navigation.navigate('TripDetail', { tripId: item.id })}
+        onPress={() => {
+          console.log('🔍 UnifiedHomeScreen - Navigation vers TripDetails avec item:', item);
+          console.log('🔍 UnifiedHomeScreen - item.id:', item.id);
+          if (item.id) {
+            navigation.navigate('TripDetails', { tripId: item.id });
+          } else {
+            console.error('❌ UnifiedHomeScreen - item.id est undefined ou null');
+          }
+        }}
         activeOpacity={0.8}
       >
         <View style={styles.tripCardHeader}>
           <View style={styles.tripCardUserInfo}>
             <Image 
-              source={{ uri: item.user?.avatar || 'https://via.placeholder.com/40' }}
+              source={{ 
+                uri: (item.user && typeof item.user === 'object' && item.user.avatar_url) || 
+                      (item.avatar_url) || 
+                      'https://via.placeholder.com/40' 
+              }}
               style={styles.tripCardAvatar}
             />
             <View style={styles.tripCardUserDetails}>
               <Text style={[styles.tripCardUserName, { color: theme.colors.text.primary }]}>
-                {item.user?.name || 'Utilisateur'}
+                {item.username || 
+                 (item.user && typeof item.user === 'object' && item.user.username) || 
+                 (item.first_name && item.last_name ? `${item.first_name} ${item.last_name}` : null) ||
+                 'Utilisateur'}
               </Text>
               <Text style={[styles.tripCardDestination, { color: theme.colors.text.secondary }]}>
-                {item.destination}
+                {item.destination || 'Destination inconnue'}
               </Text>
             </View>
           </View>
           <Text style={[styles.tripCardDate, { color: theme.colors.text.secondary }]}>
-            {new Date(item.created_at).toLocaleDateString('fr-FR')}
+            {item.created_at ? new Date(item.created_at).toLocaleDateString('fr-FR') : 'Date inconnue'}
           </Text>
         </View>
         
@@ -310,9 +353,9 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         )}
         
         {/* Aperçu des images du voyage */}
-        {(item.images && item.images.length > 0) && (
+        {(item.images && Array.isArray(item.images) && item.images.length > 0) && (
           <View style={styles.tripCardImages}>
-            {item.images.slice(0, 3).map((image, index) => (
+            {item.images.filter(image => image && typeof image === 'string').slice(0, 3).map((image, index) => (
               <Image
                 key={index}
                 source={{ uri: getImageUrl(image) }}
@@ -345,7 +388,11 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
           </View>
           <View style={[styles.tripCardStatus, { backgroundColor: theme.colors.primary[0] + '20' }]}>
             <Text style={[styles.tripCardStatusText, { color: theme.colors.primary[0] }]}>
-              {item.status === 'active' ? 'En cours' : item.status === 'completed' ? 'Terminé' : 'Brouillon'}
+              {item.status === 'ongoing' ? 'En cours' : 
+               item.status === 'completed' ? 'Terminé' : 
+               item.status === 'planned' ? 'Planifié' :
+               item.status === 'confirmed' ? 'Confirmé' :
+               item.status === 'cancelled' ? 'Annulé' : 'Planifié'}
             </Text>
           </View>
         </View>
@@ -354,8 +401,14 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   };
 
   // Fonction pour gérer les URLs d'images
-  const getImageUrl = (imageUrl: string, postId?: string, imageIndex?: number): string => {
+  const getImageUrl = (imageUrl: string | undefined, postId?: string, imageIndex?: number): string => {
     console.log('🔍 getImageUrl appelé avec:', { imageUrl, postId, imageIndex });
+    
+    // Vérifier que imageUrl existe et est une chaîne
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      console.log('⚠️ getImageUrl - URL invalide, utilisation du fallback');
+      return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop&crop=faces,center';
+    }
     
     // Si c'est une URL locale (file://), utiliser une image par défaut
     if (imageUrl.startsWith('file://')) {
@@ -434,11 +487,9 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         throw new Error('Utilisateur non connecté');
       }
 
-      // Récupérer les voyages publics depuis le store Zustand avec gestion d'erreur
-      const trips: any[] = await loadPublicTrips(20, 0).catch(error => {
-        console.error('❌ Erreur lors du chargement des voyages:', error);
-        throw error;
-      });
+      // Récupérer les voyages publics depuis le service tripService
+      const response = await tripService.getPublicTrips(1, 20);
+      const trips: any[] = response?.data || [];
 
       if (!Array.isArray(trips)) {
         console.error('❌ Format de données invalide:', trips);
@@ -453,7 +504,9 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       }
       
       // Convertir les voyages en posts sociaux
-      const apiPosts: SocialPost[] = trips.map((trip: any, index) => {
+      const apiPosts: SocialPost[] = trips
+        .filter((trip: any) => trip && typeof trip === 'object')
+        .map((trip: any, index) => {
         // Debug: Afficher les informations utilisateur pour chaque voyage
         console.log(`🔍 Voyage ${index + 1} - Infos utilisateur:`, {
           username: trip.username,
@@ -492,7 +545,9 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         // Extraire la localisation
         const location = trip.location ? 
           (typeof trip.location === 'string' ? trip.location : 
-           `${trip.location.city || 'Ville'}, ${trip.location.country || 'Pays'}`) : 
+           (trip.location && typeof trip.location === 'object' ? 
+            `${trip.location.city || 'Ville'}, ${trip.location.country || 'Pays'}` : 
+            'Destination inconnue')) : 
           'Destination inconnue';
 
         // Calculer la durée si possible
@@ -508,7 +563,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         // Debug: Afficher les informations des photos
         console.log(`🔍 Voyage ${index + 1} - Photos:`, trip.photos);
         console.log(`🔍 Voyage ${index + 1} - Type de photos:`, typeof trip.photos);
-        if (trip.photos && trip.photos.length > 0) {
+        if (trip.photos && Array.isArray(trip.photos) && trip.photos.length > 0) {
           console.log(`🔍 Voyage ${index + 1} - Premier photo:`, trip.photos[0]);
           console.log(`🔍 Voyage ${index + 1} - Type premier photo:`, typeof trip.photos[0]);
         }
@@ -517,21 +572,23 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         let tripImages: string[] = [];
         
         // Si le voyage a des photos directement attachées
-        if (trip.photos && trip.photos.length > 0) {
-          tripImages = trip.photos.map((photo: any) => {
-            // Le backend retourne des objets TripPhoto avec un champ url (minuscule)
-            if (typeof photo === 'object' && photo.url) {
-              return photo.url;
-            }
-            // Fallback pour les autres formats
-            if (typeof photo === 'string') {
-              return photo;
-            }
-            if (typeof photo === 'object' && photo.URL) {
-              return photo.URL;
-            }
-            return null;
-          }).filter((url: string | null) => url !== null);
+        if (trip.photos && Array.isArray(trip.photos) && trip.photos.length > 0) {
+          tripImages = trip.photos
+            .filter((photo: any) => photo !== null && photo !== undefined)
+            .map((photo: any) => {
+              // Le backend retourne des objets TripPhoto avec un champ url (minuscule)
+              if (typeof photo === 'object' && photo && photo.url) {
+                return photo.url;
+              }
+              // Fallback pour les autres formats
+              if (typeof photo === 'string') {
+                return photo;
+              }
+              if (typeof photo === 'object' && photo && photo.URL) {
+                return photo.URL;
+              }
+              return null;
+            }).filter((url: string | null) => url !== null);
         }
         
         // Si aucune photo directe, essayer de récupérer les photos via l'API
@@ -564,8 +621,8 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             images: tripImages, // Toutes les images pour le carrousel
           },
           caption: `🗺️ ${trip.title}\n\n${trip.description || ''}`,
-          likes: 0, // Pas de données mockées
-          comments: 0, // Pas de données mockées
+          likes: trip.likes_count || 0, // Utiliser les vraies données du backend
+          comments: trip.comments_count || 0, // Utiliser les vraies données du backend
           shares: 0, // Pas de données mockées
           isLiked: false,
           isSaved: false,
@@ -577,8 +634,8 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             duration,
             budget: trip.budget ? `${trip.budget}€` : 'Non spécifié',
             difficulty: trip.trip_type || 'Non spécifié',
-            latitude: trip.location?.latitude || 0,
-            longitude: trip.location?.longitude || 0,
+            latitude: (trip.location && typeof trip.location === 'object' && trip.location.latitude) || 0,
+            longitude: (trip.location && typeof trip.location === 'object' && trip.location.longitude) || 0,
             highlights: trip.travel_categories || [], // Utiliser les vraies catégories
             steps: trip.steps || [], // Utiliser les vraies étapes
             placesVisited: trip.places_visited || [],
@@ -708,7 +765,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     try {
       // Mise à jour optimisée sans re-render complet
       setPosts(prevPosts => {
-        const updatedPosts = prevPosts.map(post => {
+        const updatedPosts = (prevPosts || []).filter(post => post && typeof post === 'object').map(post => {
           if (post.id === postId) {
             const newLikeCount = post.isLiked ? post.likes - 1 : post.likes + 1;
             return {
@@ -737,7 +794,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     try {
       // Mise à jour optimisée du compteur de commentaires
       setPosts(prevPosts => {
-        const updatedPosts = prevPosts.map(post => {
+        const updatedPosts = (prevPosts || []).filter(post => post && typeof post === 'object').map(post => {
           if (post.id === postId) {
             return {
               ...post,
@@ -770,7 +827,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const handleSave = async (postId: string) => {
     try {
       setPosts(prevPosts =>
-        prevPosts.map(post =>
+        (prevPosts || []).filter(post => post && typeof post === 'object').map(post =>
           post.id === postId
             ? { ...post, isSaved: !post.isSaved }
             : post
@@ -789,7 +846,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 
   const handleShare = async (post: SocialPost) => {
     try {
-      const shareMessage = `${post.user.name} a partagé son voyage à ${post.location}:\n\n${post.caption}\n\nDécouvrez plus sur TripShare !`;
+      const shareMessage = `${post.user && typeof post.user === 'object' ? post.user.name || 'Voyageur' : 'Voyageur'} a partagé son voyage à ${post.location}:\n\n${post.caption}\n\nDécouvrez plus sur TripShare !`;
       await Share.share({
         message: shareMessage,
         title: `Voyage à ${post.location}`,
@@ -798,7 +855,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       try {
         // Mocked share increment
         setPosts(prevPosts =>
-          prevPosts.map(p =>
+          (prevPosts || []).filter(p => p && typeof p === 'object').map(p =>
             p.id === post.id
               ? { ...p, shares: p.shares + 1 }
               : p
@@ -814,7 +871,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     if (!post.tripInfo?.steps) return;
     try {
       // Mocked copy itinerary
-      const itineraryText = `Itinéraire ${post.tripInfo.destination} par ${post.user.name}:\n\n${post.tripInfo.steps.map(step => `${step.order}. ${step.title}${step.description ? ` - ${step.description}` : ''}${step.duration ? ` (${step.duration})` : ''}`).join('\n')}\n\nBudget: ${post.tripInfo.budget}\nDurée: ${post.tripInfo.duration}`;
+      const itineraryText = `Itinéraire ${post.tripInfo?.destination || 'Destination'} par ${post.user && typeof post.user === 'object' ? post.user.name || 'Voyageur' : 'Voyageur'}:\n\n${(post.tripInfo?.steps || []).filter(step => step && typeof step === 'object').map(step => `${step.order || ''}. ${step.title || ''}${step.description ? ` - ${step.description}` : ''}${step.duration ? ` (${step.duration})` : ''}`).join('\n')}\n\nBudget: ${post.tripInfo?.budget || 'Budget non spécifié'}\nDurée: ${post.tripInfo?.duration || 'Durée non spécifiée'}`;
       await Clipboard.setStringAsync(itineraryText);
       if (Platform.OS === 'android') Alert.alert('Succès', 'Itinéraire copié dans le presse-papiers !');
     } catch {}
@@ -829,7 +886,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   const handleOpenInMaps = async (post: SocialPost) => {
     if (!post.tripInfo?.latitude || !post.tripInfo?.longitude) return;
     const { latitude, longitude } = post.tripInfo;
-    const url = Platform.OS === 'ios' ? `http://maps.apple.com/?q=${latitude},${longitude}` : `geo:${latitude},${longitude}?q=${latitude},${longitude}(${post.tripInfo.destination})`;
+    const url = Platform.OS === 'ios' ? `http://maps.apple.com/?q=${latitude},${longitude}` : `geo:${latitude},${longitude}?q=${latitude},${longitude}(${post.tripInfo?.destination || 'Destination'})`;
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) await Linking.openURL(url);
@@ -839,7 +896,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 
   const markNotificationAsRead = (notificationId: string) => {
     setNotifications(prev =>
-      prev.map(notif =>
+      (prev || []).filter(notif => notif && typeof notif === 'object').map(notif =>
         notif.id === notificationId
           ? { ...notif, isRead: true }
           : notif
@@ -857,7 +914,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       ]}
       onPress={() => markNotificationAsRead(item.id)}
     >
-      {item.user && (
+      {item.user && typeof item.user === 'object' && (
         <Image source={{ uri: getAvatarUrl(item.user) }} style={styles.notificationAvatar2025} />
       )}
       <View style={styles.notificationContent}>
@@ -887,8 +944,44 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     const [localComments, setLocalComments] = useState(post.comments);
     const [localIsSaved, setLocalIsSaved] = useState(post.isSaved);
     
+    const handleLocalLike = async () => {
+      try {
+        if (localIsLiked) {
+          await likeService.unlikeTrip(post.id);
+          setLocalIsLiked(false);
+          setLocalLikes(prev => Math.max(0, prev - 1));
+        } else {
+          await likeService.likeTrip(post.id);
+          setLocalIsLiked(true);
+          setLocalLikes(prev => prev + 1);
+        }
+        console.log('✅ Like mis à jour pour le voyage:', post.id);
+      } catch (error) {
+        console.error('❌ Erreur lors du like:', error);
+        // Revenir à l'état précédent en cas d'erreur
+        setLocalIsLiked(localIsLiked);
+      }
+    };
+
+    const handleLocalComment = () => {
+      setLocalComments(localComments + 1);
+      console.log('💬 Commentaire local ajouté pour le voyage:', post.id);
+      
+      // Navigation vers l'écran de commentaires
+      navigation.navigate('Comments', { 
+        postId: post.id,
+        postTitle: post.tripInfo?.destination || 'Voyage',
+        postImage: post.content?.url || post.content?.images?.[0]
+      });
+    };
+
+    const handleLocalSave = () => {
+      setLocalIsSaved(!localIsSaved);
+      console.log('✅ Sauvegarde locale mise à jour pour le voyage:', post.id);
+    };
+    
     // Actions intelligentes groupées
-    const smartActions = {
+    const smartActions: Record<string, SmartAction> = {
       like: {
         icon: localIsLiked ? 'heart' : 'heart-outline',
         action: handleLocalLike,
@@ -934,34 +1027,11 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     const getCurrentIndex = () => {
       return currentImageIndex;
     };
-
-    const handleLocalLike = () => {
-      setLocalIsLiked(!localIsLiked);
-      setLocalLikes(localIsLiked ? localLikes - 1 : localLikes + 1);
-      console.log('✅ Like local mis à jour pour le voyage:', post.id);
-    };
-
-    const handleLocalComment = () => {
-      setLocalComments(localComments + 1);
-      console.log('💬 Commentaire local ajouté pour le voyage:', post.id);
-      
-      // Navigation vers l'écran de commentaires
-      navigation.navigate('Comments', { 
-        postId: post.id,
-        postTitle: post.tripInfo?.destination || 'Voyage',
-        postImage: post.content?.url || post.content?.images?.[0]
-      });
-    };
-
-    const handleLocalSave = () => {
-      setLocalIsSaved(!localIsSaved);
-      console.log('✅ Sauvegarde locale mise à jour pour le voyage:', post.id);
-    };
     
     // Rendu intelligent des actions
     const renderSmartActions = () => (
       <View style={styles.actionBar}>
-        {Object.entries(smartActions).map(([key, action]) => (
+        {Object.entries(smartActions || {}).map(([key, action]) => (
           <TouchableOpacity
             key={key}
             style={styles.actionButton}
@@ -986,24 +1056,24 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             <TouchableOpacity 
               style={styles.destinationButton}
               onPress={() => smartNavigation.toMap({
-                lat: post.tripInfo.latitude || 0,
-                lng: post.tripInfo.longitude || 0
+                lat: post.tripInfo?.latitude || 0,
+                lng: post.tripInfo?.longitude || 0
               })}
             >
               <Text style={styles.destinationText}>
-                📍 {post.tripInfo.destination}
+                📍 {post.tripInfo?.destination || 'Destination'}
               </Text>
             </TouchableOpacity>
             
             <View style={styles.tripDetails}>
               <Text style={styles.tripInfo}>
-                ⏱️ {post.tripInfo.duration}
+                ⏱️ {post.tripInfo?.duration || 'Durée non spécifiée'}
               </Text>
               <Text style={styles.tripInfo}>
-                💰 {post.tripInfo.budget}
+                💰 {post.tripInfo?.budget || 'Budget non spécifié'}
               </Text>
               <Text style={styles.tripInfo}>
-                🎯 {post.tripInfo.difficulty}
+                🎯 {post.tripInfo?.difficulty || 'Difficulté non spécifiée'}
               </Text>
             </View>
           </>
@@ -1037,18 +1107,18 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             <View style={styles.avatarContainer2025}>
               <Image 
                 source={{ 
-                  uri: getAvatarUrl(post.user)
+                  uri: post.user && typeof post.user === 'object' ? getAvatarUrl(post.user) : 'https://api.dicebear.com/7.x/avataaars/png?seed=user&backgroundColor=b6e3f4,c0aede,d1d4f9&size=100'
                 }} 
                 style={styles.userAvatar2025}
                 onError={(error) => {
                   console.log('❌ Erreur chargement avatar pour:', {
-                    userName: post.user.name,
-                    userId: post.user.id,
+                    userName: post.user && typeof post.user === 'object' ? post.user.name || 'Voyageur' : 'Voyageur',
+                    userId: post.user && typeof post.user === 'object' ? post.user.id || 'unknown' : 'unknown',
                     error: error.nativeEvent
                   });
                 }}
                 onLoad={() => {
-                  console.log('✅ Avatar chargé avec succès pour:', post.user.name);
+                  console.log('✅ Avatar chargé avec succès pour:', post.user && typeof post.user === 'object' ? post.user.name || 'Voyageur' : 'Voyageur');
                 }}
                 defaultSource={{ uri: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default&backgroundColor=b6e3f4,c0aede,d1d4f9&size=100' }}
               />
@@ -1056,9 +1126,9 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             <View style={styles.userInfo2025}>
               <View style={styles.userNameRow2025}>
                 <Text style={[styles.userName2025, { color: theme.colors.text.primary }]}>
-                  {post.user.name}
+                  {post.user && typeof post.user === 'object' ? post.user.name || 'Voyageur' : 'Voyageur'}
                 </Text>
-                {post.user.verified && (
+                {post.user && typeof post.user === 'object' && post.user.verified && (
                   <View style={styles.verifiedBadge2025}>
                     <Ionicons name="checkmark" size={12} color="white" />
                   </View>
@@ -1066,7 +1136,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
               </View>
               <View style={styles.userDetails2025}>
                 <Text style={[styles.userLevel2025, { color: theme.colors.text.secondary }]}>
-                  {post.user.level} • {post.user.trips} voyages
+                  {post.user && typeof post.user === 'object' ? (post.user.level || 'Intermédiaire') : 'Intermédiaire'} • {post.user && typeof post.user === 'object' ? (post.user.trips || 1) : 1} voyages
                 </Text>
                 <View style={styles.locationRow2025}>
                   <Ionicons name="location" size={12} color={theme.colors.text.secondary} />
@@ -1084,14 +1154,8 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         {post.content && (
           <View style={styles.imageContainer2025}>
             {post.content.images && post.content.images.length > 1 ? (
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                style={styles.carouselContainer2025}
-                onMomentumScrollEnd={handleScrollEnd}
-              >
-                {post.content.images.map((imageUrl, imageIndex) => (
+              <View style={styles.carouselContainer2025}>
+                {(post.content.images || []).filter(imageUrl => imageUrl && typeof imageUrl === 'string').map((imageUrl, imageIndex) => (
                   <View key={imageIndex} style={styles.carouselImageContainer2025}>
                     <Image 
                       source={{ 
@@ -1114,7 +1178,6 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
                           imageIndex
                         });
                       }}
-                                             defaultSource={{ uri: 'http://localhost:8085/storage/tripshare-uploads/defaults/default-trip-image.jpg' }}
                     />
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.3)']}
@@ -1122,7 +1185,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
                     />
                   </View>
                 ))}
-              </ScrollView>
+              </View>
             ) : (
               <View style={styles.singleImageContainer2025}>
                 <Image 
@@ -1155,7 +1218,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             {/* Indicateurs de pagination modernes */}
             {post.content.images && post.content.images.length > 1 && (
               <View style={styles.carouselIndicators2025}>
-                {post.content.images.map((_, index) => (
+                {(post.content.images || []).filter(imageUrl => imageUrl && typeof imageUrl === 'string').map((_, index) => (
                   <Animated.View 
                     key={index} 
                     style={[
@@ -1174,6 +1237,14 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
                 {(post.tripInfo?.destination || post.location).split(',')[0]}
               </Text>
             </View>
+            
+            {/* Badge vidéo pour les voyages créés via la vidéo */}
+            {(post.tripInfo?.tags?.includes('🎥 Vidéo Demo') || post.caption?.includes('🎥')) && (
+              <View style={styles.videoBadge2025}>
+                <Ionicons name="videocam" size={14} color="white" />
+                <Text style={styles.videoBadgeText2025}>VIDÉO</Text>
+              </View>
+            )}
             
             {post.content.type === 'video' && (
               <View style={styles.videoOverlay2025}>
@@ -1245,7 +1316,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         {/* Caption avec typographie moderne */}
         <View style={styles.captionSection2025}>
           <Text style={[styles.captionText2025, { color: theme.colors.text.primary }]}>
-            <Text style={styles.captionUsername2025}>{post.user.name}</Text> {post.caption}
+            <Text style={styles.captionUsername2025}>{post.user && typeof post.user === 'object' ? post.user.name || 'Voyageur' : 'Voyageur'}</Text> {post.caption}
           </Text>
         </View>
         
@@ -1254,27 +1325,27 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
           <View style={[styles.tripInfo2025, { backgroundColor: theme.colors.background.primary }]}>
             <View style={styles.tripHeader2025}>
               <Text style={[styles.tripTitle2025, { color: theme.colors.text.primary }]}>
-                🗺️ Voyage à {post.tripInfo.destination.split(',')[0]}
+                🗺️ Voyage à {(post.tripInfo?.destination || 'Destination').split(',')[0]}
               </Text>
             </View>
             <Text style={[styles.tripDetails2025, { color: theme.colors.text.secondary }]}>
-              {post.tripInfo.duration} • {post.tripInfo.budget} • {post.tripInfo.difficulty}
+              {post.tripInfo?.duration || 'Durée non spécifiée'} • {post.tripInfo?.budget || 'Budget non spécifié'} • {post.tripInfo?.difficulty || 'Difficulté non spécifiée'}
             </Text>
             
-            {post.tripInfo.highlights && (
+            {post.tripInfo?.highlights && (
               <Text style={[styles.tripHighlights2025, { color: theme.colors.text.secondary }]}>
-                ✨ {post.tripInfo.highlights.join(' • ')}
+                ✨ {(post.tripInfo?.highlights || []).join(' • ')}
               </Text>
             )}
             
             {/* Lieux visités avec design moderne */}
-            {post.tripInfo.placesVisited && post.tripInfo.placesVisited.length > 0 && (
+            {post.tripInfo?.placesVisited && post.tripInfo?.placesVisited.length > 0 && (
               <View style={styles.placesVisitedContainer2025}>
                 <Text style={[styles.placesVisitedTitle2025, { color: theme.colors.text.primary }]}>
-                  📍 Lieux visités ({post.tripInfo.placesVisited.filter(p => p.isVisited).length}/{post.tripInfo.placesVisited.length})
+                  📍 Lieux visités ({(post.tripInfo?.placesVisited || []).filter(p => p && typeof p === 'object' && p.isVisited).length}/{(post.tripInfo?.placesVisited || []).length})
                 </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.placesVisitedList2025}>
-                  {post.tripInfo.placesVisited.map((place, index) => (
+                <View style={styles.placesVisitedList2025}>
+                  {(post.tripInfo?.placesVisited || []).filter(place => place && typeof place === 'object' && place.id).map((place, index) => (
                     <View
                       key={place.id}
                       style={[
@@ -1302,7 +1373,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
                       </Text>
                     </View>
                   ))}
-                </ScrollView>
+                </View>
               </View>
             )}
             
@@ -1375,194 +1446,393 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
               {section.title}
             </Text>
           </View>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.sectionContent}
-          >
-            {section.data.map((post, index) => (
+          <View style={styles.sectionContent}>
+            {(section.data || []).filter(post => post && typeof post === 'object' && post.id).map((post, index) => (
               <ModernTripCard key={post.id} post={post} index={index} />
             ))}
-          </ScrollView>
+          </View>
         </View>
       )
     );
   };
 
-  return (
-    <SafeAreaView style={[styles.container2025, { backgroundColor: theme.colors.background.primary }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
-      {/* Header moderne avec glassmorphism */}
-      <Animated.View 
-        style={[
-          styles.modernHeader2025, 
-          { 
-            backgroundColor: theme.colors.background.card,
-            opacity: headerAnim,
-            transform: [{ translateY: headerAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-20, 0]
-            })}]
-          }
-        ]}
-      >
-        <View style={styles.headerContent2025}>
-          <View style={styles.greetingSection2025}>
-            <Text style={[styles.greetingText2025, { color: theme.colors.text.primary }]}>
-              Bonjour, {user?.username || user?.name || 'Voyageur'} 👋
-            </Text>
-            <Text style={[styles.subtitleText2025, { color: theme.colors.text.secondary }]}>
-              Découvrez de nouvelles aventures
+  // Fonction pour rendre un post unifié (photo ou vidéo)
+  const renderUnifiedPost = (trip: Trip) => {
+    if (!trip || typeof trip !== 'object') {
+      console.warn('⚠️ UnifiedHomeScreen - Trip invalide dans renderUnifiedPost:', trip);
+      return null;
+    }
+
+    // Déterminer si c'est un voyage vidéo ou photo (basé sur les photos pour l'instant)
+    const isVideoTrip = trip.photos && trip.photos.length > 0 && trip.photos[0]?.url?.includes('video');
+    
+    if (isVideoTrip) {
+      return renderVideoPost(trip);
+    } else {
+      return renderImagePost(trip);
+    }
+  };
+
+  // Fonction pour rendre un post vidéo
+  const renderVideoPost = (trip: Trip) => {
+    return (
+      <View style={styles.videoPostContainer}>
+        {/* Indicateur de type de contenu */}
+        <View style={styles.contentTypeIndicator}>
+          <Ionicons name="videocam" size={16} color="white" />
+          <Text style={styles.contentTypeText}>VIDÉO</Text>
+        </View>
+
+        {/* Placeholder vidéo */}
+        <View style={styles.videoPlaceholder}>
+          <Ionicons name="play-circle" size={64} color="white" />
+        </View>
+
+        {/* Actions vidéo (droite) */}
+        <View style={styles.videoActions}>
+          <TouchableOpacity style={styles.videoActionButton}>
+            <Ionicons name="heart" size={24} color="white" />
+            <Text style={styles.videoActionCount}>1.2k</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.videoActionButton}>
+            <Ionicons name="chatbubble" size={24} color="white" />
+            <Text style={styles.videoActionCount}>45</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.videoActionButton}>
+            <Ionicons name="share" size={24} color="white" />
+            <Text style={styles.videoActionCount}>Partager</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.videoActionButton}>
+            <Ionicons name="bookmark" size={24} color="white" />
+            <Text style={styles.videoActionCount}>Sauvegarder</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Informations vidéo (droite) */}
+        <View style={styles.videoInfo}>
+          <View style={styles.videoInfoItem}>
+            <Ionicons name="person" size={16} color="white" />
+            <Text style={styles.videoInfoText}>Voyageur</Text>
+          </View>
+          <View style={styles.videoInfoItem}>
+            <Ionicons name="location" size={16} color="white" />
+            <Text style={styles.videoInfoText}>{trip.destination || 'Destination'}</Text>
+          </View>
+          <View style={styles.videoInfoItem}>
+            <Ionicons name="time" size={16} color="white" />
+            <Text style={styles.videoInfoText}>{trip.duration || '5 jours'}</Text>
+          </View>
+          <View style={styles.videoInfoItem}>
+            <Ionicons name="wallet" size={16} color="white" />
+            <Text style={styles.videoInfoText}>{trip.budget || '800€'}</Text>
+          </View>
+        </View>
+
+        {/* Légende vidéo (bas) */}
+        <View style={styles.videoCaption}>
+          <View style={styles.captionHeader}>
+            <Image 
+              source={{ uri: getAvatarUrl(user) }} 
+              style={styles.captionAvatar}
+            />
+            <Text style={styles.captionUserInfo}>
+              {user?.username || 'Voyageur'} • Il y a 2h
             </Text>
           </View>
-          
-          <View style={styles.headerActions2025}>
-            {/* Avatar de profil */}
-            <TouchableOpacity 
-              style={styles.profileAvatarButton2025}
-              onPress={() => navigation.navigate('Profile' as never)}
-              activeOpacity={0.7}
-            >
+          <View style={styles.captionContent}>
+            <Text style={styles.captionTitle}>🗺️ Voyage à {trip.destination || 'Paris'}</Text>
+            <Text style={styles.captionMeta}>
+              ⏱️ {trip.duration || '5 jours'} • 💰 {trip.budget || '800€'} • 🎯 Facile
+            </Text>
+            <Text style={styles.captionHighlights}>
+              ✨ Culture • Gastronomie • Architecture
+            </Text>
+            <Text style={styles.captionHashtags}>
+              #voyage #{trip.destination?.toLowerCase() || 'paris'} #culture #gastronomie
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // Fonction pour rendre un post image
+  const renderImagePost = (trip: Trip) => {
+    return (
+      <TouchableOpacity 
+        style={styles.imagePostContainer}
+        onPress={() => {
+          setMapPost({
+            id: trip.id?.toString() || '',
+            user: {
+              id: user?.id || '',
+              name: user?.username || 'Voyageur',
+              avatar: getAvatarUrl(user),
+              verified: false,
+              level: 'Débutant',
+              trips: 1
+            },
+            caption: trip.description || '',
+            location: trip.destination || '',
+            likes: trip.likes_count || 0,
+            comments: trip.comments_count || 0,
+            shares: 0,
+            isLiked: false,
+            isSaved: false,
+            timestamp: trip.created_at || '',
+            tripInfo: {
+              id: trip.id?.toString(),
+              destination: trip.destination || '',
+              budget: trip.budget || '',
+              duration: trip.duration || '',
+              difficulty: 'Facile',
+              latitude: 48.8566, // Valeur par défaut
+              longitude: 2.3522, // Valeur par défaut
+              highlights: ['Culture', 'Gastronomie', 'Architecture'],
+              tags: ['voyage', 'culture', 'gastronomie'],
+              steps: trip.steps || []
+            }
+          });
+          setShowMapModal(true);
+        }}
+      >
+        {/* Header du post */}
+        <View style={styles.imagePostHeader}>
+          <Image 
+            source={{ uri: getAvatarUrl(user) }} 
+            style={styles.postAvatar}
+          />
+          <View style={styles.postUserInfo}>
+            <Text style={styles.postUsername}>{user?.username || 'Voyageur'}</Text>
+            <Text style={styles.postTime}>Il y a 1j</Text>
+          </View>
+          <TouchableOpacity style={styles.postMoreButton}>
+            <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Image du post */}
+        <View style={styles.imageContainer}>
+          <View style={styles.postImage}>
+            <Text style={styles.postImageEmoji}>
+              {trip.destination?.includes('Paris') ? '🗼' : 
+               trip.destination?.includes('Rome') ? '🏛️' : 
+               trip.destination?.includes('Tokyo') ? '🗾' : 
+               trip.destination?.includes('Bali') ? '🏝️' : '🗺️'}
+            </Text>
+          </View>
+          <View style={styles.imageOverlay}>
+            <Text style={styles.imageTitle}>🗺️ Voyage à {trip.destination || 'Paris'}</Text>
+            <View style={styles.imageMeta}>
+              <Text style={styles.imageMetaText}>⏱️ {trip.duration || '5 jours'}</Text>
+              <Text style={styles.imageMetaText}>💰 {trip.budget || '800€'}</Text>
+              <Text style={styles.imageMetaText}>🎯 Facile</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Actions du post */}
+        <View style={styles.imageActions}>
+          <View style={styles.leftActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="heart-outline" size={24} color="#666" />
+              <Text style={styles.actionText}>1.2k</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="chatbubble-outline" size={24} color="#666" />
+              <Text style={styles.actionText}>45</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="share-outline" size={24} color="#666" />
+              <Text style={styles.actionText}>Partager</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.rightActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="bookmark-outline" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Footer du post */}
+        <View style={styles.imageFooter}>
+          <Text style={styles.imageCaption}>
+            ✨ Culture • Gastronomie • Architecture
+          </Text>
+          <Text style={styles.imageHashtags}>
+            #voyage #{trip.destination?.toLowerCase() || 'paris'} #culture #gastronomie
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+                <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
+      
+      {/* Header avec recherche et notifications */}
+      <View style={[styles.header, { backgroundColor: theme.colors.primary[0] }]}>
+        <View style={styles.headerContent}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.searchPlaceholder}>Rechercher des voyages...</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('Profile')}>
               <Image 
                 source={{ uri: getAvatarUrl(user) }} 
-                style={styles.profileAvatar2025}
-                onError={(error) => {
-                  console.warn('⚠️ Erreur chargement avatar profil:', error);
-                }}
-                defaultSource={{ uri: 'https://api.dicebear.com/7.x/avataaars/png?seed=default&backgroundColor=b6e3f4&size=100' }}
+                style={styles.avatar}
               />
             </TouchableOpacity>
-            
-            {/* Bouton notifications */}
-            <TouchableOpacity 
-              style={[styles.iconButton2025, { backgroundColor: theme.colors.background.primary }]}
-              onPress={() => setShowNotifications(!showNotifications)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="notifications-outline" size={20} color={theme.colors.text.primary} />
+            <TouchableOpacity style={styles.headerIconButton} onPress={() => navigation.navigate('VideoTripCreation')}>
+              <Ionicons name="videocam" size={24} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerIconButton} onPress={() => setShowNotifications(!showNotifications)}>
+              <Ionicons name="notifications" size={24} color="white" />
               {unreadCount > 0 && (
-                <View style={[styles.notificationBadge2025, { backgroundColor: '#ff4757' }]}>
-                  <Text style={styles.notificationBadgeText2025}>{unreadCount}</Text>
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
         </View>
-      </Animated.View>
+      </View>
 
-      {/* Notifications avec glassmorphism */}
-      {showNotifications && (
-        <Animated.View 
-          style={[
-            styles.notificationsContainer2025, 
-            { backgroundColor: theme.colors.background.card }
-          ]}
-        >
-          <View style={styles.notificationsHeader2025}>
-            <Text style={[styles.notificationsTitle2025, { color: theme.colors.text.primary }]}>Notifications</Text>
-            <TouchableOpacity onPress={() => setShowNotifications(false)}>
-              <Ionicons name="close" size={20} color={theme.colors.text.secondary} />
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={notifications}
-            renderItem={renderNotification}
-            keyExtractor={item => item.id}
-            style={styles.notificationsList2025}
-            showsVerticalScrollIndicator={false}
+
+
+      {/* Main Feed - Interface Photo Unifiée */}
+      <FlatList
+        data={trips}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        renderItem={({ item }) => renderUnifiedPost(item)}
+        style={styles.mainFeed}
+        contentContainerStyle={styles.feedContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshingFeed}
+            onRefresh={loadPublicTrips}
+            tintColor={theme.colors.primary[0]}
+            colors={[theme.colors.primary[0]]}
           />
-        </Animated.View>
-      )}
-
-      {/* Feed moderne avec animations */}
-      {tripsLoading ? (
-        <View style={styles.loadingContainer2025}>
-          <ActivityIndicator size="large" color={theme.colors.primary[0]} />
-          <Text style={[styles.loadingText2025, { color: theme.colors.text.secondary }]}>
-            Chargement des voyages...
-          </Text>
-        </View>
-      ) : trips.length === 0 ? (
-        <View style={styles.emptyFeedContainer2025}>
-          <View style={[styles.emptyIconContainer2025, { backgroundColor: theme.colors.primary[0] + '15' }]}>
-            <Ionicons name="airplane-outline" size={48} color={theme.colors.primary[0]} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={theme.colors.primary[0]} />
+            <Text style={[styles.emptyStateText, { color: '#333' }]}>
+              Chargement des voyages...
+            </Text>
           </View>
-          <Text style={[styles.emptyFeedTitle2025, { color: theme.colors.text.primary }]}>
-            Aucun voyage partagé
-          </Text>
-          <Text style={[styles.emptyFeedSubtitle2025, { color: theme.colors.text.secondary }]}>
-            Soyez le premier à partager votre aventure !{'\n'}
-            Créez un voyage et inspirez d'autres voyageurs.
-          </Text>
-          <TouchableOpacity 
-            style={[styles.createFirstTripButton2025, { backgroundColor: theme.colors.primary[0] }]}
-            onPress={() => navigation.navigate('SimpleCreateTrip')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add" size={20} color="white" />
-            <Text style={styles.createFirstTripButtonText2025}>Créer mon premier voyage</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-          <FlatList
-            data={trips}
-            renderItem={renderTripCard}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.modernFeedContainer2025}
-            refreshControl={
-    <RefreshControl 
-      refreshing={tripsLoading} 
-      onRefresh={loadPublicTrips}
-      colors={[theme.colors.primary[0]]}
-      tintColor={theme.colors.primary[0]}
-      title="Mise à jour..."
-      titleColor={theme.colors.text.secondary}
-      progressViewOffset={20}
-    />
-  }
-            showsVerticalScrollIndicator={false}
-          />
-        </Animated.View>
-      )}
+        }
+      />
 
-      {/* Bouton flottant moderne avec glassmorphism */}
+      {/* Bouton Flottant */}
       <TouchableOpacity 
-        style={[styles.modernFloatingButton2025, { backgroundColor: theme.colors.primary[0] }]}
-        onPress={() => navigation.navigate('SimpleCreateTrip')}
-        activeOpacity={0.8}
+        style={[styles.floatingButton, { backgroundColor: theme.colors.primary[0] }]}
+        onPress={() => setShowCreationModal(true)}
       >
-        <Ionicons name="add" size={24} color="white" />
+        <Ionicons name="add" size={30} color="white" />
       </TouchableOpacity>
 
-      {/* Modal carte moderne */}
+      {/* Modal de Création */}
+      <Modal
+        visible={showCreationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCreationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.creationModal, { backgroundColor: '#fff' }]}>
+            <View style={styles.modalHeader}>
+                             <Text style={[styles.modalTitle, { color: '#333' }]}>Créer un voyage</Text>
+              <TouchableOpacity 
+                style={styles.modalCloseButton} 
+                onPress={() => setShowCreationModal(false)}
+              >
+                                 <Ionicons name="close" size={20} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalContent}>
+                             <Text style={[styles.modalSubtitle, { color: '#333' }]}>
+                Choisissez le type de voyage à créer
+              </Text>
+              
+                              <TouchableOpacity 
+                  style={[styles.modalOption, { backgroundColor: '#f8f9fa' }]}
+                  onPress={() => {
+                    setShowCreationModal(false);
+                    navigation.navigate('TripCreation');
+                  }}
+                >
+                <View style={[styles.optionIcon, { backgroundColor: theme.colors.primary[0] }]}>
+                  <Ionicons name="images" size={24} color="white" />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={[styles.optionTitle, { color: theme.colors.text }]}>Voyage Photo</Text>
+                  <Text style={[styles.optionDescription, { color: theme.colors.textSecondary }]}>
+                    Créez un voyage avec photos et itinéraire détaillé
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalOption, { backgroundColor: theme.colors.surface }]}
+                onPress={() => {
+                  setShowCreationModal(false);
+                  navigation.navigate('VideoTripCreation');
+                }}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: theme.colors.primary[0] }]}>
+                  <Ionicons name="videocam" size={24} color="white" />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={[styles.optionTitle, { color: theme.colors.text }]}>Voyage Vidéo</Text>
+                  <Text style={[styles.optionDescription, { color: theme.colors.textSecondary }]}>
+                    Créez un voyage avec vidéo et contenu dynamique
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.modalCancelButton}
+              onPress={() => setShowCreationModal(false)}
+            >
+              <Text style={[styles.modalCancelText, { color: theme.colors.primary[0] }]}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Itinéraire */}
       <Modal
         visible={showMapModal}
+        transparent
         animationType="slide"
-        presentationStyle="pageSheet"
         onRequestClose={() => setShowMapModal(false)}
       >
-        <View style={[styles.mapModalContainer2025, { backgroundColor: theme.colors.background.primary }]}>
-          <View style={[styles.mapModalHeader2025, { borderBottomColor: theme.colors.border.primary }]}>
+        <SafeAreaView style={styles.mapModalContainer}>
+          <View style={[styles.mapModalHeader, { backgroundColor: theme.colors.primary[0] }]}>
+            <Text style={[styles.mapModalTitle, { color: 'white' }]}>
+              {mapPost?.tripInfo?.destination || 'Détails du voyage'}
+            </Text>
             <TouchableOpacity onPress={() => setShowMapModal(false)}>
-              <Ionicons name="close" size={24} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-            <Text style={[styles.mapModalTitle2025, { color: theme.colors.text.primary }]}>{mapPost?.tripInfo?.destination}</Text>
-            <TouchableOpacity onPress={() => mapPost && handleOpenInMaps(mapPost)}>
-              <Ionicons name="navigate-outline" size={24} color={theme.colors.primary[0]} />
+              <Ionicons name="close" size={24} color="white" />
             </TouchableOpacity>
           </View>
           <View style={styles.mapContainer}>
-            {mapPost?.tripInfo?.latitude && mapPost?.tripInfo?.longitude && (
-              <SimpleMapView
-                latitude={mapPost.tripInfo.latitude}
-                longitude={mapPost.tripInfo.longitude}
-                title={mapPost.tripInfo.destination}
-              />
-            )}
+            <SimpleMapView
+              latitude={mapPost?.tripInfo?.latitude || 48.8566}
+              longitude={mapPost?.tripInfo?.longitude || 2.3522}
+              title={mapPost?.tripInfo?.destination || 'Voyage'}
+            />
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -1635,7 +1905,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa' 
   },
   
-  // Header moderne
+  // Header moderne avec glassmorphism
   modernHeader2025: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -1643,7 +1913,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   headerContent2025: {
     flex: 1,
@@ -1652,12 +1927,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   greetingText2025: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   subtitleText2025: {
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 15,
+    fontWeight: '500',
+    opacity: 0.8,
+    letterSpacing: 0.2,
   },
   headerActions2025: {
     flexDirection: 'row',
@@ -1665,12 +1943,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconButton2025: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   notificationBadge2025: {
     position: 'absolute',
@@ -1941,6 +2225,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  videoBadge2025: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#FF6B6B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  videoBadgeText2025: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+    marginLeft: 4,
+    letterSpacing: 0.5,
+  },
   videoOverlay2025: {
     position: 'absolute',
     top: 0,
@@ -1985,16 +2292,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 80,
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    backgroundColor: 'rgba(0, 128, 128, 0.95)',
   },
   mapModalContainer2025: { 
     flex: 1 
@@ -2013,6 +2321,99 @@ const styles = StyleSheet.create({
   },
   mapContainer: { 
     flex: 1 
+  },
+  
+  // Styles pour le modal de création moderne
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  creationModal: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  modalContent: {
+    marginBottom: 24,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  optionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  optionDescription: {
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 18,
+  },
+  modalCancelButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   countersSection2025: {
     flexDirection: 'row',
@@ -2114,17 +2515,21 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 8,
   },
-  // Styles pour les cartes de voyage
+  // Styles pour les cartes de voyage modernes avec glassmorphism
   tripCard: {
     marginHorizontal: 16,
     marginVertical: 8,
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    overflow: 'hidden',
   },
   tripCardHeader: {
     flexDirection: 'row',
@@ -2228,6 +2633,476 @@ const styles = StyleSheet.create({
   tripCardStatusText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  // Styles pour l'interface unifiée
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    paddingTop: 10,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    marginRight: 15,
+  },
+  searchPlaceholder: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  avatarButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  headerIconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#ff4757',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  storiesBar: {
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  storiesContainer: {
+    flexDirection: 'row',
+  },
+  storyItem: {
+    alignItems: 'center',
+    marginRight: 15,
+    minWidth: 60,
+  },
+  storyAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 5,
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  storyAvatarText: {
+    fontSize: 20,
+  },
+  storyName: {
+    fontSize: 10,
+    color: '#666',
+    textAlign: 'center',
+  },
+  mainFeed: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  feedContent: {
+    paddingBottom: 100,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  emptyStateText: {
+    marginTop: 15,
+    fontSize: 16,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  // Styles pour les posts vidéo
+  videoPostContainer: {
+    height: height,
+    backgroundColor: '#000',
+    position: 'relative',
+  },
+  contentTypeIndicator: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 10,
+  },
+  contentTypeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  videoPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  videoActions: {
+    position: 'absolute',
+    right: 20,
+    bottom: 250,
+    flexDirection: 'column',
+    gap: 30,
+    alignItems: 'center',
+  },
+  videoActionButton: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoActionCount: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  videoInfo: {
+    position: 'absolute',
+    right: 20,
+    bottom: 150,
+    flexDirection: 'column',
+    gap: 15,
+    alignItems: 'flex-end',
+  },
+  videoInfoItem: {
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoInfoText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  videoCaption: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    padding: 25,
+  },
+  captionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  captionAvatar: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    marginRight: 12,
+  },
+  captionUserInfo: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  captionContent: {
+    gap: 8,
+  },
+  captionTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  captionMeta: {
+    color: 'white',
+    fontSize: 14,
+    opacity: 0.9,
+  },
+  captionHighlights: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  captionHashtags: {
+    color: '#48dbfb',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Styles pour les posts image
+  imagePostContainer: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  imagePostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    gap: 12,
+  },
+  postAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  postUserInfo: {
+    flex: 1,
+  },
+  postUsername: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  postTime: {
+    fontSize: 14,
+    color: '#666',
+  },
+  postMoreButton: {
+    padding: 5,
+  },
+  imageContainer: {
+    position: 'relative',
+    height: 400,
+  },
+  postImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'linear-gradient(45deg, #667eea, #764ba2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  postImageEmoji: {
+    fontSize: 48,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 20,
+  },
+  imageTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  imageMeta: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  imageMetaText: {
+    color: 'white',
+    fontSize: 14,
+    opacity: 0.9,
+  },
+  imageActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+  },
+  leftActions: {
+    flexDirection: 'row',
+    gap: 20,
+    alignItems: 'center',
+  },
+  rightActions: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  actionText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  imageFooter: {
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+  },
+  imageCaption: {
+    fontSize: 15,
+    color: '#333',
+    marginBottom: 8,
+  },
+  imageHashtags: {
+    color: '#008080',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Styles pour les modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  creationModal: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  modalContent: {
+    marginBottom: 24,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  optionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  optionDescription: {
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 18,
+  },
+  modalCancelButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  mapModalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  mapModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  mapModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  mapContainer: {
+    flex: 1,
   },
 });
 

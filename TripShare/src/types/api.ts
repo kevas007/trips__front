@@ -2,25 +2,18 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { Trip, TripFilters } from './trip';
+import { 
+  TripFilters, 
+  PaginatedResponse, 
+  APIResponse, 
+  APIError
+} from './common';
 
 // ========== TYPES ET INTERFACES ==========
-
-export interface APIResponse<T> {
-  success: boolean;
-  data: T;
-  error?: string;
-}
 
 export interface APIService {
   getTrips(filters: TripFilters): Promise<APIResponse<Trip[]>>;
   updatePreferences(preferences: any): Promise<APIResponse<any>>;
-}
-
-export interface APIError {
-  message: string;
-  code?: string;
-  status?: number;
 }
 
 // Types d'authentification
@@ -423,9 +416,9 @@ export interface SearchFilters {
 const API_CONFIG = {
   baseURL: __DEV__ 
     ? Platform.select({
-        ios: 'http://localhsot:8000/api/v1',
-        android: 'http://localhsot:8000/api/v1', // IP réseau pour device physique
-        web: 'http://localhsot:8000/api/v1',
+        ios: 'http://localhost:8085/api/v1',
+        android: 'http://localhost:8085/api/v1', // IP réseau pour device physique
+        web: 'http://localhost:8085/api/v1',
       })
     : 'https://api.tripshare.app/v1',
   
@@ -1669,11 +1662,12 @@ class ApiService {
     }
   }
 
-  private handleError(error: APIError): APIResponse<void> {
+  private handleError<T>(error: unknown): APIResponse<T> {
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
     return {
       success: false,
-      data: undefined,
-      error: error.message,
+      data: null as T,
+      error: errorMessage,
     };
   }
 
@@ -1696,85 +1690,4 @@ class ApiService {
 
 export const apiService = new ApiService();
 
-// ========== EXPORT DES TYPES ==========
-
-// Types de base
-export type {
-  APIError,
-  APIResponse,
-  APIService,
-  BaseAPIResponse,
-  PaginatedResponse,
-} from './base';
-
-// Types d'authentification
-export type {
-  AuthResponse,
-  LoginCredentials,
-  RegisterData,
-} from './auth';
-
-// Types utilisateur
-export type {
-  User,
-  UserProfile,
-  UserStats,
-  UserSettings,
-  UserPreferences,
-} from './user';
-
-// Types de voyage
-export type {
-  Trip,
-  TripStats,
-} from './trip';
-
-// Types d'activité
-export type {
-  Activity,
-  ActivityType,
-  BookingInfo,
-  Contact,
-} from './activity';
-
-// Types de localisation
-export type {
-  Location,
-} from './location';
-
-// Types de budget
-export type {
-  TripBudget,
-  BudgetCategory,
-  BudgetSummary,
-  Money,
-} from './budget';
-
-// Types de dépenses
-export type {
-  Expense,
-  ExpenseSplit,
-  Settlement,
-  SharedExpense,
-} from './expense';
-
-// Types de recommandation
-export type {
-  AIRecommendation,
-  AIItineraryRequest,
-} from './recommendation';
-
-// Types de recherche
-export type {
-  SearchFilters,
-} from './search';
-
-// Types de profil
-export type {
-  DeviceInfo,
-} from './device';
-
-// Types de collaboration
-export type {
-  Collaborator,
-} from './collaboration';
+// Les types sont déjà exportés individuellement dans le fichier

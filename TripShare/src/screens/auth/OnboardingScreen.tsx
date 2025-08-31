@@ -1,57 +1,60 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Dimensions, 
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
   ScrollView,
+  Dimensions,
+  SafeAreaView,
   Animated,
-  Image
+  StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { OnboardingStackParamList } from '../../navigation/OnboardingNavigator';
+
 const { width } = Dimensions.get('window');
 
-const ONBOARDING_DATA = [
-  {
-    title: "Bienvenue sur TripShare !",
-    description: "Préparez-vous à vivre des expériences de voyage uniques et à les partager avec une communauté passionnée.",
-    icon: "airplane-outline",
-    color: "#FF6B6B"
-  },
-  {
-    title: "Planifiez vos voyages",
-    description: "Créez des itinéraires détaillés, trouvez les meilleurs spots et organisez vos activités en quelques clics.",
-    icon: "map-outline",
-    color: "#4ECDC4"
-  },
-  {
-    title: "Partagez vos expériences",
-    description: "Publiez vos photos, racontez vos aventures et inspirez d'autres voyageurs du monde entier.",
-    icon: "share-social-outline",
-    color: "#45B7D1"
-  },
-  {
-    title: "Rejoignez la communauté",
-    description: "Connectez-vous avec d'autres voyageurs, échangez des conseils et créez des souvenirs inoubliables.",
-    icon: "people-outline",
-    color: "#96CEB4"
-  }
-];
+type OnboardingNavigationProp = StackNavigationProp<OnboardingStackParamList>;
 
 interface OnboardingScreenProps {
   onFinish?: () => void;
 }
 
-const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
-  const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
-  const { isNewUser, setNewUser } = useAuthStore();
-  const { theme, isDark } = useAppTheme();
+const ONBOARDING_DATA = [
+  {
+    title: 'Bienvenue sur TripShare !',
+    description: 'Découvrez le monde et partagez vos aventures avec une communauté passionnée de voyageurs.',
+    icon: 'globe',
+    color: '#008080',
+  },
+  {
+    title: 'Planifiez vos voyages',
+    description: 'Créez des itinéraires personnalisés et organisez vos voyages étape par étape.',
+    icon: 'map',
+    color: '#4CAF50',
+  },
+  {
+    title: 'Partagez vos expériences',
+    description: 'Publiez vos photos, vidéos et récits de voyage pour inspirer d\'autres aventuriers.',
+    icon: 'camera',
+    color: '#FF9800',
+  },
+  {
+    title: 'Rejoignez la communauté',
+    description: 'Connectez-vous avec des voyageurs du monde entier et découvrez de nouvelles destinations.',
+    icon: 'people',
+    color: '#9C27B0',
+  },
+];
+
+const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish: _onFinish }) => {
+  const { isNewUser, completeOnboarding } = useAuthStore();
+  const { theme } = useAppTheme();
+  const navigation = useNavigation<OnboardingNavigationProp>();
   const scrollX = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -63,13 +66,13 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
     console.log('🎯 OnboardingScreen - useEffect déclenché, isNewUser:', isNewUser);
     
     if (!isNewUser) {
-      console.log('🎯 OnboardingScreen - Utilisateur pas nouveau, redirection vers AuthScreen');
-      // Utiliser navigate au lieu de reset pour éviter les erreurs de navigation
-      navigation.navigate('AuthScreen');
+      console.log('🎯 OnboardingScreen - Utilisateur pas nouveau, redirection vers l\'accueil');
+      // L'utilisateur a terminé l'onboarding, il sera redirigé vers l'accueil
+      completeOnboarding();
     } else {
       console.log('🎯 OnboardingScreen - Nouvel utilisateur confirmé, affichage de l\'onboarding');
     }
-  }, [isNewUser, navigation]);
+  }, [isNewUser, completeOnboarding]);
 
   const handleContinue = () => {
     console.log('🎯 OnboardingScreen - Bouton continuer pressé, index actuel:', currentIndex);
@@ -83,8 +86,8 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
         animated: true
       });
     } else {
-      console.log('🎯 OnboardingScreen - Fin de l\'onboarding, navigation vers TravelPreferencesScreen');
-      // Naviguer vers TravelPreferencesScreen
+      console.log('🎯 OnboardingScreen - Fin de l\'onboarding, navigation vers les préférences de voyage');
+      // Naviguer vers l'écran des préférences de voyage au lieu de terminer l'onboarding
       navigation.navigate('TravelPreferencesScreen');
     }
   };
@@ -93,28 +96,35 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
 
   const renderDots = () => {
     return (
-      <View style={styles.pagination}>
-        {ONBOARDING_DATA.map((_, i) => {
-          const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
+      <View style={styles.dotsContainer}>
+        {ONBOARDING_DATA.map((_, index) => {
+          const inputRange = [
+            (index - 1) * width,
+            index * width,
+            (index + 1) * width,
+          ];
+
           const scale = scrollX.interpolate({
             inputRange,
-            outputRange: [0.8, 1.4, 0.8],
+            outputRange: [0.8, 1.2, 0.8],
             extrapolate: 'clamp',
           });
+
           const opacity = scrollX.interpolate({
             inputRange,
             outputRange: [0.4, 1, 0.4],
             extrapolate: 'clamp',
           });
+
           return (
             <Animated.View
-              key={i}
+              key={index}
               style={[
                 styles.dot,
                 {
-                  backgroundColor: theme.colors.primary[0],
                   transform: [{ scale }],
                   opacity,
+                  backgroundColor: index === currentIndex ? theme.colors.primary[0] : theme.colors.text.secondary,
                 },
               ]}
             />
@@ -124,7 +134,6 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
     );
   };
 
-  // Si pas un nouvel utilisateur, ne pas afficher l'onboarding
   if (!isNewUser) {
     console.log('🎯 OnboardingScreen - Pas un nouvel utilisateur, affichage conditionnel');
     return null;
@@ -169,10 +178,10 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
           onPress={handleContinue}
         >
           <Text style={styles.buttonText}>
-            {currentIndex === ONBOARDING_DATA.length - 1 ? 'Commencer' : 'Suivant'}
+            {currentIndex === ONBOARDING_DATA.length - 1 ? 'Continuer' : 'Suivant'}
           </Text>
           <Ionicons 
-            name={currentIndex === ONBOARDING_DATA.length - 1 ? "checkmark" : "arrow-forward"} 
+            name={currentIndex === ONBOARDING_DATA.length - 1 ? "arrow-forward" : "arrow-forward"} 
             size={20} 
             color="white" 
             style={styles.buttonIcon}
@@ -189,71 +198,80 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
+    paddingHorizontal: 40,
   },
   iconContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    alignItems: 'center',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 40,
-    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 16,
     textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 36,
   },
   description: {
     fontSize: 16,
     textAlign: 'center',
-    paddingHorizontal: 20,
     lineHeight: 24,
+    paddingHorizontal: 20,
   },
-  pagination: {
+  dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginVertical: 30,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 5,
   },
   footer: {
-    padding: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 40,
+    paddingBottom: 40,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
     borderRadius: 12,
-    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: 4,
+    elevation: 5,
   },
   buttonText: {
     color: 'white',
-    fontWeight: 'bold',
     fontSize: 18,
+    fontWeight: '600',
+    marginRight: 8,
   },
   buttonIcon: {
-    marginLeft: 8,
-  }
+    marginLeft: 4,
+  },
 });
 
 export default OnboardingScreen; 

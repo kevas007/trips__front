@@ -33,7 +33,7 @@ import EnhancedLocationSearch from '../../components/places/EnhancedLocationSear
 import SmartDestinationSuggestions from '../../components/places/SmartDestinationSuggestions';
 import AutoItinerarySuggestions from '../../components/itinerary/AutoItinerarySuggestions';
 import { PopularDestination } from '../../services/enhancedLocationService';
-import { ItineraryStep } from '../../services/itinerarySuggestionsService';
+import { ItineraryStep as ImportedItineraryStep } from '../../services/itinerarySuggestionsService';
 import { API_CONFIG } from '../../config/api';
 import { tripShareApi } from '../../services/tripShareApi';
 import { TripCalculationService } from '../../services/tripCalculationService';
@@ -936,6 +936,44 @@ const CreateItineraryScreen: React.FC<CreateItineraryScreenProps> = ({ navigatio
       };
       // Créer le voyage
       const createdTrip = await tripShareApi.createTrip(payload);
+      
+      // ✅ CRÉER LES ACTIVITÉS POUR CHAQUE ÉTAPE
+      if (itineraryData.steps.length > 0) {
+        console.log('🔍 Création de', itineraryData.steps.length, 'activités pour le voyage');
+        
+        for (let i = 0; i < itineraryData.steps.length; i++) {
+          const step = itineraryData.steps[i];
+          try {
+            // Créer une date de base pour l'activité
+            const baseDate = new Date();
+            baseDate.setHours(9 + i, 0, 0, 0); // 9h + i heures
+            
+            const activityData = {
+              title: step.title,
+              description: step.description || '',
+              start_time: baseDate.toISOString(),
+              end_time: new Date(baseDate.getTime() + 2 * 60 * 60 * 1000).toISOString(), // +2h
+              location: {
+                address: step.location || '',
+                city: itineraryData.destination.split(',')[0]?.trim() || '',
+                country: itineraryData.destination.split(',')[1]?.trim() || '',
+                latitude: step.coordinates?.latitude || 0,
+                longitude: step.coordinates?.longitude || 0
+              },
+              category: 'activity',
+              status: 'planned',
+              priority: i + 1,
+              tags: []
+            };
+            
+            await tripShareApi.createActivity(createdTrip.id, activityData);
+            console.log('✅ Activité créée:', step.title);
+          } catch (error) {
+            console.error('❌ Erreur création activité:', step.title, error);
+            // Continuer même si une activité échoue
+          }
+        }
+      }
       
       // Upload des photos si des photos locales ont été sélectionnées
       if (itineraryData.photos.length > 0 && itineraryData.photos.some(photo => photo.startsWith('file://'))) {

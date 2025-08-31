@@ -36,13 +36,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "statusBar": {
-        "barStyle": "dark-content",
-        "backgroundColor": "#ffffff",
-        "translucent": false
-      },
       "config": {
-        "enableDangerousExperimentalLeanBuilds": true,
         "googleMaps": {
           "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
         }
@@ -67,18 +61,7 @@
         }
       ]
     ],
-    "fonts": [
-      {
-        "asset": "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"
-      },
-      {
-        "asset": "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf"
-      }
-    ],
-    "optimization": {
-      "tree-shaking": true,
-      "minify": true
-    },
+
     "extra": {
       "eas": {
         "projectId": "your-project-id-here"

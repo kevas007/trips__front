@@ -11,13 +11,16 @@ import SettingsScreen from '../screens/main/SettingsScreen';
 import PublicProfileScreen from '../screens/main/PublicProfileScreen';
 import CategoryTripsScreen from '../screens/main/CategoryTripsScreen';
 import EnhancedTripCreationScreen from '../screens/itineraries/EnhancedTripCreationScreen';
+import VideoTripCreationScreen from '../screens/itineraries/VideoTripCreationScreen';
 import SocialFeedScreen from '../screens/main/SocialFeedScreen';
 import CommentsScreen from '../screens/main/CommentsScreen';
 import CreatePostScreen from '../screens/main/CreatePostScreen';
 import UnifiedHomeScreen from '../screens/main/UnifiedHomeScreen';
 import UserTripsScreen from '../screens/main/UserTripsScreen';
 import TripPlacesManagerScreen from '../screens/main/TripPlacesManagerScreen';
+import TripDetailsScreen from '../screens/main/TripDetailsScreen';
 import ChatScreen from '../screens/main/ChatScreen';
+import GlobalSearchScreen from '../components/search/GlobalSearchScreen';
 import { useProfileData } from '../hooks/useProfileData';
 import { useNavigation } from '@react-navigation/native';
 
@@ -142,8 +145,12 @@ const HomeStackNavigator = () => {
       <HomeStack.Screen name="HomeMain" component={UnifiedHomeScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="CategoryTrips" component={CategoryTripsScreen} />
       <HomeStack.Screen name="SimpleCreateTrip" component={EnhancedTripCreationScreen} options={{ headerShown: false }} />
+      <HomeStack.Screen name="VideoTripCreation" component={VideoTripCreationScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="TripPlacesManager" component={TripPlacesManagerScreen} options={{ headerShown: false }} />
       <HomeStack.Screen name="Comments" component={CommentsScreen} options={{ headerShown: false }} />
+      <HomeStack.Screen name="TripDetails" component={TripDetailsScreen} options={{ title: 'Détails du voyage' }} />
+      <HomeStack.Screen name="PublicProfile" component={PublicProfileScreen} options={{ title: 'Profil public' }} />
+      <HomeStack.Screen name="GlobalSearch" component={GlobalSearchScreen} options={{ headerShown: false }} />
     </HomeStack.Navigator>
   );
 };

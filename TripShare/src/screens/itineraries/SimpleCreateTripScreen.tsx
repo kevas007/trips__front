@@ -22,6 +22,7 @@ import { useAppTheme } from '../../hooks/useAppTheme';
 import { useAuthStore } from '../../store';
 import { tripShareApi } from '../../services/tripShareApi';
 import { unifiedTripService } from '../../services/unifiedTripService';
+import { useGlobalRefresh } from '../../hooks/useGlobalRefresh';
 import LocationSearchInput, { LocationSuggestion } from '../../components/places/LocationSearchInput';
 import { ModerationAlert } from '../../components/ui/ModerationAlert';
 import InstagramLikeTagInput from '../../components/tags/InstagramLikeTagInput';
@@ -64,8 +65,8 @@ interface Place {
 }
 
 const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigation }) => {
-  const { theme, isDark } = useAppTheme();
-  const { user } = useAuthStore();
+  const { theme } = useAppTheme();
+  const { triggerGlobalRefresh } = useGlobalRefresh();
   
   // État de l'assistant
   const [currentStep, setCurrentStep] = useState(0);
@@ -361,15 +362,42 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
   };
   
   // Fonctions pour la sélection de dates
-  const handleStartDateChange = (date: string) => {
-    setTripData(prev => ({ ...prev, startDate: date }));
-    setShowStartDatePicker(false);
-  };
-  
-  const handleEndDateChange = (date: string) => {
-    setTripData(prev => ({ ...prev, endDate: date }));
-    setShowEndDatePicker(false);
-  };
+     const handleStartDateChange = (date: string) => {
+     const newStartDate = new Date(date);
+     const currentEndDate = tripData.endDate ? new Date(tripData.endDate) : null;
+     
+     // Si la nouvelle date de début est après la date de fin, ajuster la date de fin
+     if (currentEndDate && newStartDate > currentEndDate) {
+       const newEndDate = new Date(newStartDate);
+       newEndDate.setDate(newEndDate.getDate() + 7); // +7 jours
+       
+       setTripData(prev => ({ 
+         ...prev, 
+         startDate: date,
+         endDate: newEndDate.toISOString().split('T')[0]
+       }));
+     } else {
+       setTripData(prev => ({ ...prev, startDate: date }));
+     }
+     setShowStartDatePicker(false);
+   };
+   
+   const handleEndDateChange = (date: string) => {
+     const newEndDate = new Date(date);
+     const currentStartDate = tripData.startDate ? new Date(tripData.startDate) : null;
+     
+     // Vérifier que la date de fin n'est pas antérieure à la date de début
+     if (currentStartDate && newEndDate < currentStartDate) {
+       Alert.alert(
+         'Date invalide', 
+         'La date de fin ne peut pas être antérieure à la date de début.'
+       );
+       return;
+     }
+     
+     setTripData(prev => ({ ...prev, endDate: date }));
+     setShowEndDatePicker(false);
+   };
   
   const openDatePicker = (type: 'start' | 'end') => {
     if (type === 'start') {
@@ -403,6 +431,16 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
       case 1:
         if (tripData.photos.length === 0) {
           Alert.alert('Photos requises', 'Ajoutez au moins une photo de votre voyage !');
+          return false;
+        }
+        if (!tripData.budget || tripData.budget.trim() === '') {
+          Alert.alert('Budget requis', 'Veuillez saisir le budget de votre voyage !');
+          return false;
+        }
+        // Valider que le budget est un nombre valide
+        const budgetValue = parseFloat(tripData.budget);
+        if (isNaN(budgetValue) || budgetValue <= 0) {
+          Alert.alert('Budget invalide', 'Veuillez entrer un montant valide pour le budget (exemple: 500, 1200.50).');
           return false;
         }
         return true;
@@ -515,7 +553,12 @@ const SimpleCreateTripScreen: React.FC<SimpleCreateTripScreenProps> = ({ navigat
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              // Déclencher le rafraîchissement global avant de revenir en arrière
+              console.log('🔄 SimpleCreateTripScreen - Déclenchement du rafraîchissement global après création');
+              triggerGlobalRefresh();
+              navigation.goBack();
+            },
           },
         ]
       );

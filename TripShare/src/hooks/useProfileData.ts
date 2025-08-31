@@ -3,6 +3,7 @@ import { profileService } from '../services/profileService';
 import { useAuthStore } from '../store';
 import { User, UserStats, Badge } from '../types/user';
 import { authService } from '../services/auth';
+import { useGlobalRefresh } from './useGlobalRefresh';
 
 export function useProfileData() {
   const [user, setUser] = useState<User | null>(null);
@@ -14,6 +15,14 @@ export function useProfileData() {
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedRef = useRef(false);
   const { isAuthenticated } = useAuthStore();
+  const { registerRefreshCallback, unregisterRefreshCallback } = useGlobalRefresh();
+
+  // Fonction pour forcer le rafraîchissement des données
+  const forceRefresh = useCallback(() => {
+    console.log('🔄 useProfileData - Force refresh demandé');
+    hasLoadedRef.current = false;
+    fetchAll();
+  }, []);
 
   const fetchAll = useCallback(async () => {
     // Éviter les appels multiples lors du premier chargement
@@ -41,6 +50,16 @@ export function useProfileData() {
     
     try {
       console.log('🔄 Chargement des données de profil...');
+      
+      // Test de connectivité avec le backend
+      console.log('🔍 useProfileData - Test de connectivité backend...');
+      const isBackendAccessible = await profileService.testBackendConnection();
+      
+      if (!isBackendAccessible) {
+        console.error('❌ Backend non accessible');
+        setError('Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
+        return;
+      }
       
       console.log('🔍 useProfileData - Début des appels API');
       
@@ -74,10 +93,26 @@ export function useProfileData() {
       console.log('✅ Données de profil chargées');
     } catch (err: any) {
       console.error('❌ Erreur chargement profil:', err);
+      console.error('❌ Détails de l\'erreur:', {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+        stack: err?.stack
+      });
       
       // Si l'erreur est liée à l'authentification, afficher un message approprié
-      if (err?.message?.includes('Session expirée') || err?.message?.includes('Token invalide')) {
+      if (err?.message?.includes('Session expirée') || 
+          err?.message?.includes('Token invalide') ||
+          err?.message?.includes('Token d\'authentification manquant') ||
+          err?.response?.status === 401) {
+        console.log('🔐 Erreur d\'authentification détectée - Redirection vers la connexion');
         setError('Session expirée, veuillez vous reconnecter');
+        // Forcer la déconnexion
+        await authService.logout();
+      } else if (err?.response?.status === 404) {
+        setError('Profil utilisateur non trouvé');
+      } else if (err?.response?.status >= 500) {
+        setError('Erreur serveur, veuillez réessayer plus tard');
       } else {
         setError(err?.message || 'Erreur lors du chargement du profil');
       }
@@ -108,6 +143,15 @@ export function useProfileData() {
     }
   }, [fetchAll]);
 
+  // S'enregistrer dans le système de rafraîchissement global
+  useEffect(() => {
+    registerRefreshCallback('profile', forceRefresh);
+    
+    return () => {
+      unregisterRefreshCallback('profile');
+    };
+  }, [registerRefreshCallback, unregisterRefreshCallback, forceRefresh]);
+
   // Vérifier les nouveaux badges après chaque mise à jour des stats
   useEffect(() => {
     if (stats && badges.length > 0) {
@@ -136,5 +180,6 @@ export function useProfileData() {
     refreshing,
     onRefresh,
     checkForNewBadges,
+    forceRefresh, // Exposer la fonction de rafraîchissement forcé
   };
 } 

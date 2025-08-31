@@ -20,10 +20,10 @@ class UnifiedApiService {
     } = {}
   ): Promise<T> {
     // Récupérer le token depuis authService
-    let token = authService.getToken();
+    const token = authService.getToken();
     
     const headers: Record<string, string> = {
-      'Content-Type': options.headers?.['Content-Type'] || 'application/json',
+      'Content-Type': (options.headers as Record<string, string>)?.['Content-Type'] || 'application/json',
       ...(!options.skipApiPrefix && token && { Authorization: `Bearer ${token}` }),
       ...options.headers as Record<string, string>,
     };
@@ -93,15 +93,40 @@ class UnifiedApiService {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      const data: BackendResponse<T> = await response.json();
+      const responseText = await response.text();
+      let data: any;
       
-      // Vérifier le format de réponse du backend Go
-      if (!data.success) {
-        throw new Error(data.error || 'Erreur serveur');
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ UnifiedAPI - Erreur parsing JSON:', responseText);
+        throw new Error('Réponse invalide du serveur');
       }
-
-      // Retourner les données de réponse
-      return data.data as T;
+      
+      // Vérifier que data n'est pas undefined ou null
+      if (!data || typeof data !== 'object') {
+        console.error('❌ UnifiedAPI - Données invalides après parsing:', data);
+        throw new Error('Réponse invalide du serveur');
+      }
+      
+      // Vérifier si c'est une réponse au format BackendResponse
+      if (data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, 'success')) {
+        // Format BackendResponse: {success: boolean, data: T, error?: string}
+        if (!data.success) {
+          throw new Error(data.error || 'Erreur serveur');
+        }
+        
+        // S'assurer que data.data n'est pas undefined ou null
+        if (data.data === undefined || data.data === null) {
+          console.warn('⚠️ UnifiedAPI - data.data est null/undefined, retourner un objet vide');
+          return {} as T;
+        }
+        // Retourner directement data.data
+        return data.data as T;
+      } else {
+        // Format direct: retourner directement les données
+        return data as T;
+      }
 
     } catch (error) {
       if (error instanceof Error) {

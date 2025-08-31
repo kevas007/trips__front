@@ -9,12 +9,12 @@ export const NETWORK_CONFIG = {
   // URL du backend (utilise la configuration centralisée)
   BACKEND_URL: API_CONFIG.BASE_URL,
   
-  // URLs de test alternatives (port 8000 pour le backend Go)
+  // URLs de test alternatives (port 8085 pour le backend Docker)
   LOCALHOST_URLS: {
-    web: 'http://localhsot:8000',
-    android_emulator: 'http://localhsot:8000',
-    ios_simulator: 'http://localhsot:8000',
-    physical_device: 'http://localhsot:8000', // IP locale configurée
+    web: 'http://localhost:8085',
+    android_emulator: 'http://10.0.2.2:8085',
+    ios_simulator: 'http://localhost:8085',
+    physical_device: 'http://192.168.0.220:8085', // IP locale configurée
   },
   
   // Timeouts

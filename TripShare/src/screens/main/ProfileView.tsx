@@ -61,7 +61,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   console.log('🎯 ProfileView - User avatar_url:', user?.avatar_url);
   console.log('🎯 ProfileView - User avatar:', user?.avatar);
   console.log('🎯 ProfileView - Profile avatar_url:', user?.profile?.avatar_url);
-  console.log('🎯 ProfileView - getAvatarUrl result:', getAvatarUrl(user));
+  console.log('🎯 ProfileView - getAvatarUrl result:', user && typeof user === 'object' ? getAvatarUrl(user) : 'User invalide');
   // Logs pour déboguer
   console.log('🎯 ProfileView - Props reçues:');
   console.log('  - User:', user);
@@ -97,13 +97,46 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   if (error) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 20 }}>{error}</Text>
-        <Button title="Réessayer" onPress={onRefresh} />
+        <Ionicons name="alert-circle-outline" size={64} color="red" style={{ marginBottom: 20 }} />
+        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 20, fontSize: 16 }}>{error}</Text>
+        <TouchableOpacity 
+          style={{ 
+            backgroundColor: COLORS.primary[500], 
+            paddingHorizontal: 20, 
+            paddingVertical: 10, 
+            borderRadius: 8 
+          }}
+          onPress={onRefresh}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Réessayer</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  if (!user) {
     return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Ionicons name="person-outline" size={64} color="#666" style={{ marginBottom: 20 }} />
+        <Text style={{ color: '#666', textAlign: 'center', marginBottom: 20, fontSize: 16 }}>
+          Aucune donnée utilisateur disponible
+        </Text>
+        <TouchableOpacity 
+          style={{ 
+            backgroundColor: COLORS.primary[500], 
+            paddingHorizontal: 20, 
+            paddingVertical: 10, 
+            borderRadius: 8 
+          }}
+          onPress={onRefresh}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Actualiser</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim, backgroundColor: '#FAFAFA' }}>
         {/* Header cohérent avec HomeScreen */}
@@ -137,12 +170,12 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                 source={{ 
                   uri: avatarError 
                     ? `http://localhost:8085/storage/defaults/default-avatar.jpg&h=100&fit=crop&crop=face`
-                    : getAvatarUrl(user)
+                    : (user && typeof user === 'object' ? getAvatarUrl(user) : 'https://api.dicebear.com/7.x/avataaars/png?seed=user&backgroundColor=b6e3f4,c0aede,d1d4f9&size=100')
                 }} 
                 style={styles.instagramAvatar}
                 onError={(error) => {
                   console.warn('⚠️ Erreur chargement avatar ProfileView:', error?.nativeEvent?.error);
-                  console.warn('⚠️ URL getAvatarUrl qui a échoué:', getAvatarUrl(user));
+                  console.warn('⚠️ URL getAvatarUrl qui a échoué:', user && typeof user === 'object' ? getAvatarUrl(user) : 'User invalide');
                   console.warn('⚠️ User data:', JSON.stringify(user, null, 2));
                   setAvatarError(true);
                 }}

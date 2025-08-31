@@ -1,5 +1,11 @@
 // Utilitaire pour gérer les URLs d'avatars
 export const getAvatarUrl = (user: any): string => {
+  // Vérifier que user existe et est un objet
+  if (!user || typeof user !== 'object') {
+    console.log('⚠️ getAvatarUrl - User invalide, utilisation de DiceBear par défaut');
+    return `https://api.dicebear.com/7.x/avataaars/png?seed=user&backgroundColor=b6e3f4,c0aede,d1d4f9&size=100`;
+  }
+
   console.log('🔍 getAvatarUrl appelé avec user:', {
     id: user?.id,
     name: user?.name,
@@ -11,8 +17,8 @@ export const getAvatarUrl = (user: any): string => {
   
   // Priorité 1 : Avatar personnalisé de l'utilisateur
   // Structure backend: { user: {...}, profile: { avatar_url: "..." } }
-  const customAvatar = user?.avatar || user?.avatar_url || user?.profile?.avatar_url;
-  if (customAvatar) {
+  const customAvatar = user?.avatar || user?.avatar_url || (user?.profile && typeof user.profile === 'object' ? user.profile.avatar_url : undefined);
+  if (customAvatar && typeof customAvatar === 'string') {
     console.log('👤 Avatar personnalisé trouvé:', customAvatar);
     console.log('🔍 Test détection SVG:', {
       includesDicebear: customAvatar.includes('dicebear.com'),
@@ -61,7 +67,11 @@ export const getAvatarUrl = (user: any): string => {
   let seed = user?.name || user?.username || user?.email?.split('@')[0] || 'user';
   
   // Nettoyer le seed en supprimant les espaces pour cohérence
-  seed = seed.replace(/\s+/g, '');
+  if (seed && typeof seed === 'string') {
+    seed = seed.replace(/\s+/g, '');
+  } else {
+    seed = 'user';
+  }
   
   const dicebearUrl = `https://api.dicebear.com/7.x/avataaars/png?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9&size=100`;
   console.log('🎲 Avatar DiceBear PNG généré pour:', seed);

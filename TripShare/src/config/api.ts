@@ -7,22 +7,22 @@ import { Platform } from 'react-native';
 
 // Configuration des environnements locaux
 const LOCAL_ENVIRONMENTS = {
-  // Backend localhost (même machine) - PORT 8085
+  // Backend localhost (même machine) - PORT 8085 (Docker)
   localhost: {
     baseUrl: 'http://localhost:8085', // LOCALHOST : même machine
-    name: 'Localhost + PostgreSQL'
+    name: 'Localhost + Docker Backend'
   },
   
   // Backend avec IP réseau (pour tests sur vrais devices) - PORT 8085
   network: {
     baseUrl: 'http://192.168.0.220:8085', // IP locale pour appareils physiques
-    name: 'Physical Devices + PostgreSQL'
+    name: 'Physical Devices + Docker Backend'
   },
   
-  // Configuration pour émulateur Android
+  // Configuration pour émulateur Android - PORT 8085
   emulator: {
     baseUrl: 'http://10.0.2.2:8085', // IP spéciale pour émulateur Android
-    name: 'Android Emulator + PostgreSQL'
+    name: 'Android Emulator + Docker Backend'
   }
 };
 
@@ -45,7 +45,7 @@ const getCurrentEnvironment = (): keyof typeof LOCAL_ENVIRONMENTS => {
 };
 
 // Détection automatique de la plateforme pour choisir la bonne URL
-// FORCER network pour iOS Simulator
+// Utiliser network pour une meilleure compatibilité avec les appareils physiques
 const CURRENT_ENV: keyof typeof LOCAL_ENVIRONMENTS = 'network';
 
 export const API_CONFIG = {

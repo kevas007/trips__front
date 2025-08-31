@@ -16,6 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAppTheme } from '../../hooks/useAppTheme';
 import { useAuthStore } from '../../store';
 import { useTrips } from '../../hooks/useTripShareApi';
+import { useGlobalRefresh } from '../../hooks/useGlobalRefresh';
 import EnhancedLocationSearch from '../../components/places/EnhancedLocationSearch';
 import SmartDestinationSuggestions from '../../components/places/SmartDestinationSuggestions';
 import AutoItinerarySuggestions from '../../components/itinerary/AutoItinerarySuggestions';
@@ -50,8 +51,8 @@ interface TripFormData {
 
 const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({ navigation }) => {
   const { theme } = useAppTheme();
-  const { user } = useAuthStore();
   const { createTrip } = useTrips();
+  const { triggerGlobalRefresh } = useGlobalRefresh();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
@@ -164,8 +165,32 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (selectedDate) {
       if (showDatePicker === 'start') {
-        setFormData(prev => ({ ...prev, startDate: selectedDate }));
+        // Si la date de début est après la date de fin, ajuster la date de fin
+        const newStartDate = selectedDate;
+        const currentEndDate = formData.endDate;
+        
+        if (newStartDate > currentEndDate) {
+          // Calculer une nouvelle date de fin (7 jours après la nouvelle date de début)
+          const newEndDate = new Date(newStartDate);
+          newEndDate.setDate(newEndDate.getDate() + 7);
+          
+          setFormData(prev => ({ 
+            ...prev, 
+            startDate: newStartDate,
+            endDate: newEndDate
+          }));
+        } else {
+          setFormData(prev => ({ ...prev, startDate: newStartDate }));
+        }
       } else if (showDatePicker === 'end') {
+        // Vérifier que la date de fin n'est pas antérieure à la date de début
+        if (selectedDate < formData.startDate) {
+          Alert.alert(
+            'Date invalide', 
+            'La date de fin ne peut pas être antérieure à la date de début.'
+          );
+          return;
+        }
         setFormData(prev => ({ ...prev, endDate: selectedDate }));
       }
     }
@@ -224,6 +249,9 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
 
       await createTrip.execute(tripData);
       Alert.alert('Succès', 'Votre voyage a été créé avec succès !');
+      // Déclencher le rafraîchissement global avant de revenir en arrière
+      console.log('🔄 EnhancedTripCreationScreen - Déclenchement du rafraîchissement global après création');
+      triggerGlobalRefresh();
       navigation.goBack();
     } catch (error) {
       console.error('Erreur création voyage:', error);
@@ -241,7 +269,15 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
   const canProceedToNext = () => {
     switch (currentStep) {
       case 0: return formData.destination !== '';
-      case 1: return formData.title !== '';
+      case 1: {
+        // Vérifier que le titre et le budget sont remplis
+        const basicFieldsValid = formData.title !== '' && formData.budget && formData.budget > 0;
+        
+        // Vérifier que les dates sont valides
+        const datesValid = formData.endDate > formData.startDate;
+        
+        return basicFieldsValid && datesValid;
+      }
       case 2: return formData.steps.length > 0; // Itinéraires obligatoires
       case 3: return true;
       default: return false;
@@ -393,49 +429,61 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
               />
             </View>
 
-            <View style={styles.dateRow}>
-              <View style={styles.dateInput}>
-                <Text style={[styles.label, { color: theme.colors.text.primary }]}>
-                  Date de début
-                </Text>
-                <TouchableOpacity
-                  style={[styles.input, { 
-                    backgroundColor: theme.colors.background.card,
-                    borderColor: theme.colors.border.primary,
-                  }]}
-                  onPress={() => setShowDatePicker('start')}
-                >
-                  <Text style={{ color: theme.colors.text.primary }}>
-                    {formData.startDate.toLocaleDateString()}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                         <View style={styles.dateRow}>
+               <View style={styles.dateInput}>
+                 <Text style={[styles.label, { color: theme.colors.text.primary }]}>
+                   Date de début
+                 </Text>
+                 <TouchableOpacity
+                   style={[styles.input, { 
+                     backgroundColor: theme.colors.background.card,
+                     borderColor: theme.colors.border.primary,
+                   }]}
+                   onPress={() => setShowDatePicker('start')}
+                 >
+                   <Text style={{ color: theme.colors.text.primary }}>
+                     {formData.startDate.toLocaleDateString()}
+                   </Text>
+                 </TouchableOpacity>
+               </View>
 
-              <View style={styles.dateInput}>
-                <Text style={[styles.label, { color: theme.colors.text.primary }]}>
-                  Date de fin
-                </Text>
-                <TouchableOpacity
-                  style={[styles.input, { 
-                    backgroundColor: theme.colors.background.card,
-                    borderColor: theme.colors.border.primary,
-                  }]}
-                  onPress={() => setShowDatePicker('end')}
-                >
-                  <Text style={{ color: theme.colors.text.primary }}>
-                    {formData.endDate.toLocaleDateString()}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+               <View style={styles.dateInput}>
+                 <Text style={[styles.label, { color: theme.colors.text.primary }]}>
+                   Date de fin
+                 </Text>
+                 <TouchableOpacity
+                   style={[styles.input, { 
+                     backgroundColor: theme.colors.background.card,
+                     borderColor: theme.colors.border.primary,
+                   }]}
+                   onPress={() => setShowDatePicker('end')}
+                 >
+                   <Text style={{ color: theme.colors.text.primary }}>
+                     {formData.endDate.toLocaleDateString()}
+                   </Text>
+                 </TouchableOpacity>
+               </View>
+             </View>
+             
+             {/* Message d'erreur pour les dates invalides */}
+             {currentStep === 1 && formData.endDate <= formData.startDate && (
+               <Text style={[styles.errorText, { color: '#FF6B6B' }]}>
+                 ⚠️ La date de fin doit être après la date de début
+               </Text>
+             )}
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.colors.text.primary }]}>
-                Budget <Text style={{color: '#FF6B6B'}}>*</Text>
-              </Text>
-              <Text style={[styles.requiredHint, { color: theme.colors.text.secondary }]}>
-                Champ obligatoire - Indiquez le coût approximatif de votre voyage
-              </Text>
+                         <View style={styles.inputGroup}>
+               <Text style={[styles.label, { color: theme.colors.text.primary }]}>
+                 Budget <Text style={{color: '#FF6B6B'}}>*</Text>
+               </Text>
+               <Text style={[styles.requiredHint, { color: theme.colors.text.secondary }]}>
+                 Champ obligatoire - Indiquez le coût approximatif de votre voyage
+               </Text>
+               {currentStep === 1 && (!formData.budget || formData.budget <= 0) && (
+                 <Text style={[styles.errorText, { color: '#FF6B6B' }]}>
+                   ⚠️ Le budget est obligatoire pour continuer
+                 </Text>
+               )}
               <TextInput
                 style={[styles.input, { 
                   backgroundColor: theme.colors.background.card,
@@ -681,7 +729,7 @@ const EnhancedTripCreationScreen: React.FC<EnhancedTripCreationScreenProps> = ({
             mode="date"
             display="default"
             onChange={handleDateChange}
-            minimumDate={new Date()}
+            minimumDate={undefined}
           />
         )}
       </KeyboardAvoidingView>
@@ -942,9 +990,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 15,
   },
-  itinerarySection: {
-    marginBottom: 20,
-  },
-});
+     itinerarySection: {
+     marginBottom: 20,
+   },
+   errorText: {
+     fontSize: 12,
+     fontStyle: 'italic',
+     marginTop: 4,
+     marginBottom: 8,
+   },
+ });
 
 export default EnhancedTripCreationScreen;

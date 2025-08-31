@@ -36,7 +36,7 @@ export class ItinerarySuggestionsService {
   }
 
   // Méthodes ajoutées pour corriger les erreurs
-  hasSuggestions(): boolean {
+  static hasSuggestions(_destination?: string): boolean {
     // TODO: Implémenter la logique de vérification
     return false;
   }

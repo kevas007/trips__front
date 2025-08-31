@@ -71,8 +71,10 @@ class UnifiedTripService {
       
       const tripResponse = await unifiedApi.post<any>('/trips', tripPayload);
       
-      if (!tripResponse.id) {
-        throw new Error('Erreur lors de la création du voyage');
+      // Vérifier que la réponse est valide
+      if (!tripResponse || typeof tripResponse !== 'object' || !tripResponse.id) {
+        console.error('❌ Réponse invalide du backend:', tripResponse);
+        throw new Error('Erreur lors de la création du voyage - réponse invalide du serveur');
       }
 
       console.log('✅ UnifiedTripService - Voyage créé avec ID:', tripResponse.id);
@@ -94,9 +96,10 @@ class UnifiedTripService {
             console.warn(`⚠️ Erreur upload photo ${i + 1}:`, error);
             
             // Gérer les erreurs de modération
-            if (error?.response?.status === 403) {
+            if (error?.response?.status === 403 || error?.message?.includes('🚫 Image refusée')) {
               console.error(`🚫 Photo ${i + 1} bloquée par la modération`);
-              // Continue avec les photos suivantes
+              // Propager l'erreur de modération pour arrêter le processus
+              throw new Error('🚫 Image refusée : contenu inapproprié détecté. Veuillez choisir une autre image.');
             } else if (error?.response?.status === 202) {
               console.warn(`🚩 Photo ${i + 1} flagguée mais acceptée`);
               photosUploaded++; // Compter comme réussie
