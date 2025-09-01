@@ -1,6 +1,8 @@
 import { StateCreator } from 'zustand';
 import { User, LoginCredentials, RegisterData } from '../../types/unified';
 import { authService } from '../../services/auth';
+import { userService } from '../../services/userService';
+import { UserTravelPreferences } from '../../types/user';
 
 export interface AuthSlice {
   // State
@@ -19,6 +21,7 @@ export interface AuthSlice {
   setUser: (user: User) => void;
   setNewUser: (isNew: boolean) => void;
   completeOnboarding: () => void;
+  updatePreferences: (preferences: UserTravelPreferences) => Promise<void>;
 }
 
 export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
@@ -42,6 +45,8 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
         id: (response.user as any).id || 'unknown',
         email: (response.user as any).email || credentials.email,
         name: (response.user as any).name || `${(response.user as any).first_name || 'User'} ${(response.user as any).last_name || 'Name'}`,
+        firstName: (response.user as any).first_name || 'User',
+        lastName: (response.user as any).last_name || 'Name',
         username: (response.user as any).username || 'user',
         avatar: (response.user as any).avatar_url || (response.user as any).avatarUrl,
         bio: (response.user as any).bio,
@@ -144,6 +149,8 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
         id: (response.user as any).id || 'unknown',
         email: (response.user as any).email || data.email,
         name: (response.user as any).name || `${data.firstName || 'User'} ${data.lastName || 'Name'}`,
+        firstName: data.firstName || (response.user as any).first_name || 'User',
+        lastName: data.lastName || (response.user as any).last_name || 'Name',
         username: (response.user as any).username || data.username,
         avatar: (response.user as any).avatar_url || (response.user as any).avatarUrl,
         bio: (response.user as any).bio,
@@ -194,10 +201,17 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
       console.log('✅ Inscription réussie via authService');
     } catch (error: any) {
       console.error('❌ Erreur d\'inscription via authService:', error);
+      
+      // IMPORTANT: Ne pas changer isAuthenticated en cas d'erreur d'inscription
+      // pour éviter la redirection automatique vers login
       set({
         isLoading: false,
         error: error?.message || 'Erreur d\'inscription inconnue',
+        // Garder isAuthenticated et user inchangés
       });
+      
+      // Relancer l'erreur pour que le composant puisse la gérer
+      throw error;
     }
   },
 
@@ -242,5 +256,27 @@ export const authSlice: StateCreator<AuthSlice> = (set, _get, _api) => ({
 
   completeOnboarding: () => {
     set({ isNewUser: false });
+  },
+
+  updatePreferences: async (preferences) => {
+    try {
+      console.log('📝 Tentative de mise à jour des préférences via userService...');
+      await userService.updatePreferences(preferences);
+      
+      // Mettre à jour l'utilisateur dans le store
+      set((state) => {
+        if (state.user) {
+          state.user.preferences = preferences;
+        }
+        return state;
+      });
+      
+      console.log('✅ Mise à jour des préférences réussie via userService');
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la mise à jour des préférences:', error);
+      set({
+        error: error?.message || 'Erreur lors de la mise à jour des préférences',
+      });
+    }
   },
 });

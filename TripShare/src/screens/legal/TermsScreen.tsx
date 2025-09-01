@@ -1,22 +1,14 @@
 import React from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import { useAppTheme } from '../../hooks/useAppTheme';
-import { StackNavigationProp } from '@react-navigation/stack';
 
 const today = new Date().toLocaleDateString('fr-FR');
 
-type TermsScreenProps = {
-  navigation: StackNavigationProp<any>;
-};
-
-const TermsScreen: React.FC<TermsScreenProps> = ({ navigation }) => {
+const TermsScreen: React.FC = () => {
   const { theme } = useAppTheme();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={[styles.backButtonText, { color: theme.colors.primary[0] }]}>{'< Retour'}</Text>
-      </TouchableOpacity>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: theme.colors.text.primary }]}>Conditions Générales d'Utilisation (CGU) de TripShare</Text>
         <Text style={[styles.date, { color: theme.colors.text.secondary }]}>Dernière mise à jour : {today}</Text>
@@ -167,16 +159,6 @@ const TermsScreen: React.FC<TermsScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  backButton: {
-    paddingTop: 66,
-    paddingLeft: 16,
-    paddingBottom: 8,
-    backgroundColor: 'transparent',
-  },
-  backButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   content: {
     padding: 24,

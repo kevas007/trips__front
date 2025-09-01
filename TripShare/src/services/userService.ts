@@ -1,4 +1,5 @@
 import { unifiedApi } from './unifiedApi';
+import { UserTravelPreferences } from '../types/user';
 
 export interface User {
   id: string;
@@ -77,6 +78,24 @@ class UserService {
     } catch (error) {
       console.error('❌ UserService.searchUsers - Erreur:', error);
       throw new Error('Impossible de rechercher des utilisateurs');
+    }
+  }
+
+  /**
+   * Mettre à jour les préférences de voyage de l'utilisateur
+   */
+  async updatePreferences(preferences: UserTravelPreferences): Promise<UserTravelPreferences> {
+    try {
+      console.log('🔍 UserService.updatePreferences - Mise à jour des préférences:', preferences);
+      
+      const response = await unifiedApi.put<UserTravelPreferences>('/users/me/preferences', preferences);
+      
+      console.log('✅ UserService.updatePreferences - Préférences mises à jour:', response);
+      
+      return response;
+    } catch (error) {
+      console.error('❌ UserService.updatePreferences - Erreur:', error);
+      throw new Error('Impossible de mettre à jour les préférences');
     }
   }
 }

@@ -31,4 +31,5 @@ export const useAuthStore = () => useStore((state) => ({
   setUser: state.setUser,
   setNewUser: state.setNewUser,
   completeOnboarding: state.completeOnboarding,
+  updatePreferences: state.updatePreferences,
 }));

@@ -29,7 +29,20 @@ export interface Trip {
   difficulty?: 'easy' | 'moderate' | 'hard';
   places_visited?: any[];
   stats?: TripStats;
-  user?: any;
+  
+  // ✅ NOUVEAU : Données utilisateur du backend
+  user?: {
+    id: string;
+    username: string;
+    first_name?: string;
+    last_name?: string;
+    avatar_url?: string;
+    email: string;
+    created_at: string;
+    updated_at: string;
+  };
+  
+  // Propriétés legacy (à supprimer progressivement)
   username?: string;
   first_name?: string;
   last_name?: string;

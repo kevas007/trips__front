@@ -16,4 +16,8 @@ export { default as QuickCreateButton } from './QuickCreateButton';
 export { default as ErrorBoundary } from './ErrorBoundary';
 
 // Alias pour compatibilité
-export { default as FAB } from './FloatingActionButton'; 
+export { default as FAB } from './FloatingActionButton';
+
+export { default as ErrorHandler } from './ErrorHandler';
+export { default as InputField } from './InputField';
+export { default as AvailabilityIndicator } from './AvailabilityIndicator'; 

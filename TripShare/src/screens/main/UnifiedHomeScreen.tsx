@@ -31,6 +31,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { tripService, Trip } from '../../services/tripService';
 import { likeService } from '../../services/likeService';
 import { useGlobalRefresh } from '../../hooks/useGlobalRefresh';
+import { notificationService, Notification as NotificationType } from '../../services/notificationService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -180,22 +181,38 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       });
     }
   };
-  // Chargement des voyages publics
+  // Chargement de tous les voyages publics avec données utilisateur
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(false);
   
-  const loadPublicTrips = async () => {
+  const loadAllTrips = async () => {
     try {
       setTripsLoading(true);
-      console.log('🔍 UnifiedHomeScreen - Chargement des voyages publics');
-      const response = await tripService.getPublicTrips(1, 20);
+      console.log('🔍 UnifiedHomeScreen - Chargement de tous les voyages publics avec données utilisateur');
+      
+      // ✅ NOUVEAU : Appeler l'endpoint sans filtre pour récupérer tous les voyages
+      const response = await tripService.getUserTrips();
       console.log('✅ UnifiedHomeScreen - Voyages récupérés:', response);
       
       // S'assurer que response.data existe et est un tableau
       if (response && response.data && Array.isArray(response.data)) {
         // Vérifier que chaque élément est un objet valide
         const validTrips = response.data.filter(trip => trip && typeof trip === 'object');
-        console.log(`✅ UnifiedHomeScreen - ${validTrips.length} voyages valides sur ${response.data.length} récupérés`);
+        console.log(`✅ UnifiedHomeScreen - ${validTrips.length} voyages valides récupérés`);
+        
+        // 🔍 DÉBOGAGE : Afficher les détails de chaque voyage
+        validTrips.forEach((trip, index) => {
+          console.log(`📋 Voyage ${index + 1}:`, {
+            id: trip.id,
+            title: trip.title,
+            created_by: trip.created_by,
+            user: trip.user,
+            user_username: trip.user?.username,
+            user_avatar: trip.user?.avatar_url,
+            has_user_data: !!trip.user
+          });
+        });
+        
         setTrips(validTrips);
       } else {
         console.log('⚠️ UnifiedHomeScreen - Réponse invalide, utilisation d\'un tableau vide');
@@ -215,24 +232,25 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
   
   // Charger les voyages au montage du composant
   useEffect(() => {
-    loadPublicTrips();
+    loadAllTrips();
+    loadNotifications();
   }, []);
   
   // Recharger les voyages quand l'écran est focalisé
   useFocusEffect(
     React.useCallback(() => {
-      loadPublicTrips();
+      loadAllTrips();
     }, [])
   );
 
   // S'enregistrer dans le système de rafraîchissement global
   useEffect(() => {
-    registerRefreshCallback('home', loadPublicTrips);
+    registerRefreshCallback('home', loadAllTrips);
     
     return () => {
       unregisterRefreshCallback('home');
     };
-  }, [registerRefreshCallback, unregisterRefreshCallback, loadPublicTrips]);
+  }, [registerRefreshCallback, unregisterRefreshCallback, loadAllTrips]);
   
   // Animations pour 2025
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -662,67 +680,35 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
-  const loadNotifications = () => {
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'like',
-        title: 'Nouveau like',
-        message: 'Sarah Aventurière a aimé votre post sur Bali',
-        timestamp: '5min',
-        isRead: false,
-        user: {
-          id: '1',
-          name: 'Sarah Aventurière',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah Aventurière',
-        },
-      },
-      {
-        id: '2',
-        type: 'comment',
-        title: 'Nouveau commentaire',
-        message: 'Alex Nomade a commenté votre voyage à Tokyo',
-        timestamp: '12min',
-        isRead: false,
-        user: {
-          id: '2',
-          name: 'Alex Nomade',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex Nomade',
-        },
-      },
-      {
-        id: '3',
-        type: 'follow',
-        title: 'Nouveau follower',
-        message: 'Marie Exploratrice vous suit maintenant',
-        timestamp: '1h',
-        isRead: false,
-        user: {
-          id: '3',
-          name: 'Marie Exploratrice',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marie Exploratrice',
-        },
-      },
-      {
-        id: '4',
-        type: 'achievement',
-        title: 'Nouveau badge !',
-        message: 'Vous avez débloqué le badge "Explorateur"',
-        timestamp: '2h',
-        isRead: true,
-      },
-      {
-        id: '5',
-        type: 'reminder',
-        title: 'Rappel voyage',
-        message: 'Votre voyage à Paris commence dans 3 jours',
-        timestamp: '1j',
-        isRead: true,
-      },
-    ];
-    
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.isRead).length);
+  const loadNotifications = async () => {
+    try {
+      console.log('🔍 UnifiedHomeScreen - Chargement des notifications depuis le backend');
+      
+      // Vérifier si l'utilisateur est connecté
+      if (!user || !user.id) {
+        console.log('⚠️ UnifiedHomeScreen - Utilisateur non connecté, pas de notifications');
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
+      }
+
+      const response = await notificationService.getUserNotifications(1, 20);
+      
+      if (response && response.data && Array.isArray(response.data)) {
+        console.log(`✅ UnifiedHomeScreen - ${response.data.length} notifications récupérées`);
+        setNotifications(response.data);
+        setUnreadCount(response.data.filter(n => !n.isRead).length);
+      } else {
+        console.log('⚠️ UnifiedHomeScreen - Réponse invalide, pas de notifications');
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('❌ UnifiedHomeScreen - Erreur lors du chargement des notifications:', error);
+      // En cas d'erreur, utiliser un tableau vide
+      setNotifications([]);
+      setUnreadCount(0);
+    }
   };
 
   const handleRefreshFeed = async () => {
@@ -1037,7 +1023,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
             style={styles.actionButton}
             onPress={action.action}
           >
-            <Ionicons name={action.icon} size={24} color={action.color} />
+            <Ionicons name={action.icon as any} size={24} color={action.color} />
             {action.count !== undefined && (
               <Text style={[styles.actionCount, { color: action.color }]}>
                 {action.count}
@@ -1441,7 +1427,7 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
       section.data.length > 0 && (
         <View key={section.title} style={styles.feedSection}>
           <View style={styles.sectionHeader}>
-            <Ionicons name={section.icon} size={24} color={theme.colors.primary[0]} />
+            <Ionicons name={section.icon as any} size={24} color={theme.colors.primary[0]} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
               {section.title}
             </Text>
@@ -1561,6 +1547,22 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 
   // Fonction pour rendre un post image
   const renderImagePost = (trip: Trip) => {
+    // Utiliser les vraies données du backend
+    const tripPhotos = trip.photos || [];
+    const tripLikes = trip.likes || [];
+    
+    // 🔍 DÉBOGAGE : Vérifier les données du voyage
+    console.log('🔍 renderImagePost - Trip:', {
+      id: trip.id,
+      title: trip.title,
+      created_by: trip.created_by,
+      username: trip.username,
+      first_name: trip.first_name,
+      last_name: trip.last_name,
+      avatar_url: trip.avatar_url,
+      has_user_data: !!(trip.username || trip.first_name || trip.last_name)
+    });
+    
     return (
       <TouchableOpacity 
         style={styles.imagePostContainer}
@@ -1568,29 +1570,29 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
           setMapPost({
             id: trip.id?.toString() || '',
             user: {
-              id: user?.id || '',
-              name: user?.username || 'Voyageur',
-              avatar: getAvatarUrl(user),
+              id: trip.created_by || user?.id || '',
+              name: trip.username || trip.first_name || trip.last_name || user?.username || 'Voyageur',
+              avatar: trip.avatar_url || getAvatarUrl(user),
               verified: false,
               level: 'Débutant',
               trips: 1
             },
             caption: trip.description || '',
-            location: trip.destination || '',
-            likes: trip.likes_count || 0,
-            comments: trip.comments_count || 0,
+            location: trip.location?.city || trip.location?.country || 'Destination inconnue',
+            likes: tripLikes.length || 0,
+            comments: 0, // Pas encore implémenté
             shares: 0,
             isLiked: false,
             isSaved: false,
             timestamp: trip.created_at || '',
             tripInfo: {
-              id: trip.id?.toString(),
-              destination: trip.destination || '',
-              budget: trip.budget || '',
-              duration: trip.duration || '',
+              id: trip.id?.toString() || '',
+              destination: trip.location?.city || trip.location?.country || 'Destination inconnue',
+              budget: trip.budget || 'Non défini',
+              duration: trip.duration || 'Non défini',
               difficulty: 'Facile',
-              latitude: 48.8566, // Valeur par défaut
-              longitude: 2.3522, // Valeur par défaut
+              latitude: trip.location?.latitude || 48.8566,
+              longitude: trip.location?.longitude || 2.3522,
               highlights: ['Culture', 'Gastronomie', 'Architecture'],
               tags: ['voyage', 'culture', 'gastronomie'],
               steps: trip.steps || []
@@ -1602,12 +1604,20 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         {/* Header du post */}
         <View style={styles.imagePostHeader}>
           <Image 
-            source={{ uri: getAvatarUrl(user) }} 
+            source={{ 
+              uri: trip.avatar_url || 
+                     (trip.username ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${trip.username}&backgroundColor=b6e3f4,c0aede,d1d4f9` : 
+                      getAvatarUrl(user))
+            }} 
             style={styles.postAvatar}
           />
           <View style={styles.postUserInfo}>
-            <Text style={styles.postUsername}>{user?.username || 'Voyageur'}</Text>
-            <Text style={styles.postTime}>Il y a 1j</Text>
+            <Text style={styles.postUsername}>
+              {trip.username || trip.first_name || trip.last_name || 'Voyageur inconnu'}
+            </Text>
+            <Text style={styles.postTime}>
+              {trip.created_at ? new Date(trip.created_at).toLocaleDateString('fr-FR') : 'Date inconnue'}
+            </Text>
           </View>
           <TouchableOpacity style={styles.postMoreButton}>
             <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
@@ -1616,20 +1626,28 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
 
         {/* Image du post */}
         <View style={styles.imageContainer}>
-          <View style={styles.postImage}>
-            <Text style={styles.postImageEmoji}>
-              {trip.destination?.includes('Paris') ? '🗼' : 
-               trip.destination?.includes('Rome') ? '🏛️' : 
-               trip.destination?.includes('Tokyo') ? '🗾' : 
-               trip.destination?.includes('Bali') ? '🏝️' : '🗺️'}
-            </Text>
-          </View>
+          {tripPhotos.length > 0 ? (
+            <Image 
+              source={{ uri: tripPhotos[0].url }} 
+              style={styles.postImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.postImage}>
+              <Text style={styles.postImageEmoji}>
+                {trip.location?.city?.includes('Paris') ? '🗼' : 
+                 trip.location?.city?.includes('Rome') ? '🏛️' : 
+                 trip.location?.city?.includes('Tokyo') ? '🗾' : 
+                 trip.location?.city?.includes('Bali') ? '🏝️' : '🗺️'}
+              </Text>
+            </View>
+          )}
           <View style={styles.imageOverlay}>
-            <Text style={styles.imageTitle}>🗺️ Voyage à {trip.destination || 'Paris'}</Text>
+            <Text style={styles.imageTitle}>🗺️ Voyage à {trip.location?.city || trip.location?.country || 'Destination inconnue'}</Text>
             <View style={styles.imageMeta}>
-              <Text style={styles.imageMetaText}>⏱️ {trip.duration || '5 jours'}</Text>
-              <Text style={styles.imageMetaText}>💰 {trip.budget || '800€'}</Text>
-              <Text style={styles.imageMetaText}>🎯 Facile</Text>
+              <Text style={styles.imageMetaText}>⏱️ {trip.duration || 'Durée non définie'}</Text>
+              <Text style={styles.imageMetaText}>💰 {trip.budget || 'Budget non défini'}</Text>
+              <Text style={styles.imageMetaText}>📸 {tripPhotos.length} photo{tripPhotos.length > 1 ? 's' : ''}</Text>
             </View>
           </View>
         </View>
@@ -1639,11 +1657,11 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
           <View style={styles.leftActions}>
             <TouchableOpacity style={styles.actionButton}>
               <Ionicons name="heart-outline" size={24} color="#666" />
-              <Text style={styles.actionText}>1.2k</Text>
+              <Text style={styles.actionText}>{tripLikes.length}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton}>
               <Ionicons name="chatbubble-outline" size={24} color="#666" />
-              <Text style={styles.actionText}>45</Text>
+              <Text style={styles.actionText}>0</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton}>
               <Ionicons name="share-outline" size={24} color="#666" />
@@ -1660,10 +1678,10 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         {/* Footer du post */}
         <View style={styles.imageFooter}>
           <Text style={styles.imageCaption}>
-            ✨ Culture • Gastronomie • Architecture
+            {trip.description || 'Aucune description disponible'}
           </Text>
           <Text style={styles.imageHashtags}>
-            #voyage #{trip.destination?.toLowerCase() || 'paris'} #culture #gastronomie
+            #voyage #{trip.location?.city?.toLowerCase() || 'destination'} #culture
           </Text>
         </View>
       </TouchableOpacity>
@@ -1715,18 +1733,39 @@ const UnifiedHomeScreen = ({ navigation }: { navigation: any }) => {
         refreshControl={
           <RefreshControl
             refreshing={refreshingFeed}
-            onRefresh={loadPublicTrips}
+            onRefresh={loadAllTrips}
             tintColor={theme.colors.primary[0]}
             colors={[theme.colors.primary[0]]}
           />
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <ActivityIndicator size="large" color={theme.colors.primary[0]} />
-            <Text style={[styles.emptyStateText, { color: '#333' }]}>
-              Chargement des voyages...
-            </Text>
-          </View>
+          tripsLoading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={theme.colors.primary[0]} />
+              <Text style={[styles.emptyStateText, { color: '#333' }]}>
+                Chargement des voyages...
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyStateIcon}>
+                <Text style={styles.emptyStateEmoji}>🏛️</Text>
+              </View>
+              <Text style={[styles.emptyStateTitle, { color: '#333' }]}>
+                Aucun voyage disponible
+              </Text>
+              <Text style={[styles.emptyStateText, { color: '#666' }]}>
+                Soyez le premier à créer un voyage et partagez vos aventures !
+              </Text>
+              <TouchableOpacity 
+                style={[styles.createFirstTripButton, { backgroundColor: theme.colors.primary[0] }]}
+                onPress={() => setShowCreationModal(true)}
+              >
+                <Ionicons name="add" size={20} color="white" />
+                <Text style={styles.createFirstTripButtonText}>Créer mon premier voyage</Text>
+              </TouchableOpacity>
+            </View>
+          )
         }
       />
 
@@ -2752,11 +2791,45 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 50,
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyStateIcon: {
+    marginBottom: 20,
+  },
+  emptyStateEmoji: {
+    fontSize: 80,
+    textAlign: 'center',
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyStateText: {
-    marginTop: 15,
     fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  createFirstTripButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  createFirstTripButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   floatingButton: {
     position: 'absolute',

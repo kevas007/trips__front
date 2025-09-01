@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuthStore } from '../store';
 import SimpleAuthScreen from '../screens/auth/SimpleAuthScreen';
 import TermsScreen from '../screens/legal/TermsScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import TravelPreferencesScreen from '../screens/TravelPreferencesScreen';
-import { useNavigation } from '@react-navigation/native';
 
 export type AuthStackParamList = {
   AuthScreen: undefined;
@@ -14,13 +14,13 @@ export type AuthStackParamList = {
   OnboardingScreen: undefined;
   TravelPreferencesScreen: undefined;
   ResetPasswordScreen: undefined;
+  ForgotPassword: undefined;
 };
 
 const Stack = createStackNavigator<AuthStackParamList>();
 
 const AuthNavigator = () => {
   const { isAuthenticated } = useAuthStore();
-  const navigation = useNavigation<any>();
 
   console.log('🎯 AuthNavigator - État:', { isAuthenticated });
 
@@ -56,6 +56,24 @@ const AuthNavigator = () => {
       />
 
       
+
+      {/* Écran de mot de passe oublié */}
+      <Stack.Screen 
+        name="ForgotPassword" 
+        component={ForgotPasswordScreen}
+        options={{
+          title: 'Mot de passe oublié',
+          headerShown: true,
+          headerLeft: () => null, // Pas de bouton de retour automatique
+          headerStyle: {
+            backgroundColor: 'transparent',
+          },
+          headerTintColor: '#008080',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
+      />
 
       {/* Écrans légaux et onboarding */}
       <Stack.Screen 
